@@ -2,44 +2,18 @@
 
 This document provides comprehensive technical documentation for developers building translation review tools that work with unfoldingWord's Bible translation resources. These resources form an interconnected ecosystem designed to support accurate, clear, and natural Bible translation worldwide.
 
-## Executive Summary
-
-### What This Document Covers
-
-This guide provides complete technical specifications for the unfoldingWord translation resource ecosystem, including:
-
-- **Core Translation Resources**: ULT, UST, and word alignment data
-- **Supporting Resources**: Translation Notes, Words, Questions, and Academy
-- **Technical Architecture**: Resource Container specifications and linking systems
-- **Integration Patterns**: How resources interconnect and work together
-- **Implementation Guidelines**: Practical guidance for developers
-- **Extensibility Framework**: How to create new compatible resources
-
-### Target Audience
-
-- **Software Developers** building Bible translation tools
-- **Technical Architects** designing translation platforms
-- **Gateway Language Organizations** creating new resources
-- **Translation Tool Maintainers** integrating unfoldingWord resources
-
-### Key Benefits
-
-- **Comprehensive Coverage**: Complete ecosystem documentation in one place
-- **Technical Precision**: Exact specifications for all formats and linking mechanisms
-- **Implementation Ready**: Code examples and practical guidance
-- **Standards Compliant**: Full Resource Container and Dublin Core compliance
-- **Extensible Design**: Framework for creating new compatible resources
-
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Core Translation Resources](#core-translation-resources)
-3. [Supporting Resources](#supporting-resources)
-4. [Resource Container Architecture](#resource-container-architecture)
-5. [Resource Linking System](#resource-linking-system)
-6. [Integration Patterns](#integration-patterns)
-7. [Extensibility Framework](#extensibility-framework)
-8. [Implementation Guidelines](#implementation-guidelines)
+2. [Resource Types and Purposes](#resource-types-and-purposes)
+3. [Resource Infrastructure and Organization](#resource-infrastructure-and-organization)
+4. [Core Translation Resources](#core-translation-resources)
+5. [Supporting Resources](#supporting-resources)
+6. [Resource Container Architecture](#resource-container-architecture)
+7. [Resource Linking System](#resource-linking-system)
+8. [Integration Patterns](#integration-patterns)
+9. [Extensibility Framework](#extensibility-framework)
+10. [Implementation Guidelines](#implementation-guidelines)
 
 ## Overview
 
@@ -113,6 +87,263 @@ graph TD
     style TQ fill:#fff3e0
     style TA fill:#e8f5e8
 ```
+
+## Resource Types and Purposes
+
+### Foundation Resources
+
+These resources provide the structural framework for all translation work:
+
+#### **Versification**
+**What it contains**: The canonical chapter and verse structure for all 66 books of the Protestant Bible canon.
+
+**Purpose**: Establishes a consistent reference system that all other resources use to coordinate with each other. When you look at Genesis 1:1, every resource knows exactly which verse you're referencing.
+
+**Why translators need it**: Enables precise navigation and ensures that notes, word definitions, and questions all align to the correct Scripture passages.
+
+#### **Original Language Texts**
+**What they contain**: 
+- **Hebrew Bible (UHB)**: The complete Old Testament in Hebrew and Aramaic
+- **Greek New Testament (UGNT)**: The complete New Testament in Koine Greek
+
+**Purpose**: Provide the authoritative source texts that all translations should ultimately derive from.
+
+**Why translators need them**: These are the "measuring stick" against which all translations are evaluated for accuracy and faithfulness.
+
+### Gateway Language Translation Texts
+
+These are complete Bible translations in gateway languages (like English, Spanish, French) that serve as bridges for mother tongue translators:
+
+#### **Literal Translation (ULT)**
+**What it contains**: A complete Bible translation that stays as close as possible to the original language word order, grammar, and structure while remaining understandable.
+
+**Purpose**: Shows translators exactly what the original text says, preserving Hebrew and Greek grammatical patterns.
+
+**Why translators need it**: Helps translators understand the precise meaning and structure of the original, especially for complex passages where word order or grammar affects meaning.
+
+#### **Simplified Translation (UST)**
+**What it contains**: A complete Bible translation that prioritizes clear, natural communication of the original meaning using everyday language and cultural adaptations.
+
+**Purpose**: Demonstrates how to express biblical concepts in clear, contemporary language that ordinary people can understand.
+
+**Why translators need it**: Provides a model for dynamic equivalence translation, showing how to make ancient concepts accessible to modern readers.
+
+#### **Word Alignment Data**
+**What it contains**: Precise connections showing exactly which words in the gateway language translate which words in Hebrew/Greek.
+
+**Purpose**: Creates a bridge between the original languages and gateway language translations at the individual word level.
+
+**Why translators need it**: Enables translation tools to show exactly which Hebrew or Greek word a translator is working on, and to highlight relevant notes and definitions for that specific word.
+
+### Supporting Guidance Resources
+
+These resources provide contextual help and training for translators:
+
+#### **Translation Notes (TN)**
+**What they contain**: Verse-by-verse explanations for difficult, ambiguous, or culturally complex passages throughout the Bible.
+
+**Purpose**: Provide specific guidance for translating challenging passages, including alternative translation options, cultural background, and theological clarifications.
+
+**Why translators need them**: Many passages in Scripture require specialized knowledge to translate accurately - these notes provide that expertise in a targeted, practical format.
+
+**Example**: For a metaphor like "God is my rock," a note would explain that this refers to God as a source of protection and stability, not a literal stone.
+
+#### **Translation Words (TW)**
+**What they contain**: Comprehensive definitions and explanations of key biblical, theological, and cultural terms that appear throughout Scripture.
+
+**Purpose**: Ensure translators understand important concepts consistently across the entire Bible.
+
+**Why translators need them**: Terms like "covenant," "righteousness," or "Sabbath" carry specific meanings that must be translated consistently throughout Scripture.
+
+**Example**: The entry for "covenant" would explain the biblical concept of formal agreements between God and people, with examples from throughout Scripture.
+
+#### **Translation Words Links (TWL)**
+**What they contain**: Connections showing exactly which occurrences of original language words should be linked to Translation Words definitions.
+
+**Purpose**: Connect specific word instances in the text to their corresponding definitions and explanations.
+
+**Why translators need them**: When a translator encounters the Hebrew word "hesed" in Psalm 23, this resource points them to the Translation Words entry explaining "steadfast love" or "mercy."
+
+#### **Translation Questions (TQ)**
+**What they contain**: Comprehension questions with answers that test whether a translation successfully communicates the intended meaning.
+
+**Purpose**: Provide a quality assurance method for translators to verify their translation is clear and accurate.
+
+**Why translators need them**: After translating a passage, translators can use these questions to test whether their target audience would understand the intended meaning.
+
+**Example**: For the passage "Paul, a servant of Christ Jesus," a question might be "What does Paul call himself?" with the answer "Paul calls himself a servant."
+
+#### **Translation Academy (TA)**
+**What they contain**: Comprehensive training materials covering translation theory, methodology, cultural issues, and quality standards.
+
+**Purpose**: Provide the theoretical foundation and practical guidance needed for high-quality Bible translation work.
+
+**Why translators need them**: Translation is a complex skill requiring knowledge of linguistics, culture, theology, and communication - these materials provide structured training in all these areas.
+
+**Example**: An article on "Translating Metaphors" would explain what metaphors are, why they're challenging to translate, and provide specific strategies for handling them effectively.
+
+### How Resources Work Together
+
+These resources form an interconnected ecosystem where each one enhances the others:
+
+- **Word Alignment** connects gateway language translations to original languages
+- **Translation Notes** reference specific aligned words to provide targeted guidance
+- **Translation Words Links** point from aligned words to comprehensive definitions
+- **Translation Academy** articles explain the methodology behind translation decisions
+- **Translation Questions** verify that the final translation communicates effectively
+
+**Example workflow**: A translator working on Romans 1:1 encounters the word "servant." The alignment data shows this translates Greek "doulos." Translation Words Links points to a comprehensive definition of "doulos" explaining slavery in the ancient world. Translation Notes provide specific guidance on how to translate this concept in different cultural contexts. Translation Academy articles explain general principles for translating cultural terms. Translation Questions help verify that the final translation communicates Paul's intended meaning.
+
+This conceptual foundation enables the precise, interconnected resource ecosystem detailed in the following sections.
+
+## Resource Infrastructure and Organization
+
+### Where Resources are Hosted
+
+All unfoldingWord translation resources are hosted on **Door43 Content Service (DCS)**, a specialized Git-based platform designed specifically for Bible translation content management.
+
+#### Primary Hosting Platform: Door43 Content Service
+- **Platform URL**: `https://git.door43.org/`
+- **Technology**: Gitea-based Git platform with Door43-specific extensions
+- **Organization**: Resources are organized under the `unfoldingWord` organization
+- **Access Methods**: Web interface, Git protocols, and REST API
+- **Version Control**: Full Git history tracking for all resource changes
+- **Collaboration**: Multi-user editing with branch/merge workflows
+
+#### Repository Organization Pattern
+```
+https://git.door43.org/unfoldingWord/
+├── en_ult/          # English Literal Translation
+├── en_ust/          # English Simplified Translation  
+├── en_tn/           # English Translation Notes
+├── en_tw/           # English Translation Words
+├── en_twl/          # English Translation Words Links
+├── en_ta/           # English Translation Academy
+├── hbo_uhb/         # Hebrew Bible (original language)
+├── el-x-koine_ugnt/ # Greek New Testament (original language)
+└── [other languages and resources...]
+```
+
+### Why These Specific Structures?
+
+#### Resource Container (RC) Specification Compliance
+
+All unfoldingWord resources follow the **Resource Container (RC) specification**, an open standard designed specifically for Bible translation content. This ensures:
+
+1. **Standardized Metadata**: Every resource includes Dublin Core-compliant metadata in `manifest.yaml`
+2. **Consistent Structure**: Predictable file organization across all resource types
+3. **Interoperability**: Resources from different organizations can work together
+4. **Linking Capability**: Standardized URI format for cross-resource references
+5. **Tool Compatibility**: Translation software can easily parse and integrate resources
+
+#### Benefits of Git-Based Hosting
+
+**Version Control**: Complete history of every change to translation resources
+```bash
+# Example: View the history of Genesis translation changes
+git log --oneline 01-GEN.usfm
+```
+
+**Branching and Collaboration**: Multiple teams can work on resources simultaneously
+```bash
+# Example: Create feature branch for translation improvements
+git checkout -b improve-genesis-notes
+```
+
+**Distributed Access**: Resources can be cloned, mirrored, and used offline
+```bash
+# Example: Clone entire ULT repository locally
+git clone https://git.door43.org/unfoldingWord/en_ult.git
+```
+
+**Quality Control**: Pull requests and review workflows ensure resource accuracy
+
+### Multi-Platform Support Strategy
+
+While Door43 is the primary platform, the Resource Container specification enables hosting on multiple platforms:
+
+#### Supported Hosting Options
+- **Door43 Instances**: Primary and mirror Door43 servers
+- **Generic Git Platforms**: GitHub, GitLab, Bitbucket
+- **Self-Hosted Solutions**: Private Gitea, GitLab, or other Git servers  
+- **Local Repositories**: Offline or network-isolated environments
+- **Content Delivery Networks**: Cached distribution for performance
+
+#### Platform Detection and Adaptation
+Translation tools should detect the hosting platform and adapt accordingly:
+
+```javascript
+function detectPlatformType(repositoryUrl) {
+  if (repositoryUrl.includes('git.door43.org')) return 'door43';
+  if (repositoryUrl.includes('github.com')) return 'github';
+  if (repositoryUrl.includes('gitlab.com')) return 'gitlab';
+  return 'generic-git';
+}
+```
+
+### Resource Discovery and Access
+
+#### Door43 Catalog API
+Door43 provides enhanced resource discovery through a specialized catalog API:
+
+```javascript
+// Discover all available English resources
+GET https://git.door43.org/api/v1/catalog/list?lang=en&stage=prod
+
+// Find specific resource type across languages  
+GET https://git.door43.org/api/v1/catalog/list?resource=ult
+```
+
+#### Standard Git Access Patterns
+```javascript
+// Direct repository access
+GET https://git.door43.org/api/v1/repos/unfoldingWord/en_ult
+
+// File content access
+GET https://git.door43.org/api/v1/repos/unfoldingWord/en_ult/contents/01-GEN.usfm
+
+// Release information
+GET https://git.door43.org/api/v1/repos/unfoldingWord/en_ult/releases/latest
+```
+
+### Quality Assurance and Release Management
+
+#### Three-Stage Quality Process
+1. **Draft Stage**: Initial development and testing
+2. **Pre-Production**: Review and validation by subject matter experts  
+3. **Production**: Approved resources ready for translation teams
+
+#### Release Versioning
+Resources use semantic versioning aligned with content updates:
+```yaml
+# Example from manifest.yaml
+dublin_core:
+  version: '85'  # Incremented with each content release
+  issued: '2024-01-15'
+  modified: '2024-01-15T14:30:00Z'
+```
+
+#### Checking Levels
+Resources include quality indicators:
+- **Level 1**: Community reviewed
+- **Level 2**: Expert reviewed  
+- **Level 3**: Thoroughly checked by unfoldingWord team
+
+### Gateway Language Ecosystem Strategy
+
+#### English as Primary Gateway Language
+unfoldingWord provides the reference implementation in English, serving as the model for other gateway language organizations.
+
+#### Parallel Gateway Language Implementations
+Other organizations create complete resource sets in strategic languages:
+- **Spanish**: `es-419_gl` organization 
+- **French**: `fr_gl` organization
+- **Portuguese**: `pt-br_gl` organization
+- **Hindi**: `hi_gl` organization
+
+Each maintains the same structural patterns while adapting content for their linguistic and cultural context.
+
+This infrastructure foundation enables the precise, interconnected resource ecosystem detailed in the following sections.
 
 ## Core Translation Resources
 
