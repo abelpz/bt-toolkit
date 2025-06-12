@@ -1,0 +1,431 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Nx Monorepo Workflows and Best Practices
+
+## Project Configuration
+
+### Library Project Setup
+```json
+{
+  "name": "format-usfm",
+  "sourceRoot": "packages/formats/format-usfm/src",
+  "projectType": "library",
+  "tags": ["scope:format", "type:lib"],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/formats/format-usfm",
+        "main": "packages/formats/format-usfm/src/index.ts",
+        "tsConfig": "packages/formats/format-usfm/tsconfig.lib.json"
+      }
+    }
+  }
+}
+```
+
+### Application Project Setup
+```json
+{
+  "name": "translation-editor",
+  "sourceRoot": "apps/translation-tools/translation-editor/src",
+  "projectType": "application",
+  "tags": ["scope:translation", "type:app"],
+  "targets": {
+    "build": {
+      "executor": "@nx/vite:build",
+      "outputs": ["{options.outputPath}"],
+      "defaultConfiguration": "production"
+    },
+    "serve": {
+      "executor": "@nx/vite:dev-server",
+      "defaultConfiguration": "development"
+    }
+  }
+}
+```
+
+## Tagging Strategy
+
+### Scope Tags
+- `scope:shared` - Utilities used across domains
+- `scope:scripture` - Scripture handling and processing
+- `scope:translation` - Translation workflow tools
+- `scope:analysis` - Text analysis and quality checks
+- `scope:ui` - User interface components
+
+### Type Tags
+- `type:app` - Deployable applications
+- `type:lib` - Reusable libraries
+- `type:tool` - Development and build tools
+- `type:e2e` - End-to-end test applications
+
+### Platform Tags
+- `platform:web` - Web applications and libraries
+- `platform:desktop` - Electron applications
+- `platform:mobile` - Mobile applications
+- `platform:node` - Node.js applications
+
+## Module Boundary Rules
+
+### ESLint Configuration
+```javascript
+{
+  "rules": {
+    "@nx/enforce-module-boundaries": [
+      "error",
+      {
+        "allow": [],
+        "depConstraints": [
+          // Apps can depend on any library
+          {
+            "sourceTag": "type:app",
+            "onlyDependOnLibsWithTags": ["type:lib"]
+          },
+          // Scripture domain isolation
+          {
+            "sourceTag": "scope:scripture",
+            "onlyDependOnLibsWithTags": ["scope:scripture", "scope:shared"]
+          },
+          // UI libraries can only depend on shared utilities
+          {
+            "sourceTag": "scope:ui",
+            "onlyDependOnLibsWithTags": ["scope:ui", "scope:shared"]
+          },
+          // Platform-specific constraints
+          {
+            "sourceTag": "platform:web",
+            "onlyDependOnLibsWithTags": ["platform:web", "platform:shared"]
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+## Project Creation Commands
+
+### Libraries
+
+**Core Libraries (TypeScript/JavaScript):**
+```bash
+nx g @nx/js:library [name] --directory=packages/core/[name] --importPath=@bt-toolkit/core-[name] --publishable --bundler=tsc --unitTestRunner=jest
+
+# Example:
+nx g @nx/js:library scripture-utils --directory=packages/core/scripture-utils --importPath=@bt-toolkit/core-scripture-utils --publishable --bundler=tsc --unitTestRunner=jest
+```
+
+**UI Component Libraries (React):**
+```bash
+nx g @nx/react:library [name] --directory=packages/components/[name] --importPath=@bt-toolkit/components-[name] --publishable --bundler=rollup --unitTestRunner=jest --style=css
+
+# Example:
+nx g @nx/react:library verse-selector --directory=packages/components/verse-selector --importPath=@bt-toolkit/components-verse-selector --publishable --bundler=rollup --unitTestRunner=jest --style=css
+```
+
+**Format Libraries:**
+```bash
+nx g @nx/js:library [name] --directory=packages/formats/[name] --importPath=@bt-toolkit/formats-[name] --publishable --bundler=tsc --unitTestRunner=jest
+
+# Example:
+nx g @nx/js:library usfm-parser --directory=packages/formats/usfm-parser --importPath=@bt-toolkit/formats-usfm-parser --publishable --bundler=tsc --unitTestRunner=jest
+```
+
+**Analysis Libraries:**
+```bash
+nx g @nx/js:library [name] --directory=packages/analysis/[name] --importPath=@bt-toolkit/analysis-[name] --publishable --bundler=tsc --unitTestRunner=jest
+
+# Example:
+nx g @nx/js:library quality-checker --directory=packages/analysis/quality-checker --importPath=@bt-toolkit/analysis-quality-checker --publishable --bundler=tsc --unitTestRunner=jest
+```
+
+**Utility Libraries:**
+```bash
+nx g @nx/js:library [name] --directory=packages/utilities/[name] --importPath=@bt-toolkit/utilities-[name] --publishable --bundler=tsc --unitTestRunner=jest
+
+# Example:
+nx g @nx/js:library text-helpers --directory=packages/utilities/text-helpers --importPath=@bt-toolkit/utilities-text-helpers --publishable --bundler=tsc --unitTestRunner=jest
+```
+
+### Applications
+
+**Translation Tools (React):**
+```bash
+nx g @nx/react:application [name] --directory=apps/translation-tools/[name] --bundler=vite --unitTestRunner=jest --e2eTestRunner=playwright
+
+# Example:
+nx g @nx/react:application verse-editor --directory=apps/translation-tools/verse-editor --bundler=vite --unitTestRunner=jest --e2eTestRunner=playwright
+```
+
+**Developer Tools (Node.js):**
+```bash
+nx g @nx/node:application [name] --directory=apps/developer-tools/[name]
+
+# Example:
+nx g @nx/node:application format-converter --directory=apps/developer-tools/format-converter
+```
+
+**Demo Applications (React):**
+```bash
+nx g @nx/react:application [name] --directory=apps/demos/[name] --bundler=vite --unitTestRunner=jest --e2eTestRunner=playwright
+
+# Example:
+nx g @nx/react:application format-showcase --directory=apps/demos/format-showcase --bundler=vite --unitTestRunner=jest --e2eTestRunner=playwright
+```
+
+**Documentation Sites (Astro):**
+```bash
+nx g @nxtensions/astro:application [name] --directory=apps/community/[name]
+
+# Example:
+nx g @nxtensions/astro:application format-docs --directory=apps/community/format-docs
+```
+
+## Task Execution Patterns
+
+### Development Workflows
+```bash
+# Start all development servers
+npm run dev
+
+# Build affected projects only
+nx affected:build
+
+# Test affected projects
+nx affected:test
+
+# Lint all projects
+nx run-many --target=lint --all
+
+# Run specific project tasks
+nx serve translation-editor
+nx test format-usfm
+nx build ui-scripture-viewer
+```
+
+### CI/CD Workflows
+```bash
+# Build only what changed
+nx affected:build --base=origin/main
+
+# Test with coverage
+nx affected:test --coverage --base=origin/main
+
+# E2E tests for affected apps
+nx affected:e2e --base=origin/main
+
+# Publish libraries
+nx run-many --target=build --projects=tag:type:lib
+npm run publish:libs
+```
+
+## Custom Generators
+
+### Library Generator Template
+```typescript
+import { Tree, formatFiles, generateFiles, joinPathFragments } from '@nx/devkit';
+
+interface LibraryGeneratorSchema {
+  name: string;
+  directory: string;
+  type: 'core' | 'ui' | 'format' | 'analysis' | 'util';
+  publishable: boolean;
+}
+
+export default async function (tree: Tree, options: LibraryGeneratorSchema) {
+  const projectRoot = joinPathFragments('packages', options.directory, options.name);
+  
+  generateFiles(tree, joinPathFragments(__dirname, 'files'), projectRoot, {
+    ...options,
+    importPath: `@bt-toolkit/${options.type}-${options.name}`,
+    template: '',
+  });
+
+  await formatFiles(tree);
+}
+```
+
+### Component Generator
+```typescript
+export interface ComponentGeneratorSchema {
+  name: string;
+  project: string;
+  directory?: string;
+  export?: boolean;
+  pascalCaseFiles?: boolean;
+}
+
+export default async function (tree: Tree, options: ComponentGeneratorSchema) {
+  // Generate React component with TypeScript
+  // Include test file
+  // Update index.ts exports
+  // Follow naming conventions
+}
+```
+
+## Dependency Management
+
+### Workspace Dependencies
+```json
+{
+  "dependencies": {
+    "react": "19.0.0",
+    "react-dom": "19.0.0"
+  },
+  "devDependencies": {
+    "@nx/react": "21.1.3",
+    "@nx/vite": "21.1.3",
+    "@nx/jest": "21.1.3"
+  }
+}
+```
+
+### Library-specific Dependencies
+```json
+{
+  "name": "@bt-toolkit/format-usfm",
+  "dependencies": {
+    "fast-xml-parser": "^4.0.0"
+  },
+  "peerDependencies": {
+    "@bt-toolkit/util-validation": "*"
+  }
+}
+```
+
+## Build and Release
+
+### Build Configuration
+```json
+{
+  "build": {
+    "executor": "@nx/js:tsc",
+    "options": {
+      "outputPath": "dist/packages/formats/format-usfm",
+      "main": "src/index.ts",
+      "tsConfig": "tsconfig.lib.json",
+      "assets": ["README.md", "CHANGELOG.md"]
+    }
+  }
+}
+```
+
+### Release Configuration
+```json
+{
+  "release": {
+    "version": {
+      "preVersionCommand": "nx run-many -t build --projects=tag:type:lib"
+    },
+    "changelog": {
+      "workspaceChangelog": {
+        "createRelease": "github"
+      }
+    }
+  }
+}
+```
+
+## Performance Optimization
+
+### Caching Strategy
+```json
+{
+  "tasksRunnerOptions": {
+    "default": {
+      "runner": "nx/tasks-runners/default",
+      "options": {
+        "cacheableOperations": ["build", "test", "lint", "e2e"]
+      }
+    }
+  }
+}
+```
+
+### Distributed Execution
+```bash
+# Use Nx Cloud for distributed builds
+nx affected:build --parallel=3
+
+# Enable remote caching
+nx connect-to-nx-cloud
+```
+
+## Migration and Upgrades
+
+### Nx Migration
+```bash
+# Check for available migrations
+nx migrate latest
+
+# Apply migrations
+nx migrate --run-migrations=migrations.json
+
+# Clean up after migration
+rm migrations.json
+```
+
+### Custom Migration
+```typescript
+import { Tree, formatFiles } from '@nx/devkit';
+
+export default async function update(tree: Tree) {
+  // Update project configurations
+  // Modify source files
+  // Update dependencies
+  
+  await formatFiles(tree);
+}
+```
+
+## Troubleshooting
+
+### Common Issues
+- **Circular Dependencies**: Use `nx graph` to visualize and fix
+- **Cache Issues**: Clear cache with `nx reset`
+- **Type Errors**: Ensure proper TypeScript project references
+- **Build Failures**: Check affected dependency chain
+
+### Debug Commands
+```bash
+# Visualize project graph
+nx graph
+
+# Show project information
+nx show project my-project
+
+# Dry run commands
+nx build my-project --dry-run
+
+# Verbose logging
+nx build my-project --verbose
+```
+
+## Best Practices
+
+### Project Organization
+- Keep related functionality in the same library
+- Split large libraries when they serve different purposes
+- Use consistent naming conventions
+- Maintain clear dependency directions
+
+### Development Workflow
+- Run affected commands during development
+- Use tags to organize and filter projects
+- Leverage code generators for consistency
+- Regular dependency updates and migrations
+
+### CI/CD Integration
+- Use affected builds in CI
+- Cache build artifacts
+- Run tests in parallel
+- Automate releases for libraries
+
+
+
+

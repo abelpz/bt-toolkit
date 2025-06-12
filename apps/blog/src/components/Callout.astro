@@ -1,0 +1,54 @@
+---
+interface Props {
+  type?: 'info' | 'warning' | 'tip' | 'success' | 'danger';
+  title?: string;
+}
+
+const { type = 'info', title } = Astro.props;
+
+const typeStyles = {
+  info: {
+    container: 'bg-blue-50 border-blue-200 text-blue-800',
+    icon: '💡',
+    titleColor: 'text-blue-900'
+  },
+  warning: {
+    container: 'bg-yellow-50 border-yellow-200 text-yellow-800',
+    icon: '⚠️',
+    titleColor: 'text-yellow-900'
+  },
+  tip: {
+    container: 'bg-green-50 border-green-200 text-green-800',
+    icon: '💡',
+    titleColor: 'text-green-900'
+  },
+  success: {
+    container: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+    icon: '✅',
+    titleColor: 'text-emerald-900'
+  },
+  danger: {
+    container: 'bg-red-50 border-red-200 text-red-800',
+    icon: '🚨',
+    titleColor: 'text-red-900'
+  }
+};
+
+const styles = typeStyles[type];
+---
+
+<div class={`border rounded-lg p-4 my-6 ${styles.container}`}>
+  <div class="flex items-start gap-3">
+    <span class="text-xl flex-shrink-0">{styles.icon}</span>
+    <div class="flex-1">
+      {title && (
+        <h4 class={`font-semibold mb-2 ${styles.titleColor}`}>
+          {title}
+        </h4>
+      )}
+      <div class="prose prose-sm max-w-none">
+        <slot />
+      </div>
+    </div>
+  </div>
+</div> 

@@ -1,0 +1,179 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Card from '../components/Card.astro';
+---
+
+<Layout title="BT-Toolkit Community | Empowering Bible Translation Through Technology">
+	<main class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+		<!-- Hero Section -->
+		<section class="relative overflow-hidden">
+			<div class="absolute inset-0 bg-gradient-to-r from-blue-600/20 via-purple-600/20 to-blue-600/20"></div>
+			<div class="relative px-6 py-24 mx-auto max-w-7xl lg:px-8">
+				<div class="text-center">
+					<div class="mb-8">
+						<span class="inline-flex items-center px-3 py-1 text-sm font-medium text-blue-300 bg-blue-900/50 rounded-full ring-1 ring-blue-300/20">
+							🌍 Open Components Ecosystem
+						</span>
+					</div>
+					<h1 class="text-4xl font-bold tracking-tight text-white sm:text-6xl">
+						<span class="block">Empowering</span>
+						<span class="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">
+							Bible Translation
+						</span>
+						<span class="block">Through Technology</span>
+					</h1>
+					<p class="max-w-3xl mx-auto mt-6 text-lg leading-8 text-gray-300">
+						Welcome to the BT-Toolkit community blog. Discover insights, tutorials, and resources for both 
+						Bible translators and developers building the next generation of translation tools.
+					</p>
+					<div class="flex flex-col items-center gap-4 mt-10 sm:flex-row sm:justify-center">
+						<a href="/for-translators" class="px-8 py-3 text-lg font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+							For Translators
+						</a>
+						<a href="/for-developers" class="px-8 py-3 text-lg font-semibold text-blue-300 border border-blue-300 rounded-lg hover:bg-blue-300 hover:text-slate-900 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+							For Developers
+						</a>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- Audience Sections -->
+		<section class="px-6 py-16 mx-auto max-w-7xl lg:px-8">
+			<div class="grid gap-8 md:grid-cols-2">
+				<!-- For Translators -->
+				<div class="p-8 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
+					<div class="flex items-center mb-6">
+						<div class="flex items-center justify-center w-12 h-12 bg-green-600 rounded-lg">
+							<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+							</svg>
+						</div>
+						<h2 class="ml-4 text-2xl font-bold text-white">For Bible Translators</h2>
+					</div>
+					<p class="mb-6 text-gray-300">
+						Discover powerful, free tools designed specifically for Bible translation work. Learn about best practices, 
+						workflows, and how to leverage modern technology in your translation projects.
+					</p>
+					<ul class="space-y-3 text-gray-300">
+						<li class="flex items-center">
+							<span class="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
+							Translation workflows and methodologies
+						</li>
+						<li class="flex items-center">
+							<span class="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
+							Quality assurance techniques
+						</li>
+						<li class="flex items-center">
+							<span class="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
+							File format guides (USFM, USX, OSIS)
+						</li>
+						<li class="flex items-center">
+							<span class="w-2 h-2 bg-green-400 rounded-full mr-3"></span>
+							Community success stories
+						</li>
+					</ul>
+				</div>
+
+				<!-- For Developers -->
+				<div class="p-8 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl">
+					<div class="flex items-center mb-6">
+						<div class="flex items-center justify-center w-12 h-12 bg-purple-600 rounded-lg">
+							<svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path>
+							</svg>
+						</div>
+						<h2 class="ml-4 text-2xl font-bold text-white">For Developers</h2>
+					</div>
+					<p class="mb-6 text-gray-300">
+						Explore the Open Components Ecosystem (OCE) and learn how to build interoperable Bible translation tools. 
+						Access APIs, libraries, and development resources.
+					</p>
+					<ul class="space-y-3 text-gray-300">
+						<li class="flex items-center">
+							<span class="w-2 h-2 bg-purple-400 rounded-full mr-3"></span>
+							OCE component tutorials
+						</li>
+						<li class="flex items-center">
+							<span class="w-2 h-2 bg-purple-400 rounded-full mr-3"></span>
+							API documentation and examples
+						</li>
+						<li class="flex items-center">
+							<span class="w-2 h-2 bg-purple-400 rounded-full mr-3"></span>
+							Technical deep-dives
+						</li>
+						<li class="flex items-center">
+							<span class="w-2 h-2 bg-purple-400 rounded-full mr-3"></span>
+							Integration patterns
+						</li>
+					</ul>
+				</div>
+			</div>
+		</section>
+
+		<!-- Featured Content -->
+		<section class="px-6 py-16 mx-auto max-w-7xl lg:px-8">
+			<div class="text-center mb-12">
+				<h2 class="text-3xl font-bold text-white mb-4">Latest from the Community</h2>
+				<p class="text-gray-300 max-w-2xl mx-auto">
+					Stay updated with the latest insights, tutorials, and announcements from the Bible translation technology community.
+				</p>
+			</div>
+
+			<div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+				<Card
+					href="/posts/introduction-to-oce"
+					title="Introduction to OCE"
+					body="Learn about the Open Components Ecosystem and how it's revolutionizing Bible translation tool development."
+				/>
+				<Card
+					href="/posts/usfm-best-practices"
+					title="USFM Best Practices"
+					body="Essential guidelines for working with Unified Standard Format Markers in your translation projects."
+				/>
+				<Card
+					href="/posts/quality-checking-workflows"
+					title="Quality Checking Workflows"
+					body="Discover automated and manual quality assurance techniques for translation accuracy."
+				/>
+				<Card
+					href="/posts/getting-started-bt-toolkit"
+					title="Getting Started with BT-Toolkit"
+					body="A step-by-step guide to setting up your first Bible translation project with our tools."
+				/>
+				<Card
+					href="/posts/component-integration-guide"
+					title="Component Integration Guide"
+					body="How to integrate OCE components into your existing translation tools and workflows."
+				/>
+				<Card
+					href="/posts/community-showcase"
+					title="Community Showcase"
+					body="Highlighting innovative projects and success stories from our global translation community."
+				/>
+			</div>
+		</section>
+
+		<!-- Call to Action -->
+		<section class="px-6 py-16 mx-auto max-w-7xl lg:px-8">
+			<div class="text-center p-12 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-white/10 rounded-2xl backdrop-blur-sm">
+				<h2 class="text-3xl font-bold text-white mb-4">Join Our Community</h2>
+				<p class="text-gray-300 mb-8 max-w-2xl mx-auto">
+					Connect with translators and developers from around the world. Share knowledge, ask questions, 
+					and contribute to the future of Bible translation technology.
+				</p>
+				<div class="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+					<a href="https://github.com/bt-toolkit" class="px-6 py-3 text-white bg-gray-700 rounded-lg hover:bg-gray-600 transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+						GitHub Repository
+					</a>
+					<a href="https://discord.gg/bt-toolkit" class="px-6 py-3 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+						Join Discord
+					</a>
+					<a href="/contribute" class="px-6 py-3 text-indigo-300 border border-indigo-300 rounded-lg hover:bg-indigo-300 hover:text-slate-900 transition-colors focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900">
+						Contribute
+					</a>
+				</div>
+			</div>
+		</section>
+	</main>
+</Layout>

@@ -1,0 +1,83 @@
+---
+interface Props {
+	title: string;
+	description?: string;
+}
+
+const { 
+	title, 
+	description = "Empowering Bible translation through technology. Discover insights, tools, and resources for translators and developers in the Open Components Ecosystem." 
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="description" content={description} />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="robots" content="index, follow" />
+		<meta name="author" content="BT-Toolkit Community" />
+		<meta name="keywords" content="Bible translation, Open Components Ecosystem, OCE, USFM, USX, translation tools, developer resources" />
+		
+		<!-- Open Graph / Facebook -->
+		<meta property="og:type" content="website" />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:site_name" content="BT-Toolkit Community" />
+		
+		<!-- Twitter -->
+		<meta name="twitter:card" content="summary_large_image" />
+		<meta name="twitter:title" content={title} />
+		<meta name="twitter:description" content={description} />
+		
+		<!-- Favicon -->
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="apple-touch-icon" href="/favicon.svg" />
+		
+		<!-- Generator -->
+		<meta name="generator" content={Astro.generator} />
+		
+		<!-- Title -->
+		<title>{title}</title>
+		
+		<!-- Preload fonts for better performance -->
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+	</head>
+
+	<body class="antialiased">
+		<slot />
+	</body>
+</html>
+
+<style is:global>
+	/* Custom scrollbar for webkit browsers */
+	::-webkit-scrollbar {
+		width: 8px;
+	}
+	
+	::-webkit-scrollbar-track {
+		background: #1e293b;
+	}
+	
+	::-webkit-scrollbar-thumb {
+		background: #475569;
+		border-radius: 4px;
+	}
+	
+	::-webkit-scrollbar-thumb:hover {
+		background: #64748b;
+	}
+
+	/* Smooth scrolling */
+	html {
+		scroll-behavior: smooth;
+	}
+
+	/* Focus styles for accessibility */
+	*:focus-visible {
+		outline: 2px solid #3b82f6;
+		outline-offset: 2px;
+	}
+</style>

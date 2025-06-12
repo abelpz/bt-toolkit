@@ -1,0 +1,64 @@
+---
+import { type CollectionEntry, getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: post,
+  }));
+}
+
+type Props = CollectionEntry<'posts'>;
+
+const post = Astro.props;
+const { Content } = await post.render();
+---
+
+<Layout title={post.data.title} description={post.data.description}>
+  <main class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+    <article class="px-6 py-16 mx-auto max-w-4xl">
+      <header class="mb-12">
+        <div class="mb-6">
+          <span class="inline-flex items-center px-3 py-1 text-sm font-medium text-blue-300 bg-blue-900/50 rounded-full ring-1 ring-blue-300/20">
+            {post.data.category}
+          </span>
+        </div>
+        
+        <h1 class="text-4xl font-bold tracking-tight text-white mb-6 sm:text-5xl">
+          {post.data.title}
+        </h1>
+        
+        <div class="flex flex-wrap items-center gap-4 text-gray-300 mb-6">
+          <div class="flex items-center">
+            <span class="mr-2">👤</span>
+            {post.data.author}
+          </div>
+          <div class="flex items-center">
+            <span class="mr-2">📅</span>
+            {post.data.pubDate.toLocaleDateString()}
+          </div>
+        </div>
+        
+        <div class="flex flex-wrap gap-2">
+          {post.data.tags.map((tag: string) => (
+            <span class="px-2 py-1 text-xs font-medium text-blue-300 bg-blue-900/30 rounded-md">
+              #{tag}
+            </span>
+          ))}
+        </div>
+      </header>
+      
+      <div class="prose prose-lg prose-invert max-w-none prose-headings:text-white prose-p:text-gray-300 prose-a:text-blue-400 prose-strong:text-white prose-code:text-blue-300 prose-code:bg-slate-800">
+        <Content />
+      </div>
+      
+      <div class="mt-12 pt-8 border-t border-slate-700">
+        <a href="/" class="inline-flex items-center text-blue-400 hover:text-blue-300 transition-colors">
+          ← Back to Blog
+        </a>
+      </div>
+    </article>
+  </main>
+</Layout> 

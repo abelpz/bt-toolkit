@@ -1,0 +1,75 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Scripture Format Processing Guidelines
+
+## Supported Scripture Formats
+
+### USFM (Unified Standard Format Markers)
+- Use for plain text scripture with markup
+- Common markers: `\c` (chapter), `\v` (verse), `\p` (paragraph), `\q` (poetry)
+- Handle nested markers correctly (e.g., `\add*`, `\nd*`)
+- Preserve whitespace and formatting context
+
+### USX (Unified Scripture XML)
+- XML-based scripture format
+- Use proper schema validation
+- Handle character data and attributes correctly
+- Support for notes, cross-references, and formatting
+
+### USJ (Unified Scripture JSON)
+- JSON representation of scripture
+- Maintain hierarchical structure
+- Support streaming for large files
+- Use TypeScript interfaces for type safety
+
+## Format Conversion Best Practices
+
+### Parser Implementation
+- Use streaming parsers for large files
+- Implement proper error handling and recovery
+- Validate input format before processing
+- Provide detailed error messages with line/position info
+
+### Type Definitions
+```typescript
+interface ScriptureReference {
+  book: string;
+  chapter: number;
+  verse: number;
+}
+
+interface ScriptureContent {
+  reference: ScriptureReference;
+  text: string;
+  formatting?: FormattingMarker[];
+  notes?: Note[];
+}
+```
+
+### Error Handling
+- Catch malformed markup gracefully
+- Log parsing errors with context
+- Provide fallback content when possible
+- Never throw errors that break the entire document
+
+## Performance Considerations
+- Use generators/iterators for large files
+- Implement chunked processing
+- Cache parsed content when appropriate
+- Use Web Workers for heavy parsing in browser
+
+## Validation Rules
+- Verify chapter/verse numbering sequences
+- Check for required book metadata
+- Validate cross-reference targets exist
+- Ensure proper nesting of formatting markers
+
+## Testing Scripture Formats
+- Test with real biblical text samples
+- Include edge cases (poetry, footnotes, cross-refs)
+- Test multiple languages and scripts
+- Validate round-trip conversion accuracy
+

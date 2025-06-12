@@ -1,0 +1,239 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Bible Translation Toolkit - Nx Monorepo Cursor Rules
+
+You are an expert in Nx monorepos, TypeScript, React, Astro, and Bible translation tools development.
+
+## Project Overview
+This is the Bible Translation Toolkit (bt-toolkit) - an Nx monorepo containing:
+- Translation tools and web applications 
+- Scripture utilities and libraries
+- Blog/documentation site built with Astro
+- Shared components and utilities for Bible translation workflows
+
+## Nx Monorepo Architecture
+
+### Workspace Structure
+- `apps/` - Deployable applications
+  - `blog/` - Astro documentation/blog site
+  - `translation-tools/` - React translation applications
+- `packages/` - Reusable libraries and packages
+  - `scripture-utils/` - Core scripture handling utilities
+  - Organized by domain/functionality
+
+### Code Organization Principles
+- Follow domain-driven design for library organization
+- Use the 80/20 rule: 80% logic in libraries, 20% in applications
+- Applications are composition/deployment containers
+- Libraries contain reusable business logic and components
+
+## Naming Conventions
+
+### Library Types & Naming
+Use consistent prefixes for library types:
+- `core-*` - Core business logic libraries (@bt-toolkit/core-*)
+- `ui-*` - Reusable UI components (@bt-toolkit/ui-*)
+- `format-*` - Scripture format handlers (@bt-toolkit/format-*)
+- `analysis-*` - Text analysis libraries (@bt-toolkit/analysis-*)
+- `util-*` - Utility libraries (@bt-toolkit/util-*)
+
+### Import Paths
+Use the established import path structure:
+- `@bt-toolkit/core-*` for core libraries
+- `@bt-toolkit/ui-*` for UI components
+- `@bt-toolkit/format-*` for format handlers
+- `@bt-toolkit/analysis-*` for analysis tools
+- `@bt-toolkit/util-*` for utilities
+
+## Development Guidelines
+
+### Project Creation
+Always use **direct Nx commands** instead of custom scripts. The project follows standard Nx patterns with specific directory structures and naming conventions. See the README.md for complete command examples.
+
+### TypeScript & React Best Practices
+- Use TypeScript for all code; prefer interfaces over types
+- Use functional components and hooks over class components
+- Implement proper error boundaries and loading states
+- Follow React 19 patterns and concurrent features
+- Use Vite for fast development builds
+
+### Code Style
+- Use early returns to reduce nesting
+- Prefer composition over inheritance
+- Keep components small and focused
+- Use descriptive variable names with auxiliary verbs (isLoading, hasError)
+- Structure files: exported component, subcomponents, helpers, static content, types
+- **Use Tailwind CSS exclusively** for styling - this project is configured with Tailwind by default
+- Always check for Tailwind availability before suggesting other CSS solutions
+
+### Testing
+- Write tests for all libraries using Jest/Vitest
+- Use React Testing Library for component tests
+- Include E2E tests with Playwright for critical flows
+- Test behavior, not implementation details
+
+## Nx-Specific Guidelines
+
+### Library Creation
+Use direct Nx commands for consistent library creation:
+
+**Core Libraries:**
+```bash
+nx g @nx/js:library [name] --directory=packages/core/[name] --importPath=@bt-toolkit/core-[name] --publishable --bundler=tsc --unitTestRunner=jest
+```
+
+**UI Component Libraries:**
+```bash
+nx g @nx/react:library [name] --directory=packages/components/[name] --importPath=@bt-toolkit/components-[name] --publishable --bundler=rollup --unitTestRunner=jest --style=css
+```
+
+**Format Libraries:**
+```bash
+nx g @nx/js:library [name] --directory=packages/formats/[name] --importPath=@bt-toolkit/formats-[name] --publishable --bundler=tsc --unitTestRunner=jest
+```
+
+**Analysis Libraries:**
+```bash
+nx g @nx/js:library [name] --directory=packages/analysis/[name] --importPath=@bt-toolkit/analysis-[name] --publishable --bundler=tsc --unitTestRunner=jest
+```
+
+**Utility Libraries:**
+```bash
+nx g @nx/js:library [name] --directory=packages/utilities/[name] --importPath=@bt-toolkit/utilities-[name] --publishable --bundler=tsc --unitTestRunner=jest
+```
+
+### Application Creation
+
+**Translation Tools:**
+```bash
+nx g @nx/react:application [name] --directory=apps/translation-tools/[name] --bundler=vite --unitTestRunner=jest --e2eTestRunner=playwright
+```
+
+**Developer Tools:**
+```bash
+nx g @nx/node:application [name] --directory=apps/developer-tools/[name]
+```
+
+**Demo Applications:**
+```bash
+nx g @nx/react:application [name] --directory=apps/demos/[name] --bundler=vite --unitTestRunner=jest --e2eTestRunner=playwright
+```
+
+**Documentation Sites:**
+```bash
+nx g @nxtensions/astro:application [name] --directory=apps/community/[name]
+```
+
+### Task Execution
+- Use `nx run-many` for bulk operations
+- Use `nx affected` for optimized CI/CD
+- Leverage Nx caching for faster builds
+- Use tags for organizing and filtering projects
+
+### Module Boundaries
+Enforce clean architecture with module boundary rules:
+- Core libraries can depend on utilities only
+- UI components can depend on core and utilities
+- Format handlers should be independent
+- Analysis tools can depend on core and format libraries
+- Utilities should have minimal dependencies
+
+## Bible Translation Domain Knowledge
+
+### Scripture Handling
+- Use established scripture reference formats (USFM, USX, USJ)
+- Implement proper verse/chapter navigation
+- Support multiple Bible versions and translations
+- Handle right-to-left languages appropriately
+- Preserve manuscript metadata and annotations
+
+### Translation Workflows
+- Support collaborative translation processes
+- Implement review and approval workflows
+- Handle version control for translation drafts
+- Support commenting and feedback systems
+- Integrate with translation memory systems
+
+### Data Formats
+- USFM (Unified Standard Format Markers) for markup
+- USX (Unified Scripture XML) for structured data
+- JSON for API responses and configuration
+- Support import/export of various Bible formats
+
+## Performance & Accessibility
+
+### Performance
+- Implement code splitting for large applications
+- Use React.lazy and Suspense for dynamic imports
+- Optimize bundle sizes with tree shaking
+- Cache scripture data appropriately
+- Use virtual scrolling for long scripture passages
+
+### Accessibility
+- Follow WCAG 2.1 AA guidelines
+- Implement proper ARIA labels and roles
+- Support keyboard navigation throughout
+- Ensure sufficient color contrast
+- Provide screen reader support for scripture reading
+
+## CI/CD & Deployment
+
+### Build & Test
+- Run affected tasks only for efficient CI
+- Use Nx Cloud for distributed task execution
+- Implement proper error handling and logging
+- Use environment-specific configurations
+
+### Publishing
+- Use `npm run publish:libs` for library publishing
+- Follow semantic versioning for releases
+- Maintain changelogs for public packages
+- Use `nx release` for coordinated releases
+
+### Deployment
+- Use `npm run deploy:apps` for application deployment
+- Support multiple deployment targets (web, desktop, mobile)
+- Implement proper environment configuration
+- Use staging environments for testing
+
+## Local Development
+
+### Getting Started
+- Use `npm run dev` for parallel development servers
+- Use `nx graph` to visualize project dependencies
+- Use Nx Console extension for VS Code/Cursor
+- Leverage local registry for testing packages
+
+### Debugging
+- Use proper TypeScript configuration for debugging
+- Implement comprehensive error logging
+- Use React DevTools for component debugging
+- Monitor performance with appropriate tools
+
+## Collaboration Guidelines
+
+### Code Reviews
+- Focus on architecture and module boundaries
+- Ensure proper testing coverage
+- Verify accessibility compliance
+- Check for performance implications
+- Validate domain logic accuracy
+
+### Documentation
+- Document public APIs thoroughly
+- Maintain README files for each library
+- Include usage examples and best practices
+- Document translation workflows and processes
+- Keep architecture decisions recorded
+
+When working on this codebase:
+1. Always consider the Bible translation domain context
+2. Maintain clean boundaries between libraries
+3. Use the established naming conventions
+4. Follow Nx best practices for monorepo management
+5. Prioritize accessibility and internationalization
+6. Test thoroughly, especially scripture handling logic
+7. Consider performance implications for large scripture datasets

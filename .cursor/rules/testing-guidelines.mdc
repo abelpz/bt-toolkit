@@ -1,0 +1,290 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Testing Guidelines for Bible Translation Tools
+
+## Testing Strategy
+
+### Test Pyramid
+- **Unit Tests**: 70% - Individual functions, components, utilities
+- **Integration Tests**: 20% - Component interactions, API integration
+- **E2E Tests**: 10% - Critical user workflows
+
+### Testing Tools
+- **Jest/Vitest**: Unit and integration tests
+- **React Testing Library**: Component testing
+- **Playwright**: End-to-end testing
+- **MSW**: API mocking
+
+## Unit Testing
+
+### Scripture Format Testing
+```typescript
+describe('USFM Parser', () => {
+  test('parses chapter markers correctly', () => {
+    const usfm = '\\c 1\n\\v 1 In the beginning...';
+    const result = parseUSFM(usfm);
+    
+    expect(result.chapters).toHaveLength(1);
+    expect(result.chapters[0].number).toBe(1);
+    expect(result.chapters[0].verses[0].text).toBe('In the beginning...');
+  });
+
+  test('handles malformed markup gracefully', () => {
+    const malformedUSFM = '\\c \n\\v In the beginning...';
+    
+    expect(() => parseUSFM(malformedUSFM)).not.toThrow();
+    // Should log warning and continue parsing
+  });
+});
+```
+
+### Translation Logic Testing
+```typescript
+describe('Translation Validation', () => {
+  test('validates required translation fields', () => {
+    const translation = { text: 'translated text' };
+    const validation = validateTranslation(translation);
+    
+    expect(validation.isValid).toBe(false);
+    expect(validation.errors).toContain('Reference is required');
+  });
+
+  test('detects potential translation issues', () => {
+    const source = { text: 'Jesus', reference: 'John 1:1' };
+    const target = { text: 'Prophet', reference: 'John 1:1' };
+    
+    const issues = analyzeTranslation(source, target);
+    expect(issues).toContain('Potential theological concern');
+  });
+});
+```
+
+## Component Testing
+
+### Scripture Display Components
+```typescript
+import { render, screen } from '@testing-library/react';
+import { ScriptureViewer } from './ScriptureViewer';
+
+describe('ScriptureViewer', () => {
+  test('displays verse numbers correctly', () => {
+    const verses = [
+      { number: 1, text: 'In the beginning...' },
+      { number: 2, text: 'The earth was formless...' }
+    ];
+    
+    render(<ScriptureViewer verses={verses} />);
+    
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+  });
+
+  test('supports right-to-left text direction', () => {
+    render(<ScriptureViewer direction="rtl" />);
+    const container = screen.getByTestId('scripture-container');
+    
+    expect(container).toHaveStyle('direction: rtl');
+  });
+
+  test('handles keyboard navigation', async () => {
+    const user = userEvent.setup();
+    render(<ScriptureViewer verses={verses} />);
+    
+    await user.tab();
+    expect(screen.getByTestId('verse-1')).toHaveFocus();
+    
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByTestId('verse-2')).toHaveFocus();
+  });
+});
+```
+
+### Translation Editor Testing
+```typescript
+describe('TranslationEditor', () => {
+  test('auto-saves changes after delay', async () => {
+    const onSave = jest.fn();
+    render(<TranslationEditor onSave={onSave} autoSaveDelay={100} />);
+    
+    const editor = screen.getByRole('textbox');
+    await user.type(editor, 'New translation text');
+    
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith('New translation text');
+    }, { timeout: 200 });
+  });
+
+  test('validates translation completeness', () => {
+    render(<TranslationEditor sourceText="Hello world" />);
+    
+    const editor = screen.getByRole('textbox');
+    fireEvent.change(editor, { target: { value: 'Hello' } });
+    
+    expect(screen.getByText(/incomplete translation/i)).toBeInTheDocument();
+  });
+});
+```
+
+## Integration Testing
+
+### API Integration
+```typescript
+describe('Scripture API Integration', () => {
+  beforeEach(() => {
+    server.use(
+      rest.get('/api/scripture/:book/:chapter', (req, res, ctx) => {
+        return res(ctx.json({
+          book: req.params.book,
+          chapter: parseInt(req.params.chapter),
+          verses: mockVerses
+        }));
+      })
+    );
+  });
+
+  test('fetches and displays scripture correctly', async () => {
+    render(<ScriptureApp />);
+    
+    await user.selectOptions(
+      screen.getByLabelText(/select book/i),
+      'Genesis'
+    );
+    
+    await waitFor(() => {
+      expect(screen.getByText(/in the beginning/i)).toBeInTheDocument();
+    });
+  });
+});
+```
+
+## E2E Testing with Playwright
+
+### Translation Workflow Testing
+```typescript
+test('complete translation workflow', async ({ page }) => {
+  await page.goto('/translation-tool');
+  
+  // Select source text
+  await page.selectOption('[data-testid="book-selector"]', 'Genesis');
+  await page.selectOption('[data-testid="chapter-selector"]', '1');
+  
+  // Enter translation
+  await page.fill('[data-testid="translation-editor"]', 'In the beginning God created...');
+  
+  // Add comment
+  await page.click('[data-testid="add-comment"]');
+  await page.fill('[data-testid="comment-input"]', 'Translation note about Genesis 1:1');
+  
+  // Save translation
+  await page.click('[data-testid="save-translation"]');
+  
+  // Verify save confirmation
+  await expect(page.locator('[data-testid="save-status"]')).toContainText('Saved');
+});
+
+test('collaborative review process', async ({ page, context }) => {
+  // Test reviewer workflow
+  const reviewerPage = await context.newPage();
+  await reviewerPage.goto('/review-dashboard');
+  
+  // Reviewer sees pending translations
+  await expect(reviewerPage.locator('[data-testid="pending-count"]')).toContainText('1');
+  
+  // Approve translation
+  await reviewerPage.click('[data-testid="approve-translation"]');
+  
+  // Original translator sees approval
+  await page.reload();
+  await expect(page.locator('[data-testid="translation-status"]')).toContainText('Approved');
+});
+```
+
+## Performance Testing
+
+### Large Scripture Loading
+```typescript
+test('handles large scripture files efficiently', async () => {
+  const startTime = performance.now();
+  
+  render(<ScriptureViewer book="Psalms" />);
+  
+  await waitFor(() => {
+    expect(screen.getByText(/psalm 1/i)).toBeInTheDocument();
+  });
+  
+  const loadTime = performance.now() - startTime;
+  expect(loadTime).toBeLessThan(1000); // Should load within 1 second
+});
+```
+
+## Accessibility Testing
+
+### Screen Reader Support
+```typescript
+test('provides proper ARIA labels for scripture navigation', () => {
+  render(<ScriptureNavigator />);
+  
+  expect(screen.getByLabelText(/select bible book/i)).toBeInTheDocument();
+  expect(screen.getByLabelText(/select chapter/i)).toBeInTheDocument();
+  expect(screen.getByRole('main')).toHaveAttribute('aria-label', 'Scripture content');
+});
+
+test('supports keyboard navigation', async () => {
+  render(<ScriptureViewer />);
+  
+  // Tab through interactive elements
+  await user.tab();
+  expect(screen.getByTestId('chapter-nav')).toHaveFocus();
+  
+  await user.tab();
+  expect(screen.getByTestId('verse-selector')).toHaveFocus();
+});
+```
+
+## Test Data Management
+
+### Scripture Test Data
+```typescript
+export const mockScriptureData = {
+  genesis: {
+    1: [
+      { verse: 1, text: 'In the beginning God created the heavens and the earth.' },
+      { verse: 2, text: 'The earth was formless and empty...' }
+    ]
+  }
+};
+
+export const mockTranslations = [
+  {
+    id: '1',
+    sourceRef: { book: 'Genesis', chapter: 1, verse: 1 },
+    targetText: 'Au commencement, Dieu créa...',
+    status: 'draft',
+    translator: 'translator@example.com'
+  }
+];
+```
+
+## Testing Best Practices
+
+### Test Organization
+- Group related tests with `describe` blocks
+- Use descriptive test names that explain the behavior
+- Follow AAA pattern: Arrange, Act, Assert
+- Keep tests independent and isolated
+
+### Mocking Strategy
+- Mock external dependencies (APIs, file system)
+- Use real implementations for internal modules
+- Mock time-dependent functions for consistent results
+- Provide realistic test data
+
+### Test Maintenance
+- Update tests when requirements change
+- Remove obsolete tests
+- Refactor test utilities to reduce duplication
+- Monitor test performance and execution time
+

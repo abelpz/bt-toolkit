@@ -1,0 +1,10 @@
+{
+  "name": "@bt-toolkit/team-review-e2e",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "implicitDependencies": [
+      "@bt-toolkit/team-review"
+    ]
+  }
+}

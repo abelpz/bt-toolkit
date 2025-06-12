@@ -2,5 +2,18 @@
   "extends": "./tsconfig.base.json",
   "compileOnSave": false,
   "files": [],
-  "references": []
+  "references": [
+    {
+      "path": "./packages/scripture-utils"
+    },
+    {
+      "path": "./apps/translation-tools/team-review-e2e"
+    },
+    {
+      "path": "./apps/translation-tools/team-review"
+    },
+    {
+      "path": "./apps/blog"
+    }
+  ]
 }

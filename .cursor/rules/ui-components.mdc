@@ -1,0 +1,392 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# UI Component Development Guidelines
+
+## Styling Framework Detection & Adaptation
+
+Before suggesting any styling approach, automatically detect the project's styling setup:
+
+### Tailwind CSS Detection
+Check for these indicators that Tailwind CSS is being used:
+- `tailwind.config.js`, `tailwind.config.ts`, or `tailwind.config.cjs` in project root
+- `@tailwind` directives in CSS files (`@tailwind base`, `@tailwind components`, `@tailwind utilities`)
+- Tailwind utility classes in existing components (`className="flex items-center space-x-4"`)
+- `tailwindcss` in package.json dependencies or devDependencies
+- PostCSS config with Tailwind plugin
+- Nx project with `@nx/react` and Tailwind setup
+
+### When Tailwind CSS is Available - USE TAILWIND EXCLUSIVELY
+```typescript
+// ✅ Correct - Use Tailwind utility classes
+export function ScriptureViewer({ direction = 'ltr' }: ScriptureViewerProps) {
+  return (
+    <div 
+      className={`
+        flex flex-col space-y-4 p-6 
+        bg-white dark:bg-gray-900 
+        rounded-lg shadow-lg
+        ${direction === 'rtl' ? 'text-right' : 'text-left'}
+      `}
+      dir={direction}
+    >
+      <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+        Scripture Text
+      </div>
+    </div>
+  );
+}
+
+// ❌ Incorrect - Don't use styled-components when Tailwind is available
+const StyledDiv = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+```
+
+### Tailwind Best Practices for Bible Translation UIs
+```typescript
+// Scripture display with RTL support
+<div className={`
+  prose prose-lg max-w-none
+  ${isRtl ? 'prose-rtl text-right' : 'text-left'}
+  font-serif leading-relaxed
+  selection:bg-blue-200 dark:selection:bg-blue-800
+`}>
+  {scriptureText}
+</div>
+
+// Verse numbering
+<span className="
+  inline-block w-8 h-8 
+  text-xs font-medium 
+  bg-blue-100 dark:bg-blue-900 
+  text-blue-800 dark:text-blue-200
+  rounded-full 
+  flex items-center justify-center
+  mr-2 rtl:mr-0 rtl:ml-2
+  flex-shrink-0
+">
+  {verseNumber}
+</span>
+
+// Translation editor with focus states
+<textarea 
+  className="
+    w-full min-h-32 p-4
+    border-2 border-gray-300 dark:border-gray-600
+    focus:border-blue-500 focus:ring-2 focus:ring-blue-200
+    dark:bg-gray-800 dark:text-gray-100
+    rounded-lg resize-y
+    font-serif text-lg leading-relaxed
+    placeholder:text-gray-400
+  "
+  placeholder="Enter translation..."
+/>
+
+// Responsive navigation
+<nav className="
+  flex flex-col sm:flex-row 
+  space-y-2 sm:space-y-0 sm:space-x-4
+  p-4 bg-gray-50 dark:bg-gray-800
+  border-b border-gray-200 dark:border-gray-700
+">
+  <select className="
+    px-3 py-2 
+    bg-white dark:bg-gray-700 
+    border border-gray-300 dark:border-gray-600
+    rounded-md text-sm
+    focus:outline-none focus:ring-2 focus:ring-blue-500
+  ">
+    <option>Genesis</option>
+  </select>
+</nav>
+```
+
+### When Tailwind CSS is NOT Available
+Only use alternative styling methods if Tailwind is definitely not available:
+
+```typescript
+// CSS-in-JS as fallback
+const ScriptureText = styled.div<{ isRtl: boolean }>`
+  direction: ${props => props.isRtl ? 'rtl' : 'ltr'};
+  font-family: 'SIL Fonts', serif;
+  line-height: 1.6;
+  
+  .verse-number {
+    font-size: 0.8em;
+    color: var(--text-muted);
+  }
+`;
+
+// CSS Modules as alternative
+import styles from './ScriptureViewer.module.css';
+
+<div className={styles.scriptureContainer}>
+  {/* Content */}
+</div>
+```
+
+### Suggesting Tailwind Installation
+If no styling framework is detected, suggest adding Tailwind:
+```bash
+# For Nx projects
+nx g @nx/react:setup-tailwind --project=my-project
+
+# For general React projects
+npm install -D tailwindcss postcss autoprefixer
+npx tailwindcss init -p
+```
+
+## Component Architecture
+
+### Component Types
+- **Presentational Components**: Pure UI, no business logic
+- **Container Components**: Handle state and data fetching
+- **Layout Components**: Structure and positioning
+- **Form Components**: Input handling and validation
+
+### Naming Conventions
+```typescript
+// Component files
+ScriptureViewer.tsx
+VerseSelector.tsx
+TranslationEditor.tsx
+
+// Component exports
+export function ScriptureViewer({ ... }: ScriptureViewerProps) {}
+export default ScriptureViewer;
+```
+
+## Bible Translation UI Patterns
+
+### Scripture Display Components
+- Support right-to-left text (Arabic, Hebrew) with Tailwind's `text-right` and `dir` attributes
+- Handle verse numbering with proper spacing using `space-x-*` utilities
+- Implement proper text selection styling with `selection:` modifiers
+- Support multiple font sizes with `text-*` utilities
+- Include print-friendly styling with `print:` modifiers
+
+### Translation Interface Components
+- Side-by-side layouts with `grid grid-cols-1 md:grid-cols-2` 
+- Inline editing with focus states using `focus:` modifiers
+- Comment annotations with `absolute` positioning and `z-*` utilities
+- Version comparison with `bg-*` highlight utilities
+- Progress indicators with `w-*` and `bg-*` utilities
+
+### Accessibility Requirements
+- ARIA labels for screen readers
+- Keyboard navigation with `focus:` and `focus-within:` states
+- High contrast compatibility with `dark:` modifiers
+- Text scaling support using `text-*` responsive utilities
+- Focus management with `focus-visible:` and `focus:outline-none`
+
+## React Best Practices
+
+### Component Structure
+```typescript
+interface ComponentProps {
+  className?: string; // Always include for Tailwind extensibility
+  children?: React.ReactNode;
+}
+
+export function Component({ className = "", ...props }: ComponentProps) {
+  // Hooks at the top
+  const [state, setState] = useState();
+  const value = useMemo(() => computation, [deps]);
+  
+  // Event handlers
+  const handleAction = useCallback(() => {
+    // Implementation
+  }, [dependencies]);
+  
+  // Early returns for loading/error states
+  if (loading) return <LoadingSpinner className="mx-auto" />;
+  if (error) return <ErrorMessage error={error} className="text-red-600" />;
+  
+  // Combine default classes with passed className
+  const containerClasses = `
+    flex flex-col space-y-4 p-6
+    bg-white dark:bg-gray-900
+    rounded-lg shadow-lg
+    ${className}
+  `.trim();
+  
+  return (
+    <div className={containerClasses}>
+      {/* Component JSX */}
+    </div>
+  );
+}
+```
+
+### State Management
+- Use `useState` for local component state
+- Use `useReducer` for complex state logic
+- Lift state up when sharing between components
+- Consider context for deeply nested prop drilling
+
+### Performance Optimization
+- Use `React.memo` for expensive renders
+- Implement `useCallback` for event handlers
+- Use `useMemo` for expensive calculations
+- Lazy load heavy components with `React.lazy`
+
+## Responsive Design with Tailwind
+
+### Mobile-First Approach
+```typescript
+// Responsive scripture layout
+<div className="
+  flex flex-col lg:flex-row
+  space-y-4 lg:space-y-0 lg:space-x-6
+  p-4 sm:p-6 lg:p-8
+">
+  <div className="flex-1">
+    {/* Source text */}
+  </div>
+  <div className="flex-1">
+    {/* Translation text */}
+  </div>
+</div>
+
+// Touch-friendly controls
+<button className="
+  min-h-[44px] min-w-[44px]
+  px-4 py-2 sm:px-6 sm:py-3
+  text-sm sm:text-base
+  bg-blue-600 hover:bg-blue-700
+  active:bg-blue-800
+  text-white rounded-lg
+  transition-colors duration-200
+">
+  Save Translation
+</button>
+```
+
+## Form Components
+
+### Input Validation with Tailwind
+```typescript
+interface InputProps {
+  error?: string;
+  isValid?: boolean;
+}
+
+export function TranslationInput({ error, isValid }: InputProps) {
+  const inputClasses = `
+    w-full px-4 py-3
+    border-2 rounded-lg
+    font-serif text-lg
+    transition-colors duration-200
+    ${error 
+      ? 'border-red-500 bg-red-50 dark:bg-red-900/20 text-red-900 dark:text-red-100' 
+      : isValid 
+        ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800'
+    }
+    focus:outline-none focus:ring-2 focus:ring-blue-500
+    placeholder:text-gray-400
+  `;
+
+  return (
+    <div className="space-y-2">
+      <textarea 
+        className={inputClasses}
+        placeholder="Enter translation..."
+      />
+      {error && (
+        <p className="text-sm text-red-600 dark:text-red-400 flex items-center space-x-1">
+          <ExclamationIcon className="w-4 h-4" />
+          <span>{error}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+```
+
+## Testing UI Components
+
+### Component Testing
+```typescript
+import { render, screen, fireEvent } from '@testing-library/react';
+import { ScriptureViewer } from './ScriptureViewer';
+
+test('displays scripture text correctly', () => {
+  render(<ScriptureViewer text="In the beginning..." />);
+  expect(screen.getByText(/in the beginning/i)).toBeInTheDocument();
+});
+
+test('applies RTL styling for Hebrew text', () => {
+  render(<ScriptureViewer text="בראשית" direction="rtl" />);
+  const container = screen.getByTestId('scripture-container');
+  expect(container).toHaveClass('text-right');
+  expect(container).toHaveAttribute('dir', 'rtl');
+});
+```
+
+### Accessibility Testing
+- Test keyboard navigation with `Tab` and arrow keys
+- Verify ARIA attributes are present
+- Check color contrast with tools like axe-core
+- Test with screen reader simulators
+
+## Internationalization with Tailwind
+
+### Text Direction Support
+```typescript
+// Dynamic RTL support
+const ScriptureDisplay = ({ text, language, direction }: Props) => {
+  const isRTL = direction === 'rtl' || ['he', 'ar', 'fa'].includes(language);
+  
+  return (
+    <div 
+      className={`
+        prose prose-lg max-w-none
+        ${isRTL ? 'text-right' : 'text-left'}
+        ${isRTL ? 'space-x-reverse' : ''}
+      `}
+      dir={direction}
+    >
+      {text}
+    </div>
+  );
+};
+
+// Mixed-direction content
+<div className="space-y-4">
+  <div className="text-left" dir="ltr">
+    English reference text
+  </div>
+  <div className="text-right" dir="rtl">
+    Hebrew translation
+  </div>
+</div>
+```
+
+### Font Handling
+```typescript
+// Font loading with Tailwind
+<div className="
+  font-serif
+  [font-family:'SIL_Fonts',_'Noto_Sans_Hebrew',_serif]
+  text-lg leading-relaxed
+">
+  {scriptureText}
+</div>
+
+// Responsive font sizes
+<h1 className="
+  text-2xl sm:text-3xl lg:text-4xl 
+  font-bold leading-tight
+">
+  Chapter Title
+</h1>
+```
+
+Remember: When Tailwind is available, use it exclusively. Avoid mixing Tailwind with other CSS-in-JS solutions unless absolutely necessary for complex animations or dynamic styles that can't be expressed with Tailwind utilities.
+
+
