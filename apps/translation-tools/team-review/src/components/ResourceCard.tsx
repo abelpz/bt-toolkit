@@ -1,30 +1,53 @@
 /* eslint-disable jsx-a11y/accessible-emoji */
-import React, { useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   useResourceAPI,
   Resource,
+  createTextMessage,
+  TextMessageTypes,
 } from '../libs/linked-panels';
 
-export const ResourceCard: React.FC<Resource> = ({ id, component }) => {
-  const api = useResourceAPI(id);
-  const [message, setMessage] = React.useState<string>('');
+export const ResourceCard: React.FC<Resource> = ({ id, component,  }) => {
+  const api = useResourceAPI<TextMessageTypes['text']>(id);
+  const [message, setMessage] = useState<string>('');
 
-  // Direct store subscription - automatically reacts to message changes (no polling needed!)
-  const receivedMessages = api.messaging.getMyMessages();
+  // Get received messages using the API
+  const receivedMessages = api.messaging.getMessages();
+
+  const handleSendMessage = () => {
+    if (message.trim()) {
+      const allResources = api.system.getAllResources();
+      const otherResource = allResources.find(resourceId => resourceId !== id);
+
+      const currentPanel = api.system.getMyPanel();
+      const allPanels = api.system.getAllPanels();
+      const otherPanel = allPanels.find(panelId => panelId !== currentPanel);
+
+      
+      if (otherResource && otherPanel) {
+        // Send to first available resource
+        const textMessage = createTextMessage(message, `${id}@${currentPanel}`);
+        const success = api.messaging.send(otherResource, textMessage);
+        if (success) {
+          console.log(`📤 Sent message from ${id} to ${otherResource}`);
+          setMessage('');
+          api.navigation.goToResourceInPanel(otherPanel, otherResource);
+        }
+      }
+    }
+  };
+
+  const handleSendToAll = () => {
+    if (message.trim()) {
+      const textMessage = createTextMessage(message, `${id}@${api.system.getMyPanel()}`);
+      const sentCount = api.messaging.sendToAll(textMessage);
+      console.log(`📤 Sent message to ${sentCount} resources`);
+      setMessage('');
+    }
+  };
 
   return (
-    <div className="p-4 border border-gray-200 rounded-lg shadow-sm">
-      <h3 className="text-lg font-semibold mb-2">{id}</h3>
-      <div className="text-sm text-gray-600 mb-4">
-        {receivedMessages.length > 0 ? 'New messages:' : 'No messages yet'}
-      </div>
-      <div className="space-y-2">
-        {receivedMessages.map((msg, index) => (
-          <div key={index} className="p-2 bg-gray-50 rounded-md">
-            <strong>{msg.content.originalSender}:</strong> {msg.content.text}
-          </div>
-        ))}
-      </div>
-    </div>
+      
+        component
   );
 };

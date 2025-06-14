@@ -1,0 +1,48 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "Bible Translation Toolkit - Linked Panels Library",
+  "entryPoints": [
+    "apps/translation-tools/team-review/src/libs/linked-panels/index.ts"
+  ],
+  "tsconfig": "./tsconfig.docs.json",
+  "out": "docs/linked-panels",
+  "theme": "default",
+  "includeVersion": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeExternals": true,
+  "readme": "apps/translation-tools/team-review/src/libs/linked-panels/README.md",
+  "categorizeByGroup": false,
+  "groupOrder": [
+    "Components",
+    "Hooks", 
+    "Types",
+    "Store",
+    "Plugins",
+    "Utilities",
+    "*"
+  ],
+  "sort": ["source-order"],
+  "kindSortOrder": [
+    "Project",
+    "Module",
+    "Namespace",
+    "Enum",
+    "Class",
+    "Interface",
+    "TypeAlias",
+    "Constructor",
+    "Property",
+    "Variable",
+    "Function",
+    "Accessor",
+    "Method"
+  ],
+  "navigation": {
+    "includeCategories": false,
+    "includeGroups": false
+  },
+  "githubPages": false,
+  "hideGenerator": true,
+  "treatWarningsAsErrors": false
+} 
