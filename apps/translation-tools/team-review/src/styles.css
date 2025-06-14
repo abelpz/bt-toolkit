@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
 
 /* Hide scrollbars for swipeable panels */
 .scrollbar-hide {
@@ -15,27 +15,59 @@
 /* Thin scrollbars for content areas */
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: rgb(148 163 184) transparent;
 }
 
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
+.scrollbar-thumb-slate-300::-webkit-scrollbar-thumb {
+  @apply bg-slate-300 rounded-full;
 }
 
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background-color: rgb(148 163 184);
-  border-radius: 2px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background-color: rgb(100 116 139);
+.scrollbar-track-transparent::-webkit-scrollbar-track {
+  @apply bg-transparent;
 }
 
 /* Smooth scrolling for touch devices */
 .scroll-smooth {
   -webkit-overflow-scrolling: touch;
+}
+
+/* Resource focus and highlight styles */
+.resource-focused {
+  @apply ring-2 ring-blue-500 bg-blue-50 transition-all duration-300;
+}
+
+.resource-highlighted {
+  @apply ring-2 ring-yellow-500 bg-yellow-50 transition-all duration-300;
+}
+
+/* Greek font styling */
+.greek-font {
+  font-family: 'SBL Greek', 'Gentium Plus', 'Arial Unicode MS', 'Times New Roman', serif;
+  font-feature-settings: 'liga' 1, 'clig' 1;
+}
+
+/* Alignment data specific styles */
+.alignment-card {
+  @apply transition-all duration-200 hover:shadow-md;
+}
+
+.alignment-card:hover {
+  transform: translateY(-1px);
+}
+
+.alignment-focused {
+  @apply border-blue-500 bg-blue-50 shadow-md transform scale-[1.02];
+}
+
+.alignment-highlighted {
+  @apply border-blue-300 bg-blue-25;
+}
+
+/* Blue-25 utility class (25% opacity blue) */
+.bg-blue-25 {
+  background-color: rgba(59, 130, 246, 0.25);
+}
+
+/* Improved hover states for alignment cards */
+.hover\:bg-blue-25:hover {
+  background-color: rgba(59, 130, 246, 0.25);
 }
