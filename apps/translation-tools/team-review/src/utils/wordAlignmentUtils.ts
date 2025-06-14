@@ -5,24 +5,7 @@ export function findWordsByGreekAlignment(greekPhrase: string, occurrence: numbe
   const normalizedPhrase = normalizeGreek(greekPhrase);
   const greekWords = normalizedPhrase.split(' ').filter(word => word.length > 0);
   
-  // Debug logging
-  console.log('🔍 findWordsByGreekAlignment Debug:', {
-    originalPhrase: greekPhrase,
-    normalizedPhrase,
-    greekWords,
-    occurrence,
-    totalWords: mergedWords.length
-  });
-  
-  // Log first few words with their alignment data
-  console.log('📝 First 10 words with alignment:');
-  mergedWords.slice(0, 10).forEach((word, i) => {
-    if (word.alignment) {
-      console.log(`  ${i}: "${word.displayText}" -> Greek: "${word.alignment.content}" (${word.alignment.strong})`);
-    } else {
-      console.log(`  ${i}: "${word.displayText}" -> No alignment`);
-    }
-  });
+
   
   if (greekWords.length === 0) return null;
   
@@ -51,14 +34,8 @@ export function findWordsByGreekAlignment(greekPhrase: string, occurrence: numbe
           // Check if we've collected enough words to potentially match the phrase
           const currentPhrase = currentGreekWords.join(' ');
           
-          // Debug logging for phrase building
-          if (startPos === 0 || currentGreekWords.length <= 3) {
-            console.log(`  Position ${startPos}-${pos}: "${currentPhrase}" vs "${normalizedPhrase}"`);
-          }
-          
           if (currentPhrase === normalizedPhrase) {
             // Found a complete match
-            console.log(`  ✅ Found match at positions ${startPos}-${endPos}:`, alignmentKeys);
             phraseOccurrences.push({
               startIndex: startPos,
               endIndex: endPos,
@@ -75,17 +52,12 @@ export function findWordsByGreekAlignment(greekPhrase: string, occurrence: numbe
     }
   }
   
-  console.log(`  Found ${phraseOccurrences.length} total occurrences, requested occurrence ${occurrence}`);
-  
   // Return the alignment keys for the specified occurrence (1-based)
   if (phraseOccurrences.length >= occurrence) {
     const match = phraseOccurrences[occurrence - 1];
-    const result = match.alignmentKeys.length > 0 ? match.alignmentKeys.join('|') : null;
-    console.log(`  ✅ Returning result:`, result);
-    return result;
+    return match.alignmentKeys.length > 0 ? match.alignmentKeys.join('|') : null;
   }
   
-  console.log(`  ❌ No match found for occurrence ${occurrence}`);
   return null;
 }
 

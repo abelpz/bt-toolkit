@@ -1,15 +1,29 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VerseText } from '../../types';
+import { useGreekWordFiltering } from '../../hooks/useGreekWordFiltering';
 
 interface AlignmentDataCardProps {
   verse: VerseText;
+  resourceId?: string;
 }
 
-export const AlignmentDataCard: React.FC<AlignmentDataCardProps> = ({ verse }) => {
+export const AlignmentDataCard: React.FC<AlignmentDataCardProps> = ({ verse, resourceId = 'alignment-data' }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const cardRef = useRef<HTMLDivElement>(null);
+  
+  // Use filtering functionality
+  const { activeFilter, hasActiveFilter, clearFilter, matchesFilter } = useGreekWordFiltering({
+    resourceId
+  });
 
   const alignedWords = verse.words.filter((word) => word.alignment);
+  
+  // Filter alignments based on active filter
+  const filteredAlignments = alignedWords.filter(word => {
+    if (!hasActiveFilter) return true;
+    
+    return matchesFilter([word.alignment!.content], [word.alignment!.strong]);
+  });
 
   const goToPrevious = () => {
     if (currentIndex > 0) {
@@ -18,14 +32,19 @@ export const AlignmentDataCard: React.FC<AlignmentDataCardProps> = ({ verse }) =
   };
 
   const goToNext = () => {
-    if (currentIndex < alignedWords.length - 1) {
+    if (currentIndex < filteredAlignments.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
   };
 
+  // Reset current index when filter changes
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [hasActiveFilter]);
+
   // Keyboard navigation
   useEffect(() => {
-    if (alignedWords.length === 0) return;
+    if (filteredAlignments.length === 0) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!cardRef.current?.contains(document.activeElement)) {
@@ -47,14 +66,14 @@ export const AlignmentDataCard: React.FC<AlignmentDataCardProps> = ({ verse }) =
           break;
         case 'End':
           event.preventDefault();
-          setCurrentIndex(alignedWords.length - 1);
+          setCurrentIndex(filteredAlignments.length - 1);
           break;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, alignedWords.length]);
+  }, [currentIndex, filteredAlignments.length]);
 
   // Handle empty alignments array
   if (!alignedWords || alignedWords.length === 0) {
@@ -70,9 +89,47 @@ export const AlignmentDataCard: React.FC<AlignmentDataCardProps> = ({ verse }) =
     );
   }
 
-  const currentWord = alignedWords[currentIndex];
+  // Handle empty filtered alignments
+  if (filteredAlignments.length === 0) {
+    return (
+      <div className="bg-gradient-to-br from-white to-amber-50/30 border border-amber-100/50 overflow-hidden h-full flex flex-col">
+        {/* Header with filter indicator */}
+        <div className="px-4 py-2 bg-amber-50/50 border-b border-amber-100/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="text-amber-600">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                </svg>
+              </div>
+              <span className="text-xs text-amber-600 font-medium">Alignments</span>
+            </div>
+            {hasActiveFilter && (
+              <button
+                onClick={clearFilter}
+                className="text-xs text-amber-600 hover:text-amber-700 underline"
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-4xl mb-2">🔍</div>
+            <p>No alignments match the current filter</p>
+            <p className="text-sm mt-2">
+              Filtered by: {activeFilter?.greekWords.map(w => w.word).join(', ')}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentWord = filteredAlignments[currentIndex];
   const canGoUp = currentIndex > 0;
-  const canGoDown = currentIndex < alignedWords.length - 1;
+  const canGoDown = currentIndex < filteredAlignments.length - 1;
 
     return (
     <div 
@@ -90,9 +147,27 @@ export const AlignmentDataCard: React.FC<AlignmentDataCardProps> = ({ verse }) =
               </svg>
             </div>
             <span className="text-xs text-amber-600 font-medium">
-              Alignment {currentIndex + 1} of {alignedWords.length}
+              Alignment {currentIndex + 1} of {filteredAlignments.length}
+              {hasActiveFilter && (
+                <span className="text-gray-500"> (filtered from {alignedWords.length})</span>
+              )}
             </span>
           </div>
+          
+          {/* Filter indicator and clear button */}
+          {hasActiveFilter && (
+            <div className="flex items-center space-x-2">
+              <div className="text-xs text-amber-600 bg-amber-100 px-2 py-1 rounded">
+                {activeFilter!.greekWords.map(w => w.word).join(', ')}
+              </div>
+              <button
+                onClick={clearFilter}
+                className="text-xs text-amber-600 hover:text-amber-700 underline"
+              >
+                Clear
+              </button>
+            </div>
+          )}
           
           {/* Navigation Controls */}
           <div className="flex space-x-1">

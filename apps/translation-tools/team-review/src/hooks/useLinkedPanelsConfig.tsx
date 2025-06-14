@@ -63,7 +63,7 @@ export const useLinkedPanelsConfig = ({
           component: (
             <ResourceCard
               id="alignment-data"
-              component={<AlignmentDataCard verse={ultVerse} />}
+              component={<AlignmentDataCard verse={ultVerse} resourceId="alignment-data" />}
             />
           ),
         },
@@ -87,7 +87,7 @@ export const useLinkedPanelsConfig = ({
           component: (
             <ResourceCard
               id="greek-words"
-              component={<GreekWordsCard verse={ultVerse} />}
+              component={<GreekWordsCard verse={ultVerse} resourceId="greek-words" />}
             />
           ),
         },

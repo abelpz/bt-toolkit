@@ -15,9 +15,10 @@ export const USTCard: React.FC<USTCardProps> = ({ verse, resourceId = 'ust-card'
   const mergedWords = mergeWordsWithPunctuation(verse.words);
   
   // Use custom hooks for highlighting logic
-  const { handleWordHover, getWordHighlightState } = useWordAlignmentHighlighting({
+  const { handleWordHover, handleWordClick, getWordHighlightState } = useWordAlignmentHighlighting({
     resourceId,
     mergedWords,
+    enableFiltering: true, // Enable filtering for scripture cards
   });
   
   const { getWordClassName } = useWordHighlightStyles({ colorScheme: 'emerald' });
@@ -53,6 +54,14 @@ export const USTCard: React.FC<USTCardProps> = ({ verse, resourceId = 'ust-card'
                     } : undefined
                   )}
                   onMouseLeave={() => handleWordHover(null)}
+                  onClick={() => handleWordClick(
+                    alignmentKey, 
+                    word.alignment ? {
+                      greekWord: word.alignment.content,
+                      strongNumber: word.alignment.strong,
+                      lemma: word.alignment.lemma
+                    } : undefined
+                  )}
                   title={
                     word.alignment
                       ? `${word.alignment.content} (${word.alignment.lemma}) - ${word.alignment.strong}`

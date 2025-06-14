@@ -24,6 +24,22 @@ export interface WordAlignmentMessageTypes {
     type: 'clearHighlights';
     sourceResourceId?: string; // Optional: only clear highlights from specific source
   };
+  
+  filterByGreekWords: {
+    type: 'filterByGreekWords';
+    greekWords: Array<{
+      word: string;
+      strongNumber: string;
+      lemma: string;
+    }>;
+    sourceResourceId: string; // Which resource initiated the filter
+    alignmentKeys: string[]; // The alignment keys for cross-referencing
+  };
+  
+  clearFilters: {
+    type: 'clearFilters';
+    sourceResourceId?: string; // Optional: only clear filters from specific source
+  };
 }
 
 // Validation functions
@@ -73,6 +89,42 @@ function isClearHighlightsMessage(content: unknown): content is WordAlignmentMes
   );
 }
 
+function isFilterByGreekWordsMessage(content: unknown): content is WordAlignmentMessageTypes['filterByGreekWords'] {
+  return (
+    typeof content === 'object' &&
+    content !== null &&
+    'type' in content &&
+    content.type === 'filterByGreekWords' &&
+    'greekWords' in content &&
+    Array.isArray((content as any).greekWords) &&
+    (content as any).greekWords.every((word: any) => 
+      typeof word === 'object' &&
+      word !== null &&
+      'word' in word &&
+      typeof word.word === 'string' &&
+      'strongNumber' in word &&
+      typeof word.strongNumber === 'string' &&
+      'lemma' in word &&
+      typeof word.lemma === 'string'
+    ) &&
+    'sourceResourceId' in content &&
+    typeof (content as any).sourceResourceId === 'string' &&
+    'alignmentKeys' in content &&
+    Array.isArray((content as any).alignmentKeys) &&
+    (content as any).alignmentKeys.every((key: any) => typeof key === 'string')
+  );
+}
+
+function isClearFiltersMessage(content: unknown): content is WordAlignmentMessageTypes['clearFilters'] {
+  return (
+    typeof content === 'object' &&
+    content !== null &&
+    'type' in content &&
+    content.type === 'clearFilters' &&
+    (!('sourceResourceId' in content) || typeof (content as any).sourceResourceId === 'string')
+  );
+}
+
 // Message handlers
 function handleHighlightAlignment(message: ResourceMessage<WordAlignmentMessageTypes['highlightAlignment']>) {
   console.log(
@@ -100,6 +152,21 @@ function handleClearHighlights(message: ResourceMessage<WordAlignmentMessageType
   );
 }
 
+function handleFilterByGreekWords(message: ResourceMessage<WordAlignmentMessageTypes['filterByGreekWords']>) {
+  const wordList = message.content.greekWords.map(w => `"${w.word}" (${w.strongNumber})`).join(', ');
+  console.log(
+    `🔍 Filter by Greek words from ${message.fromResourceId}: ${wordList}`
+  );
+}
+
+function handleClearFilters(message: ResourceMessage<WordAlignmentMessageTypes['clearFilters']>) {
+  console.log(
+    `🧹 Clear filters from ${message.fromResourceId}${
+      message.content.sourceResourceId ? ` (source: ${message.content.sourceResourceId})` : ''
+    }`
+  );
+}
+
 // Create the plugin
 export const wordAlignmentPlugin = createPlugin<WordAlignmentMessageTypes>({
   name: 'word-alignment',
@@ -112,12 +179,16 @@ export const wordAlignmentPlugin = createPlugin<WordAlignmentMessageTypes>({
     highlightAlignment: isHighlightAlignmentMessage,
     highlightNoteQuote: isHighlightNoteQuoteMessage,
     clearHighlights: isClearHighlightsMessage,
+    filterByGreekWords: isFilterByGreekWordsMessage,
+    clearFilters: isClearFiltersMessage,
   },
   
   handlers: {
     highlightAlignment: handleHighlightAlignment,
     highlightNoteQuote: handleHighlightNoteQuote,
     clearHighlights: handleClearHighlights,
+    filterByGreekWords: handleFilterByGreekWords,
+    clearFilters: handleClearFilters,
   },
   
   onInstall: () => {
@@ -167,6 +238,32 @@ export function createClearHighlightsMessage(
 ): WordAlignmentMessageTypes['clearHighlights'] {
   return {
     type: 'clearHighlights',
+    sourceResourceId,
+  };
+}
+
+export function createFilterByGreekWordsMessage(
+  greekWords: Array<{
+    word: string;
+    strongNumber: string;
+    lemma: string;
+  }>,
+  sourceResourceId: string,
+  alignmentKeys: string[]
+): WordAlignmentMessageTypes['filterByGreekWords'] {
+  return {
+    type: 'filterByGreekWords',
+    greekWords,
+    sourceResourceId,
+    alignmentKeys,
+  };
+}
+
+export function createClearFiltersMessage(
+  sourceResourceId?: string
+): WordAlignmentMessageTypes['clearFilters'] {
+  return {
+    type: 'clearFilters',
     sourceResourceId,
   };
 } 

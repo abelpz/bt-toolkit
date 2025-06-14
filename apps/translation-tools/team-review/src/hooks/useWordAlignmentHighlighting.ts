@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useResourceAPI } from '../libs/linked-panels';
-import { WordAlignmentMessageTypes, createHighlightAlignmentMessage } from '../plugins/word-alignment';
+import { WordAlignmentMessageTypes, createHighlightAlignmentMessage, createFilterByGreekWordsMessage } from '../plugins/word-alignment';
 import { findWordsForNoteQuote } from '../utils/wordAlignmentUtils';
 
 interface WordAlignmentHighlightingOptions {
   resourceId: string;
   mergedWords: any[];
+  enableFiltering?: boolean; // Whether to send filter messages on word clicks
 }
 
 interface WordData {
@@ -14,7 +15,7 @@ interface WordData {
   lemma: string;
 }
 
-export function useWordAlignmentHighlighting({ resourceId, mergedWords }: WordAlignmentHighlightingOptions) {
+export function useWordAlignmentHighlighting({ resourceId, mergedWords, enableFiltering = false }: WordAlignmentHighlightingOptions) {
   const [hoveredAlignment, setHoveredAlignment] = useState<string | null>(null);
   const [externalHighlight, setExternalHighlight] = useState<string | null>(null);
   
@@ -58,20 +59,12 @@ export function useWordAlignmentHighlighting({ resourceId, mergedWords }: WordAl
     } else if (latestMessage.content.type === 'highlightNoteQuote') {
       // Don't highlight if the message came from this same resource
       if (latestMessage.content.sourceResourceId !== resourceId) {
-        console.log(`🎯 Processing highlightNoteQuote in ${resourceId}:`, {
-          quote: latestMessage.content.quote,
-          occurrence: latestMessage.content.occurrence,
-          sourceResourceId: latestMessage.content.sourceResourceId
-        });
-        
         // Find words that match the quote and occurrence
         const noteHighlightKey = findWordsForNoteQuote(
           latestMessage.content.quote, 
           latestMessage.content.occurrence,
           mergedWords
         );
-        
-        console.log(`🎯 ${resourceId} highlight result:`, noteHighlightKey);
         setExternalHighlight(noteHighlightKey);
       }
     }
@@ -89,11 +82,41 @@ export function useWordAlignmentHighlighting({ resourceId, mergedWords }: WordAl
         wordData.lemma,
         resourceId
       );
+      console.log('🎯 Sending highlightAlignment message on HOVER:', { type: message.type, alignmentKey, greekWord: wordData.greekWord, from: resourceId });
       api.messaging.sendToAll(message);
     } else {
       // Send clear message
       const clearMessage = { type: 'clearHighlights' as const, sourceResourceId: resourceId };
+      console.log('🎯 Sending clearHighlights message on HOVER:', { type: clearMessage.type, from: resourceId });
       api.messaging.sendToAll(clearMessage);
+    }
+  };
+
+  const handleWordClick = (alignmentKey: string | null, wordData?: WordData) => {
+    if (!enableFiltering || !alignmentKey || !wordData) return;
+    
+    // Collect all Greek words that share the same alignment key
+    const relatedWords = mergedWords
+      .filter(word => word.alignment && `${word.alignment.content}-${word.alignment.strong}` === alignmentKey)
+      .map(word => ({
+        word: word.alignment.content,
+        strongNumber: word.alignment.strong,
+        lemma: word.alignment.lemma
+      }));
+    
+    // Remove duplicates
+    const uniqueWords = relatedWords.filter((word, index, arr) => 
+      arr.findIndex(w => w.word === word.word && w.strongNumber === word.strongNumber) === index
+    );
+    
+    if (uniqueWords.length > 0) {
+      const filterMessage = createFilterByGreekWordsMessage(
+        uniqueWords,
+        resourceId,
+        [alignmentKey]
+      );
+      console.log('🔍 Sending filterByGreekWords message on CLICK:', { type: filterMessage.type, greekWords: uniqueWords, from: resourceId });
+      api.messaging.sendToAll(filterMessage);
     }
   };
 
@@ -118,6 +141,7 @@ export function useWordAlignmentHighlighting({ resourceId, mergedWords }: WordAl
     hoveredAlignment,
     externalHighlight,
     handleWordHover,
+    handleWordClick,
     getWordHighlightState
   };
 } 

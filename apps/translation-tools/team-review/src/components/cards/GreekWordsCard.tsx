@@ -1,13 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { VerseText } from '../../types';
+import { useGreekWordFiltering } from '../../hooks/useGreekWordFiltering';
 
 interface GreekWordsCardProps {
   verse: VerseText;
+  resourceId?: string;
 }
 
-export const GreekWordsCard: React.FC<GreekWordsCardProps> = ({ verse }) => {
+export const GreekWordsCard: React.FC<GreekWordsCardProps> = ({ verse, resourceId = 'greek-words' }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const cardRef = useRef<HTMLDivElement>(null);
+  
+  // Use filtering functionality
+  const { activeFilter, hasActiveFilter, clearFilter, matchesFilter } = useGreekWordFiltering({
+    resourceId
+  });
 
   const greekWords = verse.words
     .filter((word) => word.alignment)
@@ -26,6 +33,13 @@ export const GreekWordsCard: React.FC<GreekWordsCardProps> = ({ verse }) => {
     }, {} as Record<string, any>);
 
   const wordsArray = Object.values(greekWords);
+  
+  // Filter words based on active filter
+  const filteredWords = wordsArray.filter(word => {
+    if (!hasActiveFilter) return true;
+    
+    return matchesFilter([word.greek], [word.strong]);
+  });
 
   const goToPrevious = () => {
     if (currentIndex > 0) {
@@ -34,14 +48,19 @@ export const GreekWordsCard: React.FC<GreekWordsCardProps> = ({ verse }) => {
   };
 
   const goToNext = () => {
-    if (currentIndex < wordsArray.length - 1) {
+    if (currentIndex < filteredWords.length - 1) {
       setCurrentIndex(currentIndex + 1);
     }
   };
 
+  // Reset current index when filter changes
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [hasActiveFilter]);
+
   // Keyboard navigation
   useEffect(() => {
-    if (wordsArray.length === 0) return;
+    if (filteredWords.length === 0) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!cardRef.current?.contains(document.activeElement)) {
@@ -63,14 +82,14 @@ export const GreekWordsCard: React.FC<GreekWordsCardProps> = ({ verse }) => {
           break;
         case 'End':
           event.preventDefault();
-          setCurrentIndex(wordsArray.length - 1);
+          setCurrentIndex(filteredWords.length - 1);
           break;
       }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, wordsArray.length]);
+  }, [currentIndex, filteredWords.length]);
 
   // Handle empty words array
   if (!wordsArray || wordsArray.length === 0) {
@@ -86,9 +105,47 @@ export const GreekWordsCard: React.FC<GreekWordsCardProps> = ({ verse }) => {
     );
   }
 
-  const currentWord = wordsArray[currentIndex] as any;
+  // Handle empty filtered words
+  if (filteredWords.length === 0) {
+    return (
+      <div className="bg-gradient-to-br from-white to-indigo-50/30 border border-indigo-100/50 overflow-hidden h-full flex flex-col">
+        {/* Header with filter indicator */}
+        <div className="px-4 py-2 bg-indigo-50/50 border-b border-indigo-100/50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="text-indigo-600">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                </svg>
+              </div>
+              <span className="text-xs text-indigo-600 font-medium">Greek Words</span>
+            </div>
+            {hasActiveFilter && (
+              <button
+                onClick={clearFilter}
+                className="text-xs text-indigo-600 hover:text-indigo-700 underline"
+              >
+                Clear filter
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-gray-500">
+            <div className="text-4xl mb-2">🔍</div>
+            <p>No Greek words match the current filter</p>
+            <p className="text-sm mt-2">
+              Filtered by: {activeFilter?.greekWords.map(w => w.word).join(', ')}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const currentWord = filteredWords[currentIndex] as any;
   const canGoUp = currentIndex > 0;
-  const canGoDown = currentIndex < wordsArray.length - 1;
+  const canGoDown = currentIndex < filteredWords.length - 1;
 
   return (
     <div 
@@ -106,9 +163,27 @@ export const GreekWordsCard: React.FC<GreekWordsCardProps> = ({ verse }) => {
               </svg>
             </div>
             <span className="text-xs text-indigo-600 font-medium">
-              Word {currentIndex + 1} of {wordsArray.length}
+              Word {currentIndex + 1} of {filteredWords.length}
+              {hasActiveFilter && (
+                <span className="text-gray-500"> (filtered from {wordsArray.length})</span>
+              )}
             </span>
           </div>
+          
+          {/* Filter indicator and clear button */}
+          {hasActiveFilter && (
+            <div className="flex items-center space-x-2">
+              <div className="text-xs text-indigo-600 bg-indigo-100 px-2 py-1 rounded">
+                {activeFilter!.greekWords.map(w => w.word).join(', ')}
+              </div>
+              <button
+                onClick={clearFilter}
+                className="text-xs text-indigo-600 hover:text-indigo-700 underline"
+              >
+                Clear
+              </button>
+            </div>
+          )}
           
           {/* Navigation Controls */}
           <div className="flex space-x-1">
