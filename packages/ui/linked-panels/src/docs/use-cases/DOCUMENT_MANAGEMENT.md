@@ -69,7 +69,7 @@ export type Document = TextDocument | MarkdownDocument | PDFDocument;
 ```tsx
 // components/TextDocumentViewer.tsx
 import React, { useState } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { TextDocument } from '../types/document';
 
 interface TextDocumentViewerProps {
@@ -170,7 +170,7 @@ export function TextDocumentViewer({ document, readonly = false }: TextDocumentV
 ```tsx
 // components/MarkdownDocumentViewer.tsx
 import React, { useState, useMemo } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { MarkdownDocument } from '../types/document';
 
 interface MarkdownDocumentViewerProps {
@@ -308,7 +308,7 @@ export function MarkdownDocumentViewer({ document }: MarkdownDocumentViewerProps
 ```tsx
 // components/AnnotationPanel.tsx
 import React, { useState, useEffect } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { Annotation } from '../types/document';
 
 interface AnnotationPanelProps {
@@ -429,7 +429,7 @@ export function AnnotationPanel({ documentId, annotations }: AnnotationPanelProp
 ```tsx
 // components/DocumentComparison.tsx
 import React, { useMemo } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { Document } from '../types/document';
 
 interface DocumentComparisonProps {
@@ -595,7 +595,7 @@ import {
   LinkedPanel,
   createDefaultPluginRegistry,
   IndexedDBAdapter
-} from '@bt-toolkit/ui-linked-panels';
+} from 'linked-panels';
 import { TextDocumentViewer } from './components/TextDocumentViewer';
 import { MarkdownDocumentViewer } from './components/MarkdownDocumentViewer';
 import { AnnotationPanel } from './components/AnnotationPanel';
@@ -812,7 +812,7 @@ export function DocumentManagementSystem() {
 
 ```tsx
 // plugins/documentManagementPlugin.ts
-import { createPlugin } from '@bt-toolkit/ui-linked-panels';
+import { createPlugin } from 'linked-panels';
 
 export interface DocumentContentChangedMessage {
   type: 'document-content-changed';
@@ -900,7 +900,7 @@ export const documentManagementPlugin = createPlugin({
 ```tsx
 // hooks/useCollaborativeEditing.ts
 import { useEffect, useRef } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { WebSocketConnection } from '../services/websocket';
 
 export function useCollaborativeEditing(documentId: string) {
@@ -956,7 +956,7 @@ export function useCollaborativeEditing(documentId: string) {
 ```tsx
 // components/VersionHistory.tsx
 import React, { useState } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 
 interface DocumentVersion {
   id: string;

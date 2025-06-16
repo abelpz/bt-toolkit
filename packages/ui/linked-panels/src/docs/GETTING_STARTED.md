@@ -20,13 +20,13 @@ Welcome to Linked Panels! This guide will walk you through everything you need t
 
 ```bash
 # Using npm
-npm install @bt-toolkit/ui-linked-panels
+npm install linked-panels
 
 # Using yarn
-yarn add @bt-toolkit/ui-linked-panels
+yarn add linked-panels
 
 # Using pnpm
-pnpm add @bt-toolkit/ui-linked-panels
+pnpm add linked-panels
 ```
 
 ## Your First Panel System
@@ -58,7 +58,7 @@ export interface Comment {
 ```tsx
 // components/DocumentViewer.tsx
 import React from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { Document } from '../types';
 
 interface DocumentViewerProps {
@@ -102,7 +102,7 @@ export function DocumentViewer({ document }: DocumentViewerProps) {
 ```tsx
 // components/CommentsPanel.tsx
 import React, { useState } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { Comment } from '../types';
 
 interface CommentsPanelProps {
@@ -167,7 +167,7 @@ import {
   LinkedPanel,
   createDefaultPluginRegistry,
   LocalStorageAdapter
-} from '@bt-toolkit/ui-linked-panels';
+} from 'linked-panels';
 import { DocumentViewer } from './components/DocumentViewer';
 import { CommentsPanel } from './components/CommentsPanel';
 import { Document, Comment } from './types';

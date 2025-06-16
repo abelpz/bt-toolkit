@@ -2,7 +2,7 @@
 
 > A powerful React library for building interconnected panel systems with advanced state management, inter-panel communication, and flexible persistence.
 
-[![npm version](https://badge.fury.io/js/@bt-toolkit%2Fui-linked-panels.svg)](https://badge.fury.io/js/@bt-toolkit%2Fui-linked-panels)
+[![npm version](https://badge.fury.io/js/linked-panels.svg)](https://badge.fury.io/js/linked-panels)
 [![TypeScript](https://img.shields.io/badge/%3C%2F%3E-TypeScript-%230074c1.svg)](http://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18+-61DAFB.svg)](https://reactjs.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -37,7 +37,7 @@ Linked Panels is a sophisticated React library designed for applications that ne
 ### Installation
 
 ```bash
-npm install @bt-toolkit/ui-linked-panels
+npm install linked-panels
 ```
 
 ### Basic Example
@@ -49,7 +49,7 @@ import {
   LinkedPanel,
   createDefaultPluginRegistry,
   LocalStorageAdapter
-} from '@bt-toolkit/ui-linked-panels';
+} from 'linked-panels';
 
 function App() {
   // Define your resources
@@ -407,7 +407,7 @@ Optimized for large-scale applications:
 Built-in testing utilities:
 
 ```tsx
-import { MemoryStorageAdapter, createTestEnvironment } from '@bt-toolkit/ui-linked-panels';
+import { MemoryStorageAdapter, createTestEnvironment } from 'linked-panels';
 
 describe('My Panel System', () => {
   it('should sync panels correctly', () => {

@@ -18,7 +18,7 @@ These adapters are included in the main package because they:
 
 ### LocalStorageAdapter
 ```typescript
-import { LocalStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { LocalStorageAdapter } from 'linked-panels';
 
 // Default for web applications
 // ~5-10MB storage limit
@@ -28,7 +28,7 @@ const adapter = new LocalStorageAdapter();
 
 ### SessionStorageAdapter  
 ```typescript
-import { SessionStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { SessionStorageAdapter } from 'linked-panels';
 
 // For temporary/session-only storage
 // Cleared when tab closes
@@ -38,7 +38,7 @@ const adapter = new SessionStorageAdapter();
 
 ### MemoryStorageAdapter
 ```typescript
-import { MemoryStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { MemoryStorageAdapter } from 'linked-panels';
 
 // For testing and development
 // No persistence (lost on refresh)
@@ -91,7 +91,7 @@ const adapter = new AsyncStorageAdapter(AsyncStorage);
 For unique requirements, users implement the simple `PersistenceStorageAdapter` interface:
 
 ```typescript
-import { PersistenceStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { PersistenceStorageAdapter } from 'linked-panels';
 
 class MyCustomAdapter implements PersistenceStorageAdapter {
   async isAvailable(): Promise<boolean> {
@@ -198,7 +198,7 @@ export function createDefaultStorageAdapter(): PersistenceStorageAdapter {
 
 #### Quick Start (Core Adapters)
 ```typescript
-import { LinkedPanelsContainer, LocalStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { LinkedPanelsContainer, LocalStorageAdapter } from 'linked-panels';
 
 // Most common case - just works
 <LinkedPanelsContainer 

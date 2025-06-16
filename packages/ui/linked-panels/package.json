@@ -1,5 +1,5 @@
 {
-  "name": "@bt-toolkit/ui-linked-panels",
+  "name": "linked-panels",
   "version": "1.0.0",
   "description": "A powerful React library for building interconnected panel systems with advanced state management, inter-panel communication, and flexible persistence.",
   "main": "./dist/index.js",
@@ -45,8 +45,12 @@
     "CHANGELOG.md"
   ],
   "scripts": {
-    "build": "vite build",
-    "dev": "vite build --watch",
+    "build": "npm run build:tsc",
+    "build:tsc": "tsc -p tsconfig.lib.json",
+    "build:vite": "vite build --config vite.docs.config.ts",
+    "dev": "npm run build:tsc -- --watch",
+    "dev:docs": "vite dev --config vite.docs.config.ts",
+    "build:docs": "vite build --config vite.docs.config.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -91,11 +95,14 @@
   "homepage": "https://github.com/bt-toolkit/bt-toolkit/tree/main/packages/ui/linked-panels#readme",
   "peerDependencies": {
     "react": ">=18.0.0",
-    "react-dom": ">=18.0.0"
+    "react-dom": ">=18.0.0",
+    "zustand": ">=4.0.0",
+    "immer": ">=9.0.0"
   },
-  "dependencies": {
-    "zustand": "^4.4.7",
-    "immer": "^10.0.3"
+  "peerDependenciesMeta": {
+    "@react-native-async-storage/async-storage": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@types/react": "^18.2.43",
@@ -112,9 +119,9 @@
     "vitest": "^1.0.4",
     "@testing-library/react": "^14.1.2",
     "@testing-library/jest-dom": "^6.1.5",
-    "@testing-library/user-event": "^14.5.1"
-  },
-  "optionalDependencies": {
+    "@testing-library/user-event": "^14.5.1",
+    "zustand": "^4.4.7",
+    "immer": "^10.0.3",
     "@react-native-async-storage/async-storage": "^1.19.5"
   },
   "engines": {

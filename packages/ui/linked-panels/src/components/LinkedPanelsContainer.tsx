@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { createLinkedPanelsStore } from '../core/store';
 import { LinkedPanelsStore, LinkedPanelsConfig, LinkedPanelsOptions, StatePersistenceOptions } from '../core/types';
 import { PluginRegistry } from '../plugins/base';
@@ -26,12 +26,11 @@ export function LinkedPanelsContainer({
   const configRef = useRef<LinkedPanelsConfig | null>(null);
   
   // Create store instance only once or when plugins/persistence change
-  const store = useMemo(() => {
+  useEffect(() => {
     console.log('🏪 Creating store with config:', config);
     const newStore = createLinkedPanelsStore(options, plugins, persistence);
     storeRef.current = newStore;
     globalStore = newStore;
-    return newStore;
   }, [plugins, persistence]); // Only recreate when plugins or persistence change
 
   // Update config when it changes

@@ -58,7 +58,7 @@ export interface DashboardFilter {
 ```tsx
 // components/LineChart.tsx
 import React, { useMemo } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { DataPoint, DashboardFilter } from '../types/dashboard';
 
 interface LineChartProps {
@@ -199,7 +199,7 @@ export function LineChart({ id, title, data, xField, yField }: LineChartProps) {
 ```tsx
 // components/FilterPanel.tsx
 import React, { useState } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { FilterConfig, DashboardFilter } from '../types/dashboard';
 
 interface FilterPanelProps {
@@ -392,7 +392,7 @@ import {
   LinkedPanel,
   createDefaultPluginRegistry,
   LocalStorageAdapter
-} from '@bt-toolkit/ui-linked-panels';
+} from 'linked-panels';
 import { LineChart } from './components/LineChart';
 import { FilterPanel } from './components/FilterPanel';
 import { DataPoint, FilterConfig, ChartConfig } from './types/dashboard';
@@ -698,7 +698,7 @@ function DashboardSummary({ data }: { data: DataPoint[] }) {
 
 ```tsx
 // plugins/dashboardPlugin.ts
-import { createPlugin } from '@bt-toolkit/ui-linked-panels';
+import { createPlugin } from 'linked-panels';
 
 export const dashboardPlugin = createPlugin({
   name: 'dashboard',
@@ -755,7 +755,7 @@ export const dashboardPlugin = createPlugin({
 ```tsx
 // hooks/useRealTimeData.ts
 import { useEffect } from 'react';
-import { useResourceAPI } from '@bt-toolkit/ui-linked-panels';
+import { useResourceAPI } from 'linked-panels';
 
 export function useRealTimeData(endpoint: string) {
   const api = useResourceAPI('data-source');

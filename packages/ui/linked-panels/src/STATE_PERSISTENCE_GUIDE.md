@@ -21,7 +21,7 @@ import {
   LinkedPanelsContainer, 
   StatePersistenceOptions,
   LocalStorageAdapter
-} from '@bt-toolkit/ui-linked-panels';
+} from 'linked-panels';
 
 const persistenceOptions: StatePersistenceOptions = {
   storageKey: 'my-app-panels-state',     // Storage key
@@ -62,7 +62,7 @@ The library includes several built-in storage adapters and supports custom imple
 
 #### LocalStorageAdapter (Default)
 ```tsx
-import { LocalStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { LocalStorageAdapter } from 'linked-panels';
 
 const adapter = new LocalStorageAdapter();
 // Data persists across browser sessions
@@ -71,7 +71,7 @@ const adapter = new LocalStorageAdapter();
 
 #### SessionStorageAdapter
 ```tsx
-import { SessionStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { SessionStorageAdapter } from 'linked-panels';
 
 const adapter = new SessionStorageAdapter();
 // Data only persists for current tab/session
@@ -80,7 +80,7 @@ const adapter = new SessionStorageAdapter();
 
 #### MemoryStorageAdapter
 ```tsx
-import { MemoryStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { MemoryStorageAdapter } from 'linked-panels';
 
 const adapter = new MemoryStorageAdapter();
 // Data is lost on page refresh
@@ -89,7 +89,7 @@ const adapter = new MemoryStorageAdapter();
 
 #### IndexedDBAdapter
 ```tsx
-import { IndexedDBAdapter } from '@bt-toolkit/ui-linked-panels';
+import { IndexedDBAdapter } from 'linked-panels';
 
 const adapter = new IndexedDBAdapter({
   dbName: 'MyAppDB',
@@ -103,7 +103,7 @@ const adapter = new IndexedDBAdapter({
 
 #### HTTPStorageAdapter
 ```tsx
-import { HTTPStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { HTTPStorageAdapter } from 'linked-panels';
 
 const adapter = new HTTPStorageAdapter({
   baseUrl: 'https://api.example.com',
@@ -118,7 +118,7 @@ const adapter = new HTTPStorageAdapter({
 
 #### AsyncStorageAdapter (React Native)
 ```tsx
-import { AsyncStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { AsyncStorageAdapter } from 'linked-panels';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const adapter = new AsyncStorageAdapter(AsyncStorage);
@@ -131,7 +131,7 @@ const adapter = new AsyncStorageAdapter(AsyncStorage);
 Create your own storage adapter by implementing the `PersistenceStorageAdapter` interface:
 
 ```tsx
-import { PersistenceStorageAdapter } from '@bt-toolkit/ui-linked-panels';
+import { PersistenceStorageAdapter } from 'linked-panels';
 
 class MyCustomAdapter implements PersistenceStorageAdapter {
   async isAvailable(): Promise<boolean> {
@@ -263,7 +263,7 @@ import {
   saveLinkedPanelsState, 
   loadLinkedPanelsState, 
   clearLinkedPanelsState 
-} from '@bt-toolkit/ui-linked-panels';
+} from 'linked-panels';
 
 // Save state manually
 const success = saveLinkedPanelsState(

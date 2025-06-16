@@ -692,7 +692,7 @@ useEffect(() => {
 
 ```tsx
 // Lazy load storage adapters
-const IndexedDBAdapter = lazy(() => import('@bt-toolkit/ui-linked-panels/adapters/indexeddb'));
+const IndexedDBAdapter = lazy(() => import('linked-panels/adapters/indexeddb'));
 
 // Conditional plugin loading
 const plugins = createDefaultPluginRegistry();

@@ -147,7 +147,7 @@ The first stable release of the Linked Panels library, providing a complete solu
 
 **Basic Panel System**
 ```tsx
-import { LinkedPanelsContainer, LinkedPanel } from '@bt-toolkit/ui-linked-panels';
+import { LinkedPanelsContainer, LinkedPanel } from 'linked-panels';
 
 function App() {
   return (

@@ -2,17 +2,28 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "dist",
-    "types": [
-      "node",
-      "@nx/react/typings/cssmodule.d.ts",
-      "@nx/react/typings/image.d.ts",
-      "vite/client"
-    ],
     "rootDir": "src",
-    "jsx": "react-jsx",
-    "module": "esnext",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
     "moduleResolution": "bundler",
-    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo"
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "noEmit": false,
+    "emitDeclarationOnly": false,
+    "preserveWatchOutput": true,
+    "tsBuildInfoFile": "dist/tsconfig.lib.tsbuildinfo",
+    "types": [
+      "node"
+    ]
   },
   "exclude": [
     "out-tsc",
@@ -26,11 +37,18 @@
     "**/*.spec.jsx",
     "**/*.test.jsx",
     "vi.config.ts",
+    "vite.config.ts",
     "src/**/*.spec.ts",
     "src/**/*.test.ts",
+    "src/**/*.stories.tsx",
+    "src/examples/**/*",
+    "src/docs/**/*",
     "eslint.config.js",
     "eslint.config.cjs",
     "eslint.config.mjs"
   ],
-  "include": ["src/**/*.js", "src/**/*.jsx", "src/**/*.ts", "src/**/*.tsx"]
+  "include": [
+    "src/**/*.ts", 
+    "src/**/*.tsx"
+  ]
 }
