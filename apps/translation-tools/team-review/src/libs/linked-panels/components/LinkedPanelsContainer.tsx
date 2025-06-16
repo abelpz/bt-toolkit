@@ -1,19 +1,16 @@
-import React, { createContext, useContext, useMemo, useState } from 'react';
-import { StoreApi, UseBoundStore } from 'zustand';
+import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { createLinkedPanelsStore } from '../core/store';
-import { LinkedPanelsStore, LinkedPanelsConfig, LinkedPanelsOptions } from '../core/types';
+import { LinkedPanelsStore, LinkedPanelsConfig, LinkedPanelsOptions, StatePersistenceOptions } from '../core/types';
 import { PluginRegistry } from '../plugins/base';
 
-// Context for the store
-const LinkedPanelsStoreContext = createContext<UseBoundStore<StoreApi<LinkedPanelsStore>> | null>(null);
-
-// Context for the plugin registry
-const PluginRegistryContext = createContext<PluginRegistry | null>(null);
+// Global store instance for the LinkedPanels system
+let globalStore: ReturnType<typeof createLinkedPanelsStore> | null = null;
 
 interface LinkedPanelsContainerProps {
   config: LinkedPanelsConfig;
   options?: LinkedPanelsOptions;
   plugins?: PluginRegistry;
+  persistence?: StatePersistenceOptions;
   children: React.ReactNode;
 }
 
@@ -21,66 +18,90 @@ export function LinkedPanelsContainer({
   config, 
   options = {}, 
   plugins,
+  persistence,
   children 
 }: LinkedPanelsContainerProps) {
   const [isConfigured, setIsConfigured] = useState(false);
+  const storeRef = useRef<ReturnType<typeof createLinkedPanelsStore> | null>(null);
+  const configRef = useRef<LinkedPanelsConfig | null>(null);
   
-  // Create store instance (stable across re-renders)
+  // Create store instance only once or when plugins/persistence change
   const store = useMemo(() => {
     console.log('🏪 Creating store with config:', config);
-    const newStore = createLinkedPanelsStore(options, plugins);
-    
-    // Set config immediately during store creation
-    console.log('⚙️ Setting store config immediately:', config);
-    newStore.getState().setConfig(config);
-    
-    // Debug: Log the store state after setting config
-    const state = newStore.getState();
-    console.log('📊 Store state after immediate config:', {
-      resources: Array.from(state.resources.entries()),
-      panelConfig: state.panelConfig,
-      panelNavigation: state.panelNavigation,
-    });
-    
-    setIsConfigured(true);
+    const newStore = createLinkedPanelsStore(options, plugins, persistence);
+    storeRef.current = newStore;
+    globalStore = newStore;
     return newStore;
-  }, [config, options, plugins]);
+  }, [plugins, persistence]); // Only recreate when plugins or persistence change
+
+  // Update config when it changes
+  useEffect(() => {
+    if (storeRef.current && configRef.current !== config) {
+      console.log('⚙️ Setting store config:', config);
+      storeRef.current.getState().setConfig(config);
+      configRef.current = config;
+      
+      // Debug: Log the store state after setting config
+      const state = storeRef.current.getState();
+      console.log('📊 Store state after config update:', {
+        resources: Array.from(state.resources.entries()),
+        panelConfig: state.panelConfig,
+        panelNavigation: state.panelNavigation,
+      });
+      
+      setIsConfigured(true);
+    }
+  }, [config]);
+
+  // Initial configuration
+  useEffect(() => {
+    if (storeRef.current && !isConfigured) {
+      console.log('⚙️ Setting initial store config:', config);
+      storeRef.current.getState().setConfig(config);
+      configRef.current = config;
+      setIsConfigured(true);
+    }
+  }, [isConfigured]);
 
   // Don't render children until store is configured
   if (!isConfigured) {
     return <div>Loading...</div>;
   }
 
-  return (
-    <LinkedPanelsStoreContext.Provider value={store}>
-      <PluginRegistryContext.Provider value={plugins || null}>
-        {children}
-      </PluginRegistryContext.Provider>
-    </LinkedPanelsStoreContext.Provider>
-  );
+  return <>{children}</>;
 }
 
-// Hook to access the store
+// Hook to access the Zustand store directly
 export function useLinkedPanelsStore<T = LinkedPanelsStore>(
   selector?: (state: LinkedPanelsStore) => T
 ): T extends LinkedPanelsStore ? LinkedPanelsStore : T {
-  const store = useContext(LinkedPanelsStoreContext);
-  
-  if (!store) {
+  if (!globalStore) {
     throw new Error('useLinkedPanelsStore must be used within a LinkedPanelsContainer');
   }
 
   if (selector) {
-    return store(selector) as any;
+    return globalStore(selector) as any;
   }
   
-  return store.getState() as any;
+  return globalStore.getState() as any;
 }
 
-// Hook to access the plugin registry
+// Export the store getter for other hooks
+export function getLinkedPanelsStore() {
+  if (!globalStore) {
+    throw new Error('LinkedPanels store not initialized. Make sure you have wrapped your app with LinkedPanelsContainer');
+  }
+  return globalStore;
+}
+
+// Hook to access the plugin registry (if we need it)
 export function usePluginRegistry(): PluginRegistry | null {
-  return useContext(PluginRegistryContext);
+  // For now, return null since plugins are handled during store creation
+  // If we need runtime plugin access, we can store it in the global scope
+  return null;
 }
 
-// Export the context for LinkedPanel to use
-export { LinkedPanelsStoreContext }; 
+// Function to reset the global store (for testing purposes)
+export function resetGlobalStore() {
+  globalStore = null;
+} 

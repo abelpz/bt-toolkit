@@ -379,7 +379,7 @@ import { CleanupManager } from './utils/CleanupManager';
 
 describe('Cleanup Operations', () => {
   let cleanupManager: CleanupManager;
-  let mockSignalBus: jest.Mocked<SignalBus>;
+  let mockSignalBus: vi.Mocked<SignalBus>;
 
   beforeEach(() => {
     mockSignalBus = createMockSignalBus();
@@ -387,7 +387,7 @@ describe('Cleanup Operations', () => {
   });
 
   it('should register and execute cleanup handler', async () => {
-    const cleanupHandler = jest.fn();
+    const cleanupHandler = vi.fn();
     cleanupManager.registerCleanupHandler('test', cleanupHandler);
 
     await cleanupManager.cleanup('test-resource', 'test');
@@ -396,8 +396,8 @@ describe('Cleanup Operations', () => {
   });
 
   it('should handle cleanup dependencies', async () => {
-    const parentHandler = jest.fn();
-    const childHandler = jest.fn();
+    const parentHandler = vi.fn();
+    const childHandler = vi.fn();
 
     cleanupManager.registerCleanupHandler('parent', parentHandler);
     cleanupManager.registerCleanupHandler('child', childHandler);
@@ -418,7 +418,7 @@ describe('CleanupManager Integration', () => {
     const signalBus = new SignalBus();
     const cleanupManager = new CleanupManager(signalBus);
 
-    const signalSpy = jest.spyOn(signalBus, 'emit');
+    const signalSpy = vi.spyOn(signalBus, 'emit');
 
     cleanupManager.registerCleanupHandler('test', async () => {
       // Cleanup logic

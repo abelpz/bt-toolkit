@@ -78,6 +78,51 @@ export type {
 } from './hooks/useResourceAPI';
 
 /**
+ * State persistence utilities
+ */
+export { 
+  /** Class for managing state persistence */
+  StatePersistenceManager,
+  /** Factory function to create a persistence manager */
+  createStatePersistence,
+  /** Quick save function for manual state saving */
+  saveLinkedPanelsState,
+  /** Quick load function for manual state loading */
+  loadLinkedPanelsState,
+  /** Quick clear function for manual state clearing */
+  clearLinkedPanelsState
+} from './core/persistence';
+
+/**
+ * Storage adapters for different persistence backends
+ */
+export {
+  /** localStorage adapter for web environments */
+  LocalStorageAdapter,
+  /** sessionStorage adapter for web environments */
+  SessionStorageAdapter,
+  /** In-memory storage adapter (no persistence) */
+  MemoryStorageAdapter,
+  /** Async storage adapter for React Native or similar */
+  AsyncStorageAdapter,
+  /** IndexedDB adapter for robust browser storage */
+  IndexedDBAdapter,
+  /** HTTP API adapter for server-side storage */
+  HTTPStorageAdapter,
+  /** Factory function to create default storage adapter */
+  createDefaultStorageAdapter
+} from './core/storage-adapters';
+
+export type {
+  /** Interface for persisted state structure */
+  LinkedPanelsPersistedState,
+  /** Options for configuring state persistence */
+  StatePersistenceOptions,
+  /** Interface for custom storage adapters */
+  PersistenceStorageAdapter
+} from './core/types';
+
+/**
  * Plugin system for extending messaging capabilities
  */
 export { 
@@ -108,8 +153,6 @@ export type {
   /** Type definitions for text message content */
   TextMessageTypes 
 } from './plugins/built-in/text-message';
-
-
 
 /**
  * Creates a plugin registry pre-loaded with built-in plugins.
@@ -143,12 +186,22 @@ export const LINKED_PANELS_VERSION = '1.0.0';
 /** Display name of the Linked Panels Library */
 export const LINKED_PANELS_NAME = 'Linked Panels Library';
 
-// Re-export everything for convenience
+// Core exports
 export * from './core/types';
+export * from './core/messaging';
 export * from './core/store';
+
+// Hook exports
+export * from './hooks/useResourceAPI';
+export * from './hooks/useSimpleMessaging';
+
+// Plugin exports
+export * from './plugins/base';
+
+// Component exports
 export * from './components/LinkedPanelsContainer';
 export * from './components/LinkedPanel';
-export * from './hooks/useResourceAPI';
-export * from './plugins/base';
+
+// Legacy exports for backward compatibility
 export * from './plugins/built-in/text-message';
  

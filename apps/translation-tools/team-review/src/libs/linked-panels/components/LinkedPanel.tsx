@@ -1,6 +1,6 @@
-import React, { useMemo, useContext } from 'react';
+import React, { useMemo } from 'react';
 import { LinkedPanelRenderProps, Resource } from '../core/types';
-import { LinkedPanelsStoreContext } from './LinkedPanelsContainer';
+import { getLinkedPanelsStore, useLinkedPanelsStore } from './LinkedPanelsContainer';
 
 /**
  * Props interface for the LinkedPanel component.
@@ -53,34 +53,28 @@ interface LinkedPanelProps {
  * @throws {Error} If used outside of a LinkedPanelsContainer
  */
 export function LinkedPanel({ id, children }: LinkedPanelProps) {
-  // Get store from context
-  const store = useContext(LinkedPanelsStoreContext);
+  // Use Zustand selectors to automatically subscribe to state changes
+  const panelConfig = useLinkedPanelsStore((state: any) => state.panelConfig[id]);
+  const currentIndex = useLinkedPanelsStore((state: any) => state.panelNavigation[id]?.currentIndex ?? 0);
+  const resources = useLinkedPanelsStore((state: any) => state.resources);
   
-  if (!store) {
-    throw new Error('LinkedPanel must be used within a LinkedPanelsContainer');
-  }
-
-  // Use Zustand selectors to automatically subscribe to state changes (like the old implementation)
-  const panelConfig = store((state) => state.panelConfig[id]);
-  const currentIndex = store((state) => state.panelNavigation[id]?.currentIndex ?? 0);
-  const resources = store((state) => state.resources);
-  
-  // Get stable actions (same pattern as old implementation)
+  // Get stable actions
   const actions = useMemo(() => {
+    const store = getLinkedPanelsStore();
     const storeState = store.getState();
     return {
       setCurrentResource: storeState.setCurrentResource,
       nextResource: storeState.nextResource,
       previousResource: storeState.previousResource,
     };
-  }, [store]);
+  }, []);
   
   // Panel-specific derived state (like old implementation)
   const panelResources = useMemo(() => {
     if (!panelConfig) return [];
     return panelConfig.resourceIds
       .map((resourceId: string) => resources.get(resourceId))
-      .filter((resource): resource is Resource => resource !== undefined);
+      .filter((resource: any): resource is Resource => resource !== undefined);
   }, [resources, panelConfig]);
 
   const currentResource = panelResources[currentIndex] || null;

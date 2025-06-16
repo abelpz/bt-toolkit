@@ -323,7 +323,7 @@ import { TYPES } from './index';
 
 describe('MyService', () => {
   let container: Container;
-  let mockSignalBus: jest.Mocked<SignalBus>;
+  let mockSignalBus: vi.Mocked<SignalBus>;
 
   beforeEach(() => {
     container = new Container();

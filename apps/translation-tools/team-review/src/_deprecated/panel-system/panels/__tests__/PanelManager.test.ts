@@ -1,17 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { PanelManager } from '../PanelManager';
-import { PanelRegistry } from '../PanelRegistry';
 import { SignalBus } from '../../core/SignalBus';
 import { SIGNAL_TYPES } from '../../signals/SignalTypes';
 import {
   PanelConfig,
-  PanelAPI,
   PanelLayout,
   PanelVisibility,
   PanelLifecyclePhase,
   PanelCoordination,
 } from '../../types/Panel';
-import { ResourceAPI } from '../../types/Resource';
 
 // Mock PanelRegistry - Simplified to avoid memory leaks
 const createMockRegistry = (): any => {

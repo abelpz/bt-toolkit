@@ -1,0 +1,133 @@
+{
+  "name": "@bt-toolkit/ui-linked-panels",
+  "version": "1.0.0",
+  "description": "A powerful React library for building interconnected panel systems with advanced state management, inter-panel communication, and flexible persistence.",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./adapters/localStorage": {
+      "import": "./dist/adapters/localStorage.js",
+      "types": "./dist/adapters/localStorage.d.ts"
+    },
+    "./adapters/sessionStorage": {
+      "import": "./dist/adapters/sessionStorage.js",
+      "types": "./dist/adapters/sessionStorage.d.ts"
+    },
+    "./adapters/memory": {
+      "import": "./dist/adapters/memory.js",
+      "types": "./dist/adapters/memory.d.ts"
+    },
+    "./adapters/indexeddb": {
+      "import": "./dist/adapters/indexeddb.js",
+      "types": "./dist/adapters/indexeddb.d.ts"
+    },
+    "./adapters/http": {
+      "import": "./dist/adapters/http.js",
+      "types": "./dist/adapters/http.d.ts"
+    },
+    "./adapters/react-native": {
+      "import": "./dist/adapters/react-native.js",
+      "types": "./dist/adapters/react-native.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm run test && npm run lint"
+  },
+  "keywords": [
+    "react",
+    "panels",
+    "ui",
+    "components",
+    "state-management",
+    "typescript",
+    "messaging",
+    "persistence",
+    "synchronized",
+    "multi-panel",
+    "dashboard",
+    "workspace",
+    "collaboration",
+    "document-management",
+    "data-visualization",
+    "educational-tools"
+  ],
+  "author": {
+    "name": "BT Toolkit Team",
+    "email": "dev@bt-toolkit.org",
+    "url": "https://bt-toolkit.org"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bt-toolkit/bt-toolkit.git",
+    "directory": "packages/ui/linked-panels"
+  },
+  "bugs": {
+    "url": "https://github.com/bt-toolkit/bt-toolkit/issues"
+  },
+  "homepage": "https://github.com/bt-toolkit/bt-toolkit/tree/main/packages/ui/linked-panels#readme",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  },
+  "dependencies": {
+    "zustand": "^4.4.7",
+    "immer": "^10.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@typescript-eslint/eslint-plugin": "^6.14.0",
+    "@typescript-eslint/parser": "^6.14.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "eslint": "^8.55.0",
+    "eslint-plugin-react": "^7.33.2",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vite-plugin-dts": "^3.6.4",
+    "vitest": "^1.0.4",
+    "@testing-library/react": "^14.1.2",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/user-event": "^14.5.1"
+  },
+  "optionalDependencies": {
+    "@react-native-async-storage/async-storage": "^1.19.5"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "sideEffects": false,
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/bt-toolkit"
+  }
+}

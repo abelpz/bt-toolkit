@@ -1,24 +1,28 @@
 import { createPlugin } from '../base';
-import { ResourceMessage } from '../../core/types';
+import { ResourceMessage, BaseMessageContent } from '../../core/types';
 
-// Text message types
+// Text message content types that extend BaseMessageContent
+export interface TextMessage extends BaseMessageContent {
+  type: 'text';
+  message: string;
+  originalSender?: string; // For chain completion tracking
+}
+
+export interface ChainedTextMessage extends BaseMessageContent {
+  type: 'chainedText';
+  message: string;
+  originalSender: string;
+  hopCount: number;
+}
+
+// Text message registry - maps message type names to their content types
 export interface TextMessageTypes {
-  text: {
-    type: 'text';
-    message: string;
-    originalSender?: string; // For chain completion tracking
-  };
-  
-  chainedText: {
-    type: 'chainedText';
-    message: string;
-    originalSender: string;
-    hopCount: number;
-  };
+  text: TextMessage;
+  chainedText: ChainedTextMessage;
 }
 
 // Validation functions
-function isTextMessage(content: unknown): content is TextMessageTypes['text'] {
+function isTextMessage(content: unknown): content is TextMessage {
   return (
     typeof content === 'object' &&
     content !== null &&
@@ -29,7 +33,7 @@ function isTextMessage(content: unknown): content is TextMessageTypes['text'] {
   );
 }
 
-function isChainedTextMessage(content: unknown): content is TextMessageTypes['chainedText'] {
+function isChainedTextMessage(content: unknown): content is ChainedTextMessage {
   return (
     typeof content === 'object' &&
     content !== null &&
@@ -45,11 +49,11 @@ function isChainedTextMessage(content: unknown): content is TextMessageTypes['ch
 }
 
 // Message handlers
-function handleTextMessage(message: ResourceMessage<TextMessageTypes['text']>) {
+function handleTextMessage(message: ResourceMessage<TextMessage>) {
   console.log(`📝 Text message from ${message.fromResourceId}: "${message.content.message}"`);
 }
 
-function handleChainedTextMessage(message: ResourceMessage<TextMessageTypes['chainedText']>) {
+function handleChainedTextMessage(message: ResourceMessage<ChainedTextMessage>) {
   console.log(
     `🔗 Chained text message (hop ${message.content.hopCount}) from ${message.fromResourceId}: "${message.content.message}" (original: ${message.content.originalSender})`
   );
@@ -60,8 +64,6 @@ export const textMessagePlugin = createPlugin<TextMessageTypes>({
   name: 'text-message',
   version: '1.0.0',
   description: 'Built-in plugin for simple text messages with chaining support',
-  
-  messageTypes: {} as TextMessageTypes, // Type-only, no runtime value needed
   
   validators: {
     text: isTextMessage,
@@ -83,7 +85,7 @@ export const textMessagePlugin = createPlugin<TextMessageTypes>({
 });
 
 // Helper functions for creating messages
-export function createTextMessage(message: string, originalSender?: string): TextMessageTypes['text'] {
+export function createTextMessage(message: string, originalSender?: string): TextMessage {
   return {
     type: 'text',
     message,
@@ -95,7 +97,7 @@ export function createChainedTextMessage(
   message: string,
   originalSender: string,
   hopCount: number
-): TextMessageTypes['chainedText'] {
+): ChainedTextMessage {
   return {
     type: 'chainedText',
     message,

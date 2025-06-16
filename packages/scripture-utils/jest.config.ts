@@ -11,7 +11,7 @@ swcJestConfig.swcrc = false;
 
 export default {
   displayName: '@bt-toolkit/scripture-utils',
-  preset: '../../jest.preset.js',
+  preset: '../../vi.preset.js',
   testEnvironment: 'node',
   transform: {
     '^.+\\.[tj]s$': ['@swc/jest', swcJestConfig],

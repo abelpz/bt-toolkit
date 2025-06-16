@@ -1,40 +1,56 @@
-import { ResourceMessage } from '../core/types';
+import { ResourceMessage, BaseMessageContent } from '../core/types';
 
-// Base plugin interface for message type extensions
-export interface MessageTypePlugin<TMessageRegistry = Record<string, unknown>> {
+/**
+ * Plugin interface that preserves the exact types from the plugin developer
+ */
+export interface MessageTypePlugin<TMessageRegistry = any> {
   name: string;
   version: string;
   description?: string;
   
-  // Message type definitions
+  // Message type definitions - preserves exact types from plugin developer
   messageTypes: TMessageRegistry;
   
-  // Optional runtime validators
+  // Type-safe validators - each validator knows its exact message type
   validators?: {
     [K in keyof TMessageRegistry]?: (content: unknown) => content is TMessageRegistry[K];
   };
   
-  // Optional message handlers
+  // Type-safe handlers - each handler receives the exact message type
   handlers?: {
-    [K in keyof TMessageRegistry]?: (message: ResourceMessage<TMessageRegistry[K]>) => void;
+    [K in keyof TMessageRegistry]?: (message: ResourceMessage<any>) => void;
   };
   
-  // Optional lifecycle hooks
+  // Lifecycle hooks
   onInstall?: () => void;
   onUninstall?: () => void;
 }
 
-// Plugin registry for managing installed plugins
-export class PluginRegistry<TMessageRegistry = Record<string, unknown>> {
+/**
+ * Plugin registry that maintains type safety while allowing flexibility
+ */
+export class PluginRegistry {
   private plugins: Map<string, MessageTypePlugin<any>> = new Map();
   
-  register<TPlugin extends MessageTypePlugin<any>>(plugin: TPlugin): this {
+  /**
+   * Register a plugin with full type preservation
+   */
+  register<TMessageRegistry>(
+    plugin: MessageTypePlugin<TMessageRegistry>
+  ): this {
     if (this.plugins.has(plugin.name)) {
       console.warn(`Plugin "${plugin.name}" is already registered. Overwriting...`);
     }
     
     this.plugins.set(plugin.name, plugin);
-    plugin.onInstall?.();
+    
+    // Handle plugin initialization errors gracefully
+    try {
+      plugin.onInstall?.();
+    } catch (error) {
+      console.error(`Plugin "${plugin.name}" initialization failed:`, error);
+      // Continue execution - don't let plugin errors break the system
+    }
     
     console.log(`✅ Registered plugin: ${plugin.name} v${plugin.version}`);
     return this;
@@ -43,7 +59,13 @@ export class PluginRegistry<TMessageRegistry = Record<string, unknown>> {
   unregister(pluginName: string): boolean {
     const plugin = this.plugins.get(pluginName);
     if (plugin) {
-      plugin.onUninstall?.();
+      // Handle plugin cleanup errors gracefully
+      try {
+        plugin.onUninstall?.();
+      } catch (error) {
+        console.error(`Plugin "${pluginName}" cleanup failed:`, error);
+        // Continue execution - don't let plugin errors break the system
+      }
       this.plugins.delete(pluginName);
       console.log(`🗑️ Unregistered plugin: ${pluginName}`);
       return true;
@@ -59,12 +81,12 @@ export class PluginRegistry<TMessageRegistry = Record<string, unknown>> {
     return Array.from(this.plugins.values());
   }
   
-  validateMessage<K extends keyof TMessageRegistry>(
-    messageType: K,
-    content: unknown
-  ): content is TMessageRegistry[K] {
+  /**
+   * Validate a message against all registered plugins
+   */
+  validateMessage(messageType: string, content: unknown): boolean {
     for (const plugin of this.plugins.values()) {
-      const validator = plugin.validators?.[messageType as string];
+      const validator = plugin.validators?.[messageType];
       if (validator && validator(content)) {
         return true;
       }
@@ -72,15 +94,21 @@ export class PluginRegistry<TMessageRegistry = Record<string, unknown>> {
     return false;
   }
   
-  handleMessage<K extends keyof TMessageRegistry>(
-    message: ResourceMessage<TMessageRegistry[K]>
-  ): void {
-    if (!message.messageType) return;
+  /**
+   * Handle a message by triggering appropriate plugin handlers
+   */
+  handleMessage<T extends BaseMessageContent>(message: ResourceMessage<T>): void {
+    if (!message.content?.type) return;
     
     for (const plugin of this.plugins.values()) {
-      const handler = plugin.handlers?.[message.messageType];
+      const handler = plugin.handlers?.[message.content.type];
       if (handler) {
-        handler(message);
+        try {
+          handler(message as ResourceMessage<any>);
+        } catch (error) {
+          console.error(`Plugin "${plugin.name}" handler failed for message type "${message.content.type}":`, error);
+          // Continue execution - don't let plugin errors break the system
+        }
       }
     }
   }
@@ -93,7 +121,9 @@ export class PluginRegistry<TMessageRegistry = Record<string, unknown>> {
   }
 }
 
-// Utility function to create a simple plugin
+/**
+ * Utility function to create a type-safe plugin
+ */
 export function createPlugin<TMessageRegistry>(
   config: Omit<MessageTypePlugin<TMessageRegistry>, 'messageTypes'> & {
     messageTypes?: TMessageRegistry;

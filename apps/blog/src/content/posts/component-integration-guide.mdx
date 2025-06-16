@@ -493,12 +493,12 @@ class ComponentCache {
 ```typescript
 describe('OCE Integration', () => {
   let app: TranslationApp;
-  let mockOCEComponent: jest.Mocked<OCETextValidator>;
+  let mockOCEComponent: vi.Mocked<OCETextValidator>;
   
   beforeEach(() => {
     mockOCEComponent = {
-      validate: jest.fn(),
-      configure: jest.fn()
+      validate: vi.fn(),
+      configure: vi.fn()
     } as any;
     
     app = new TranslationApp();

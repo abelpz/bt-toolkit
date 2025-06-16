@@ -1,5 +1,5 @@
-import { useMemo, useContext } from 'react';
-import { LinkedPanelsStoreContext } from '../components/LinkedPanelsContainer';
+import { useMemo } from 'react';
+import { getLinkedPanelsStore, useLinkedPanelsStore } from '../components/LinkedPanelsContainer';
 import { ResourceMessage } from '../core/types';
 
 // Stable empty array to avoid creating new arrays on every render
@@ -70,7 +70,7 @@ export interface ResourceAPI<TContent = unknown> {
      * Get all messages received by this resource
      * @returns Array of messages sent to this resource
      */
-    getMessages: () => ResourceMessage<TContent>[];
+    getMessages: () => ResourceMessage<any>[];
     
     /** 
      * Clear all messages for this resource
@@ -230,20 +230,14 @@ export interface ResourceAPI<TContent = unknown> {
  * @throws {Error} If used outside of a LinkedPanelsContainer
  */
 export function useResourceAPI<TContent = unknown>(resourceId: string): ResourceAPI<TContent> {
-  // Get store from context
-  const store = useContext(LinkedPanelsStoreContext);
-  
-  if (!store) {
-    throw new Error('useResourceAPI must be used within a LinkedPanelsContainer');
-  }
-
-  // Use Zustand selector to subscribe to messages for this specific resource with stable empty array
-  const myMessages = store((state) => 
+  // Use Zustand selector to subscribe to messages for this specific resource
+  const myMessages = useLinkedPanelsStore((state: any) => 
     state.resourceMessages[resourceId] || EMPTY_MESSAGES
-  ) as ResourceMessage<TContent>[];
+  ) as ResourceMessage<any>[];
 
-  // Get stable actions (same pattern as old implementation - empty dependency array)
+  // Get stable actions
   const actions = useMemo(() => {
+    const store = getLinkedPanelsStore();
     const storeState = store.getState();
     return {
       // Navigation actions
@@ -274,7 +268,7 @@ export function useResourceAPI<TContent = unknown>(resourceId: string): Resource
         getResourcesByCategory: storeState.getResourcesByCategory,
       }
     };
-  }, []); // Empty dependency array like the old implementation
+  }, []); // Empty dependency array
 
   // Memoize the API (same pattern as old implementation)
   return useMemo(() => ({

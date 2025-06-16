@@ -50,7 +50,7 @@ export default function App() {
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex flex-col overflow-hidden">
       <div className="flex-1 min-h-0 p-0">
-        <LinkedPanelsContainer
+        <LinkedPanelsContainer 
           config={config}
           plugins={pluginRegistry}
           options={{

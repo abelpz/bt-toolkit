@@ -183,7 +183,7 @@ export const TranslationNotesCard: React.FC<TranslationNotesCardProps> = ({ note
   const canGoDown = currentIndex < filteredNotes.length - 1;
 
   return (
-    <div 
+    <div
       ref={cardRef}
       tabIndex={0}
       className="bg-gradient-to-br from-white to-purple-50/30   border border-purple-100/50 overflow-hidden h-full flex flex-col focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
@@ -193,23 +193,36 @@ export const TranslationNotesCard: React.FC<TranslationNotesCardProps> = ({ note
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <div className="text-purple-600">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
               </svg>
             </div>
             <span className="text-xs text-purple-600 font-medium">
               Note {currentIndex + 1} of {filteredNotes.length}
               {hasActiveFilter && (
-                <span className="text-gray-500"> (filtered from {notes.length})</span>
+                <span className="text-gray-500">
+                  {' '}
+                  (filtered from {notes.length})
+                </span>
               )}
             </span>
           </div>
-          
+
           {/* Filter indicator and clear button */}
           {hasActiveFilter && (
             <div className="flex items-center space-x-2">
               <div className="text-xs text-purple-600 bg-purple-100 px-2 py-1 rounded">
-                {activeFilter!.greekWords.map(w => w.word).join(', ')}
+                {activeFilter!.greekWords.map((w) => w.word).join(', ')}
               </div>
               <button
                 onClick={clearFilter}
@@ -219,7 +232,7 @@ export const TranslationNotesCard: React.FC<TranslationNotesCardProps> = ({ note
               </button>
             </div>
           )}
-          
+
           {/* Vertical Navigation Controls */}
           <div className="flex space-x-1">
             <button
@@ -232,8 +245,18 @@ export const TranslationNotesCard: React.FC<TranslationNotesCardProps> = ({ note
               }`}
               title="Previous note"
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 15l7-7 7 7"
+                />
               </svg>
             </button>
             <button
@@ -246,8 +269,18 @@ export const TranslationNotesCard: React.FC<TranslationNotesCardProps> = ({ note
               }`}
               title="Next note"
             >
-              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <svg
+                className="w-3 h-3"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M19 9l-7 7-7-7"
+                />
               </svg>
             </button>
           </div>
@@ -255,29 +288,28 @@ export const TranslationNotesCard: React.FC<TranslationNotesCardProps> = ({ note
       </div>
 
       {/* Current Note Content */}
-      <div className="flex-1 overflow-y-auto">
-
-          <div className="bg-white/60  p-5 border-l-4 border-purple-400 shadow-sm">
-            <div className="flex items-center space-x-3 mb-4">
-              <button
-                onClick={() => sendHighlightMessage(currentNote)}
-                className="bg-gradient-to-r rounded-full from-purple-500 to-violet-600 text-white px-3 py-1 text-xs font-medium hover:from-purple-600 hover:to-violet-700 transition-all duration-200 cursor-pointer"
-                title="Click to highlight words in translation panels"
-              >
-                "{currentNote.quote}"
-              </button>
-              <span className="text-xs bg-gray-100 rounded-full text-gray-600 px-2 py-1 ">
-                occurrence {currentNote.occurrence}
-              </span>
-            </div>
-            
+      <div className="flex-1">
+        <div className="bg-white/60  p-5 border-l-4 border-purple-400 shadow-sm">
+          <div className="flex items-center space-x-3 mb-4">
+            <button
+              onClick={() => sendHighlightMessage(currentNote)}
+              className="bg-gradient-to-r rounded-full from-purple-500 to-violet-600 text-white px-3 py-1 text-xs font-medium hover:from-purple-600 hover:to-violet-700 transition-all duration-200 cursor-pointer"
+              title="Click to highlight words in translation panels"
+            >
+              "{currentNote?.quote}"
+            </button>
+            <span className="text-xs bg-gray-100 rounded-full text-gray-600 px-2 py-1 ">
+              occurrence {currentNote?.occurrence}
+            </span>
+          </div>
+          <div className="overflow-y-auto space-x-2">
             <div className="prose prose-sm max-w-none">
               <p className="text-gray-800 leading-relaxed mb-4 text-base">
-                {currentNote.note}
+                {currentNote?.note}
               </p>
             </div>
-            
-            {currentNote.supportReference && (
+
+            {currentNote?.supportReference && (
               <div className="flex items-center text-sm text-purple-600 bg-purple-50/50 px-3 py-2 rounded-lg mt-4">
                 <svg
                   className="w-4 h-4 mr-2"
@@ -292,13 +324,12 @@ export const TranslationNotesCard: React.FC<TranslationNotesCardProps> = ({ note
                     d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                   />
                 </svg>
-                Reference: {currentNote.supportReference}
+                Reference: {currentNote?.supportReference}
               </div>
             )}
           </div>
+        </div>
       </div>
-
-      
     </div>
   );
 }; 

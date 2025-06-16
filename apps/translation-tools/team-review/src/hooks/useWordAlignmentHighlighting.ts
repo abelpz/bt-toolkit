@@ -23,7 +23,8 @@ export function useWordAlignmentHighlighting({ resourceId, mergedWords, enableFi
   const api = useResourceAPI<
     WordAlignmentMessageTypes['highlightAlignment'] | 
     WordAlignmentMessageTypes['highlightNoteQuote'] | 
-    WordAlignmentMessageTypes['clearHighlights']
+    WordAlignmentMessageTypes['clearHighlights'] |
+    WordAlignmentMessageTypes['filterByGreekWords']
   >(resourceId);
 
   // Get messages reactively - this will trigger re-renders when messages change
@@ -82,12 +83,10 @@ export function useWordAlignmentHighlighting({ resourceId, mergedWords, enableFi
         wordData.lemma,
         resourceId
       );
-      console.log('🎯 Sending highlightAlignment message on HOVER:', { type: message.type, alignmentKey, greekWord: wordData.greekWord, from: resourceId });
       api.messaging.sendToAll(message);
     } else {
       // Send clear message
-      const clearMessage = { type: 'clearHighlights' as const, sourceResourceId: resourceId };
-      console.log('🎯 Sending clearHighlights message on HOVER:', { type: clearMessage.type, from: resourceId });
+      const clearMessage = { type: 'clearHighlights' as const, lifecycle: 'command' as const, sourceResourceId: resourceId };
       api.messaging.sendToAll(clearMessage);
     }
   };
@@ -115,19 +114,18 @@ export function useWordAlignmentHighlighting({ resourceId, mergedWords, enableFi
         resourceId,
         [alignmentKey]
       );
-      console.log('🔍 Sending filterByGreekWords message on CLICK:', { type: filterMessage.type, greekWords: uniqueWords, from: resourceId });
       api.messaging.sendToAll(filterMessage);
     }
   };
 
   const getWordHighlightState = (alignmentKey: string | null) => {
-    const isLocallyHighlighted = hoveredAlignment && alignmentKey === hoveredAlignment;
+    const isLocallyHighlighted = !!(hoveredAlignment && alignmentKey === hoveredAlignment);
     
     // Check if this word's alignment key is in the external highlight (could be multiple keys separated by |)
-    const isExternallyHighlighted = externalHighlight && alignmentKey && (
+    const isExternallyHighlighted = !!(externalHighlight && alignmentKey && (
       externalHighlight === alignmentKey || 
       externalHighlight.split('|').includes(alignmentKey)
-    );
+    ));
     
     return {
       isLocallyHighlighted,

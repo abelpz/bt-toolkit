@@ -106,7 +106,7 @@ describe('ScriptureViewer', () => {
 ```typescript
 describe('TranslationEditor', () => {
   test('auto-saves changes after delay', async () => {
-    const onSave = jest.fn();
+    const onSave = vi.fn();
     render(<TranslationEditor onSave={onSave} autoSaveDelay={100} />);
     
     const editor = screen.getByRole('textbox');

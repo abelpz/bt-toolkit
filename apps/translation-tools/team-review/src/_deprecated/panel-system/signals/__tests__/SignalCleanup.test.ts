@@ -29,7 +29,7 @@ describe('SignalCleanup', () => {
       const strategies = signalCleanup.getStrategies();
       expect(strategies).toHaveLength(3);
       
-      const strategyNames = strategies.map(s => s.name);
+      const strategyNames = strategies.map((s: CleanupStrategy) => s.name);
       expect(strategyNames).toContain('highlighting_cleanup');
       expect(strategyNames).toContain('panel_cleanup');
       expect(strategyNames).toContain('error_cleanup');
@@ -314,7 +314,7 @@ describe('SignalCleanup', () => {
   describe('default strategies', () => {
     it('should have highlighting cleanup strategy', () => {
       const strategies = signalCleanup.getStrategies();
-      const highlightingStrategy = strategies.find(s => s.name === 'highlighting_cleanup');
+      const highlightingStrategy = strategies.find((s: CleanupStrategy) => s.name === 'highlighting_cleanup');
       
       expect(highlightingStrategy).toBeDefined();
       expect(highlightingStrategy?.priority).toBe(100);
@@ -323,7 +323,7 @@ describe('SignalCleanup', () => {
 
     it('should have panel cleanup strategy', () => {
       const strategies = signalCleanup.getStrategies();
-      const panelStrategy = strategies.find(s => s.name === 'panel_cleanup');
+      const panelStrategy = strategies.find((s: CleanupStrategy) => s.name === 'panel_cleanup');
       
       expect(panelStrategy).toBeDefined();
       expect(panelStrategy?.priority).toBe(90);
@@ -340,7 +340,7 @@ describe('SignalCleanup', () => {
 
     it('should have error cleanup strategy', () => {
       const strategies = signalCleanup.getStrategies();
-      const errorStrategy = strategies.find(s => s.name === 'error_cleanup');
+      const errorStrategy = strategies.find((s: CleanupStrategy) => s.name === 'error_cleanup');
       
       expect(errorStrategy).toBeDefined();
       expect(errorStrategy?.priority).toBe(80);

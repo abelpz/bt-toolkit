@@ -99,7 +99,7 @@ describe('CleanupManager', () => {
       cleanupManager.registerStrategy(strategy);
       
       const strategies = cleanupManager.getStrategies();
-      expect(strategies.some(s => s.name === 'test_strategy')).toBe(true);
+      expect(strategies.some((s: CleanupStrategy) => s.name === 'test_strategy')).toBe(true);
     });
 
     it('should unregister cleanup strategies', () => {
@@ -114,7 +114,7 @@ describe('CleanupManager', () => {
       cleanupManager.unregisterStrategy('test_strategy');
       
       const strategies = cleanupManager.getStrategies();
-      expect(strategies.some(s => s.name === 'test_strategy')).toBe(false);
+      expect(strategies.some((s: CleanupStrategy) => s.name === 'test_strategy')).toBe(false);
     });
 
     it('should prevent duplicate strategy registration', () => {
@@ -244,8 +244,6 @@ describe('CleanupManager', () => {
 
   describe('signal handling', () => {
     it('should handle resource unmounted signals', async () => {
-      const scheduleCleanupSpy = vi.spyOn(cleanupManager, 'scheduleCleanup');
-
       // Emit a resource unmounted signal
       await signalBus.emit({
         type: SIGNAL_TYPES.RESOURCE_UNMOUNTED,

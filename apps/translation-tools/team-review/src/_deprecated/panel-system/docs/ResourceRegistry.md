@@ -368,7 +368,7 @@ import { ResourceRegistry } from './core/ResourceRegistry';
 
 describe('Resource Management', () => {
   let resourceRegistry: ResourceRegistry;
-  let mockSignalBus: jest.Mocked<SignalBus>;
+  let mockSignalBus: vi.Mocked<SignalBus>;
 
   beforeEach(() => {
     mockSignalBus = createMockSignalBus();
@@ -409,7 +409,7 @@ describe('ResourceRegistry Integration', () => {
     const signalBus = new SignalBus();
     const resourceRegistry = new ResourceRegistry(signalBus);
     
-    const signalSpy = jest.spyOn(signalBus, 'emit');
+    const signalSpy = vi.spyOn(signalBus, 'emit');
     
     const resource = createTestResource('test-1');
     await resourceRegistry.registerResource(resource);

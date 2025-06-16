@@ -1,32 +1,39 @@
 import { createPlugin } from '../libs/linked-panels/plugins/base';
-import { ResourceMessage } from '../libs/linked-panels/core/types';
+import { BaseMessageContent, ResourceMessage } from '../libs/linked-panels/core/types';
 
-// Word alignment message types
+// Updated word alignment message types with lifecycle properties
 export interface WordAlignmentMessageTypes {
   highlightAlignment: {
     type: 'highlightAlignment';
+    lifecycle: 'state';           // ← Add lifecycle management
+    stateKey: 'highlight';        // ← Add state key
     alignmentKey: string | null; // null to clear highlights
     greekWord: string;
     strongNumber: string;
     lemma: string;
     sourceResourceId: string; // Which resource initiated the highlight
-  };
+  } & BaseMessageContent;
   
   highlightNoteQuote: {
     type: 'highlightNoteQuote';
+    lifecycle: 'state';           // ← Add lifecycle management
+    stateKey: 'highlight';        // ← Same state key as highlightAlignment
     quote: string; // The quote text from the translation note
     occurrence: number; // Which occurrence of this quote (1-based)
     sourceResourceId: string; // Which resource initiated the highlight
     noteId?: string; // Optional note identifier for tracking
-  };
+  } & BaseMessageContent;
   
   clearHighlights: {
     type: 'clearHighlights';
+    lifecycle: 'command';         // ← Add lifecycle management
     sourceResourceId?: string; // Optional: only clear highlights from specific source
-  };
+  } & BaseMessageContent;
   
   filterByGreekWords: {
     type: 'filterByGreekWords';
+    lifecycle: 'state';           // ← Add lifecycle management
+    stateKey: 'filter';           // ← Add state key
     greekWords: Array<{
       word: string;
       strongNumber: string;
@@ -34,12 +41,13 @@ export interface WordAlignmentMessageTypes {
     }>;
     sourceResourceId: string; // Which resource initiated the filter
     alignmentKeys: string[]; // The alignment keys for cross-referencing
-  };
+  } & BaseMessageContent;
   
   clearFilters: {
     type: 'clearFilters';
+    lifecycle: 'command';         // ← Add lifecycle management
     sourceResourceId?: string; // Optional: only clear filters from specific source
-  };
+  } & BaseMessageContent;
 }
 
 // Validation functions
@@ -210,6 +218,8 @@ export function createHighlightAlignmentMessage(
 ): WordAlignmentMessageTypes['highlightAlignment'] {
   return {
     type: 'highlightAlignment',
+    lifecycle: 'state',           // ← Add lifecycle
+    stateKey: 'highlight',        // ← Add state key
     alignmentKey,
     greekWord,
     strongNumber,
@@ -226,6 +236,8 @@ export function createHighlightNoteQuoteMessage(
 ): WordAlignmentMessageTypes['highlightNoteQuote'] {
   return {
     type: 'highlightNoteQuote',
+    lifecycle: 'state',           // ← Add lifecycle
+    stateKey: 'highlight',        // ← Add state key
     quote,
     occurrence,
     sourceResourceId,
@@ -238,6 +250,7 @@ export function createClearHighlightsMessage(
 ): WordAlignmentMessageTypes['clearHighlights'] {
   return {
     type: 'clearHighlights',
+    lifecycle: 'command',         // ← Add lifecycle
     sourceResourceId,
   };
 }
@@ -253,6 +266,8 @@ export function createFilterByGreekWordsMessage(
 ): WordAlignmentMessageTypes['filterByGreekWords'] {
   return {
     type: 'filterByGreekWords',
+    lifecycle: 'state',           // ← Add lifecycle
+    stateKey: 'filter',           // ← Add state key
     greekWords,
     sourceResourceId,
     alignmentKeys,
@@ -264,6 +279,7 @@ export function createClearFiltersMessage(
 ): WordAlignmentMessageTypes['clearFilters'] {
   return {
     type: 'clearFilters',
+    lifecycle: 'command',         // ← Add lifecycle
     sourceResourceId,
   };
 } 
