@@ -44,7 +44,7 @@ export interface ResourceMessages<TContent = unknown> {
 
 // Core store interface - generic and extensible
 export interface LinkedPanelsStore<TContent = unknown> {
-  resources: Map<string, Resource>;
+  resources: Record<string, Resource>; // Use plain object instead of Map for React Native compatibility
   panelConfig: PanelConfig;
   panelNavigation: PanelNavigation;
   resourceMessages: ResourceMessages<TContent>;

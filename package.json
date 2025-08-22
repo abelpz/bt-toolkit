@@ -2,6 +2,7 @@
   "name": "@bt-toolkit/source",
   "version": "0.0.0",
   "license": "MIT",
+  "packageManager": "pnpm@9.12.0",
   "bin": {
     "btt": "./bin/btt.js"
   },
@@ -45,9 +46,9 @@
     "@nx/eslint": "21.1.3",
     "@nx/eslint-plugin": "21.1.3",
     "@nx/jest": "21.1.3",
-    "@nx/js": "21.1.3",
+    "@nx/js": "21.2.0",
     "@nx/playwright": "21.1.3",
-    "@nx/react": "^21.1.3",
+    "@nx/react": "21.2.0",
     "@nx/vite": "21.1.3",
     "@nx/web": "21.1.3",
     "@playwright/test": "^1.36.0",
@@ -103,7 +104,10 @@
     "packages/*",
     "apps/*",
     "apps/translation-tools/*",
-    "packages/ui/*"
+    "apps/mobile/*",
+    "packages/ui/*",
+    "packages/scripture/*",
+    "apps/docs/*"
   ],
   "nx": {
     "includedScripts": [],

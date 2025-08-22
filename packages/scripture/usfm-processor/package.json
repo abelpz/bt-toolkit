@@ -1,0 +1,95 @@
+{
+  "name": "@bt-toolkit/usfm-processor",
+  "version": "1.0.0",
+  "description": "Comprehensive TypeScript USFM processing library for Bible translation applications",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "!**/*.tsbuildinfo"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json",
+    "dev": "tsc -p tsconfig.lib.json --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --ext .ts,.tsx",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "usfm",
+    "bible",
+    "scripture",
+    "parser",
+    "translation",
+    "alignment",
+    "typescript",
+    "react-native",
+    "nodejs",
+    "bt-toolkit"
+  ],
+  "author": {
+    "name": "BT Toolkit Team",
+    "email": "dev@bt-toolkit.org",
+    "url": "https://bt-toolkit.org"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bt-toolkit/bt-toolkit.git",
+    "directory": "packages/scripture/usfm-processor"
+  },
+  "bugs": {
+    "url": "https://github.com/bt-toolkit/bt-toolkit/issues"
+  },
+  "homepage": "https://github.com/bt-toolkit/bt-toolkit/tree/main/packages/scripture/usfm-processor#readme",
+  "dependencies": {
+    "usfm-js": "^3.4.3",
+    "tslib": "^2.3.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.60.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=16.0.0",
+    "npm": ">=7.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "sideEffects": false,
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/bt-toolkit"
+  }
+}

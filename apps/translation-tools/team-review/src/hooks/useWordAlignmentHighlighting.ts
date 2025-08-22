@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useResourceAPI } from '../libs/linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { WordAlignmentMessageTypes, createHighlightAlignmentMessage, createFilterByGreekWordsMessage } from '../plugins/word-alignment';
 import { findWordsForNoteQuote } from '../utils/wordAlignmentUtils';
 

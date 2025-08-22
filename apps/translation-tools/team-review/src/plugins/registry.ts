@@ -5,7 +5,7 @@
  * and app-specific Bible translation plugins.
  */
 
-import { PluginRegistry, createDefaultPluginRegistry } from '../libs/linked-panels';
+import { PluginRegistry, createDefaultPluginRegistry } from 'linked-panels';
 import { wordAlignmentPlugin } from './word-alignment';
 
 /**

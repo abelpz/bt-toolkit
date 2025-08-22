@@ -1,4 +1,4 @@
-import { useMessaging } from '../libs/linked-panels/hooks/useSimpleMessaging';
+import { useMessaging } from linked-panels/hooks/useSimpleMessaging';
 import { WordAlignmentMessages } from '../plugins/word-alignment-simple';
 
 interface GreekWordFilteringOptions {

@@ -1,4 +1,4 @@
-import { BaseMessageContent } from '../libs/linked-panels/core/types';
+import { BaseMessageContent } from linked-panels/core/types';
 
 // Updated word alignment message types with lifecycle properties
 export interface WordAlignmentMessageTypes {

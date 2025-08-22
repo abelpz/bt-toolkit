@@ -1,0 +1,6 @@
+packages:
+  # Apps - deployable applications
+  - 'apps/**'
+ 
+  # Packages - reusable libraries and components
+  - 'packages/**' 

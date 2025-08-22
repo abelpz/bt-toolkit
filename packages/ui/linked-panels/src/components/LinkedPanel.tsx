@@ -73,7 +73,7 @@ export function LinkedPanel({ id, children }: LinkedPanelProps) {
   const panelResources = useMemo(() => {
     if (!panelConfig) return [];
     return panelConfig.resourceIds
-      .map((resourceId: string) => resources.get(resourceId))
+      .map((resourceId: string) => resources[resourceId])
       .filter((resource: any): resource is Resource => resource !== undefined);
   }, [resources, panelConfig]);
 

@@ -6,13 +6,26 @@ import { PluginRegistry } from '../plugins/base';
  * Enhanced messaging system with automatic lifecycle management
  */
 export class MessagingSystem {
-  private messages: Map<string, ResourceMessage[]> = new Map();
-  private stateMessages: Map<string, Map<string, ResourceMessage>> = new Map(); // resourceId -> stateKey -> message
-  private consumedEventIds: Set<string> = new Set();
-  private consumedCommandIds: Set<string> = new Set();
+  private messages: Map<string, ResourceMessage[]>;
+  private stateMessages: Map<string, Map<string, ResourceMessage>>; // resourceId -> stateKey -> message
+  private consumedEventIds: Set<string>;
+  private consumedCommandIds: Set<string>;
   private pluginRegistry?: PluginRegistry;
 
   constructor(pluginRegistry?: PluginRegistry) {
+    // Ensure MapSet plugin is enabled before creating Map/Set instances
+    try {
+      const { enableMapSet } = require('immer');
+      enableMapSet();
+    } catch (e) {
+      console.warn('Failed to enable MapSet plugin:', e);
+    }
+    
+    // Now create the Map/Set instances
+    this.messages = new Map();
+    this.stateMessages = new Map();
+    this.consumedEventIds = new Set();
+    this.consumedCommandIds = new Set();
     this.pluginRegistry = pluginRegistry;
   }
 

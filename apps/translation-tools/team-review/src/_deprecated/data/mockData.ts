@@ -35,7 +35,7 @@ const createRomans1_1_ULT = (): VerseText => {
       }
     },
     {
-      text: "siervo",
+      text: "esclavo",
       occurrence: 1,
       occurrences: 1,
       alignment: {
@@ -122,7 +122,7 @@ const createRomans1_1_ULT = (): VerseText => {
   return {
     reference: "1:1",
     words,
-    rawText: "Pablo, un siervo de Cristo Jesús, llamado apóstol"
+    rawText: "Pablo, un esclavo de Cristo Jesús, llamado apóstol"
   };
 };
 

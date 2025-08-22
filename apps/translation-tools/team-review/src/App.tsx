@@ -2,7 +2,7 @@ import { ResizablePanels } from './libs/resizable-panels';
 import {
   LinkedPanelsContainer,
   LinkedPanel,
-} from './libs/linked-panels';
+} from 'linked-panels';
 import { createBibleTranslationPluginRegistry } from './plugins';
 
 import { PanelUI } from './components/PanelUI';

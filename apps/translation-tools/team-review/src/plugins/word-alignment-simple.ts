@@ -1,4 +1,4 @@
-import { BaseMessageContent } from '../libs/linked-panels/core/types';
+import { BaseMessageContent } from linked-panels/core/types';
 
 /**
  * SUPER SIMPLE! Developers just add lifecycle properties to their existing messages

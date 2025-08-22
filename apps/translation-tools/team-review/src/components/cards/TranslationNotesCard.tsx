@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TranslationNote } from '../../types';
-import { useResourceAPI } from '../../libs/linked-panels';
+import { useResourceAPI } from 'linked-panels';
 import { createHighlightNoteQuoteMessage, createClearHighlightsMessage, WordAlignmentMessageTypes } from '../../plugins';
 import { useGreekWordFiltering } from '../../hooks/useGreekWordFiltering';
 

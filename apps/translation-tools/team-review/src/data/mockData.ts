@@ -43,7 +43,7 @@ const createRomans1_1_ULT = (): VerseText => {
       },
     },
     {
-      text: 'siervo',
+      text: 'esclavo',
       occurrence: 1,
       occurrences: 1,
       alignment: {

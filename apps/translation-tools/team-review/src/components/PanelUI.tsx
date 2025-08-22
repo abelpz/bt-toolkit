@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LinkedPanelRenderProps } from '../libs/linked-panels';
+import { LinkedPanelRenderProps } from 'linked-panels';
 import { InfoModal } from './InfoModal';
 
 interface NavigationHeaderProps extends LinkedPanelRenderProps {

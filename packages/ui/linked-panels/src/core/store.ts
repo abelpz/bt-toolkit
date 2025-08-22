@@ -34,11 +34,18 @@ export function createLinkedPanelsStore<TContent = unknown>(
     : null;
 
   const storeImplementation = (set: any, get: any): LinkedPanelsStore<TContent> => {
+    // Ensure MapSet plugin is enabled before creating any Map/Set instances
+    try {
+      enableMapSet();
+    } catch (e) {
+      console.warn('MapSet plugin already enabled or failed to enable:', e);
+    }
+    
     // Create messaging system instance with plugin registry
     const messagingSystem = new MessagingSystem(pluginRegistry);
 
     return {
-      resources: new Map<string, Resource>(),
+      resources: {} as Record<string, Resource>, // Use plain object instead of Map for React Native compatibility
       panelConfig: {},
       panelNavigation: {},
       resourceMessages: {},
@@ -46,10 +53,10 @@ export function createLinkedPanelsStore<TContent = unknown>(
 
       setConfig: (config: LinkedPanelsConfig) => {
         set((state: any) => {
-          // Clear and rebuild resources map
-          state.resources.clear();
+          // Clear and rebuild resources object
+          state.resources = {};
           config.resources.forEach((resource: Resource) => {
-            state.resources.set(resource.id, resource);
+            state.resources[resource.id] = resource;
           });
 
           // Reset panel config
@@ -202,7 +209,7 @@ export function createLinkedPanelsStore<TContent = unknown>(
           return true;
         } else {
           // Check if the resource exists globally but not in this panel
-          const resourceExists = state.resources.has(resourceId);
+          const resourceExists = resourceId in state.resources;
           if (resourceExists) {
             console.warn(
               `Resource "${resourceId}" exists but is not available in panel "${panelId}". Available resources: [${panelInfo.resourceIds.join(
@@ -225,11 +232,11 @@ export function createLinkedPanelsStore<TContent = unknown>(
       const state = get();
 
       // Check if both resources exist
-      if (!state.resources.has(fromResourceId)) {
+      if (!(fromResourceId in state.resources)) {
         console.warn(`Sender resource "${fromResourceId}" does not exist`);
         return false;
       }
-      if (!state.resources.has(toResourceId)) {
+      if (!(toResourceId in state.resources)) {
         console.warn(`Receiver resource "${toResourceId}" does not exist`);
         return false;
       }
@@ -267,7 +274,7 @@ export function createLinkedPanelsStore<TContent = unknown>(
 
       getAllResourceIds: () => {
         const state = get();
-        return Array.from(state.resources.keys());
+        return Object.keys(state.resources);
       },
 
       getResourcePanel: (resourceId: string) => {
@@ -319,7 +326,7 @@ export function createLinkedPanelsStore<TContent = unknown>(
 
       getResourceInfo: (resourceId: string) => {
         const state = get();
-        const resource = state.resources.get(resourceId);
+        const resource = state.resources[resourceId];
         if (!resource) return null;
 
         return {
@@ -338,7 +345,7 @@ export function createLinkedPanelsStore<TContent = unknown>(
         if (!panelInfo) return [];
 
         return (panelInfo as any).resourceIds.map((resourceId: string) => {
-          const resource = state.resources.get(resourceId);
+          const resource = state.resources[resourceId];
           return resource ? {
             id: resource.id,
             title: resource.title || resource.id,
@@ -354,7 +361,7 @@ export function createLinkedPanelsStore<TContent = unknown>(
         const state = get();
         const resourcesByCategory: { [category: string]: any[] } = {};
 
-        for (const resource of state.resources.values()) {
+        for (const resource of Object.values(state.resources) as Resource[]) {
           const category = resource.category || 'uncategorized';
           if (!resourcesByCategory[category]) {
             resourcesByCategory[category] = [];

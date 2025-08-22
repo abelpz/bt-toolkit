@@ -1,6 +1,6 @@
-import { useMessaging } from '../libs/linked-panels/hooks/useSimpleMessaging';
+import { useMessaging } from 'linked-panels';
 import { WordAlignmentMessageTypes } from '../plugins/word-alignment';
-import { useResourceAPI } from '../libs/linked-panels';
+import { useResourceAPI } from 'linked-panels';
 
 interface GreekWordFilteringOptions {
   resourceId: string;

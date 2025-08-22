@@ -1,0 +1,8 @@
+{
+  "name": "@bt-toolkit/linked-panels-docs",
+  "version": "0.0.1",
+  "private": true,
+  "nx": {
+    "name": "linked-panels-docs"
+  }
+}

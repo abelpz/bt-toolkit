@@ -2,7 +2,16 @@
   "name": "@bt-toolkit/team-review",
   "version": "0.0.1",
   "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "zustand": "^4.4.7",
+    "immer": "^10.0.3",
+    "linked-panels": "workspace:*"
+  },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3"
+    "@testing-library/jest-dom": "^6.6.3",
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17"
   }
 }

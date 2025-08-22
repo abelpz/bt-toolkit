@@ -43,7 +43,7 @@ export function LinkedPanelsContainer({
       // Debug: Log the store state after setting config
       const state = storeRef.current.getState();
       console.log('📊 Store state after config update:', {
-        resources: Array.from(state.resources.entries()),
+        resources: Object.entries(state.resources),
         panelConfig: state.panelConfig,
         panelNavigation: state.panelNavigation,
       });
@@ -64,7 +64,7 @@ export function LinkedPanelsContainer({
 
   // Don't render children until store is configured
   if (!isConfigured) {
-    return <div>Loading...</div>;
+    return null; // Return null instead of HTML div for React Native compatibility
   }
 
   return <>{children}</>;

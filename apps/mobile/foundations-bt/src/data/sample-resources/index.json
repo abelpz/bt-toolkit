@@ -1,0 +1,94 @@
+{
+  "fetchedAt": "2025-08-21T14:20:09.151Z",
+  "resources": [
+    {
+      "type": "Literal Translation",
+      "owner": "unfoldingWord",
+      "repo": "en_ult",
+      "outputDir": "bible-text/ult",
+      "files": [
+        "32-JON.usfm",
+        "57-PHM.usfm"
+      ]
+    },
+    {
+      "type": "Simplified Translation",
+      "owner": "unfoldingWord",
+      "repo": "en_ust",
+      "outputDir": "bible-text/ust",
+      "files": [
+        "32-JON.usfm",
+        "57-PHM.usfm"
+      ]
+    },
+    {
+      "type": "Translation Notes",
+      "owner": "unfoldingWord",
+      "repo": "en_tn",
+      "outputDir": "translation-notes",
+      "files": [
+        "tn_JON.tsv",
+        "tn_PHM.tsv"
+      ]
+    },
+    {
+      "type": "Translation Words",
+      "owner": "unfoldingWord",
+      "repo": "en_tw",
+      "outputDir": "translation-words",
+      "files": [
+        "bible/kt/god.md",
+        "bible/kt/love.md",
+        "bible/names/jonah.md",
+        "bible/kt/mercy.md",
+        "bible/kt/grace.md"
+      ]
+    },
+    {
+      "type": "Translation Questions",
+      "owner": "unfoldingWord",
+      "repo": "en_tq",
+      "outputDir": "translation-questions",
+      "files": [
+        "tq_JON.tsv",
+        "tq_PHM.tsv"
+      ]
+    },
+    {
+      "type": "Translation Words Links",
+      "owner": "unfoldingWord",
+      "repo": "en_twl",
+      "outputDir": "translation-words-links",
+      "files": [
+        "twl_JON.tsv",
+        "twl_PHM.tsv"
+      ]
+    },
+    {
+      "type": "Translation Academy",
+      "owner": "unfoldingWord",
+      "repo": "en_ta",
+      "outputDir": "translation-academy",
+      "files": [
+        "translate/figs-metaphor/title.md",
+        "translate/figs-metaphor/sub-title.md",
+        "translate/figs-metaphor/01.md",
+        "translate/translate-names/title.md",
+        "translate/translate-names/sub-title.md",
+        "translate/translate-names/01.md",
+        "translate/writing-newevent/title.md",
+        "translate/writing-newevent/sub-title.md",
+        "translate/writing-newevent/01.md",
+        "translate/grammar-connect-logic-result/title.md",
+        "translate/grammar-connect-logic-result/sub-title.md",
+        "translate/grammar-connect-logic-result/01.md",
+        "translate/figs-explicit/title.md",
+        "translate/figs-explicit/sub-title.md",
+        "translate/figs-explicit/01.md",
+        "translate/figs-idiom/title.md",
+        "translate/figs-idiom/sub-title.md",
+        "translate/figs-idiom/01.md"
+      ]
+    }
+  ]
+}

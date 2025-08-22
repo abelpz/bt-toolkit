@@ -50,9 +50,9 @@ const adapter = new MemoryStorageAdapter();
 
 These adapters handle specific environments or have external dependencies:
 
-### @bt-toolkit/linked-panels-indexeddb
+### linked-panels-indexeddb
 ```typescript
-import { IndexedDBAdapter } from '@bt-toolkit/linked-panels-indexeddb';
+import { IndexedDBAdapter } from 'linked-panels-indexeddb';
 
 // For large data storage in browsers
 // Asynchronous operations
@@ -63,9 +63,9 @@ const adapter = new IndexedDBAdapter({
 });
 ```
 
-### @bt-toolkit/linked-panels-http
+### linked-panels-http
 ```typescript
-import { HTTPStorageAdapter } from '@bt-toolkit/linked-panels-http';
+import { HTTPStorageAdapter } from 'linked-panels-http';
 
 // For server-side/collaborative storage
 // Requires backend API
@@ -76,9 +76,9 @@ const adapter = new HTTPStorageAdapter({
 });
 ```
 
-### @bt-toolkit/linked-panels-react-native
+### linked-panels-react-native
 ```typescript
-import { AsyncStorageAdapter } from '@bt-toolkit/linked-panels-react-native';
+import { AsyncStorageAdapter } from 'linked-panels-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // For React Native applications
@@ -210,9 +210,9 @@ import { LinkedPanelsContainer, LocalStorageAdapter } from 'linked-panels';
 #### Extended Environments
 ```typescript
 // Install additional package for specialized storage
-npm install @bt-toolkit/linked-panels-indexeddb
+npm install linked-panels-indexeddb
 
-import { IndexedDBAdapter } from '@bt-toolkit/linked-panels-indexeddb';
+import { IndexedDBAdapter } from 'linked-panels-indexeddb';
 ```
 
 #### Custom Requirements

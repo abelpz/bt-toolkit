@@ -1,5 +1,5 @@
-import { createPlugin } from '../libs/linked-panels/plugins/base';
-import { BaseMessageContent, ResourceMessage } from '../libs/linked-panels/core/types';
+import { createPlugin } from 'linked-panels';
+import { BaseMessageContent, ResourceMessage } from 'linked-panels';
 
 // Updated word alignment message types with lifecycle properties
 export interface WordAlignmentMessageTypes {

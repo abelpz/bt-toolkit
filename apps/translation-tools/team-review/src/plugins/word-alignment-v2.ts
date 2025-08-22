@@ -1,5 +1,5 @@
-import { createPlugin } from '../libs/linked-panels/plugins/base';
-import { MessageLifecycle } from '../libs/linked-panels/core/types';
+import { createPlugin } from 'linked-panels';
+import { MessageLifecycle } from 'linked-panels';
 
 // Message type configuration interface
 interface MessageTypeConfig {

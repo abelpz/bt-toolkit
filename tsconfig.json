@@ -4,9 +4,6 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/scripture-utils"
-    },
-    {
       "path": "./apps/translation-tools/team-review-e2e"
     },
     {
@@ -17,6 +14,18 @@
     },
     {
       "path": "./packages/ui/linked-panels"
+    },
+    {
+      "path": "./apps/docs/linked-panels-e2e"
+    },
+    {
+      "path": "./apps/docs/linked-panels"
+    },
+    {
+      "path": "./packages/scripture/scripture-utils"
+    },
+    {
+      "path": "./packages/scripture/usfm-processor"
     }
   ]
 }

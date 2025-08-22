@@ -9,6 +9,10 @@
  * @version 1.0.0
  */
 
+// Enable Immer MapSet plugin early to support Map and Set data structures
+import { enableMapSet } from 'immer';
+enableMapSet();
+
 // Internal imports for utility functions
 import { PluginRegistry } from './plugins/base';
 import { textMessagePlugin } from './plugins/built-in/text-message';

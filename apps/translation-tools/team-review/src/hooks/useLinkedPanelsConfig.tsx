@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { LinkedPanelsConfig } from '../libs/linked-panels';
+import { LinkedPanelsConfig } from 'linked-panels';
 import { ResourceCard } from '../components/ResourceCard';
 import {
   ULTCard,
