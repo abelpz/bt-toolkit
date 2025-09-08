@@ -203,7 +203,7 @@ export function NotesViewer({
     <div className="h-full flex flex-col">
       {/* Notes content */}
       <div 
-        className={`flex-1 overflow-y-auto p-4 ${
+        className={`flex-1 overflow-y-auto p-3 ${
           // Apply RTL styling based on metadata
           resourceMetadata?.languageDirection === 'rtl'
             ? 'text-right rtl' 
@@ -219,9 +219,9 @@ export function NotesViewer({
             <p>No notes for this selection</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {filteredNotes.map((note, index) => (
-              <div key={note.id || index} className="border border-gray-200 rounded-lg p-4 bg-white">
+              <div key={note.id || index} className="border border-gray-200 rounded-lg p-3 bg-white">
                 {/* Note header */}
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-2">

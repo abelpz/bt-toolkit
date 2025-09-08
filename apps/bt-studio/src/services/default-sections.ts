@@ -3,6 +3,14 @@
  * Provides default section handling for USFM processing
  */
 
+import { 
+  getDefaultSections, 
+  getDefaultSectionsMetadata, 
+  hasDefaultSections,
+  type TranslatorSection,
+  type BookMetadata
+} from '../data/default-sections';
+
 export interface SectionInfo {
   start: {
     chapter: number;
@@ -19,10 +27,50 @@ export interface SectionInfo {
 export class DefaultSectionsService {
   /**
    * Get default sections for a book
-   * This is a simplified implementation for testing
+   * Uses the comprehensive default sections data when available,
+   * falls back to chapter-based sections if not
    */
   getDefaultSections(bookCode: string): SectionInfo[] {
-    // Return basic chapter-based sections
+    // Try to get comprehensive default sections first
+    if (hasDefaultSections(bookCode)) {
+      const defaultSections = getDefaultSections(bookCode) as TranslatorSection[];
+      return defaultSections.map(section => ({
+        start: {
+          chapter: section.start.chapter,
+          verse: section.start.verse,
+          reference: section.start.reference
+        },
+        end: {
+          chapter: section.end.chapter,
+          verse: section.end.verse,
+          reference: section.end.reference
+        }
+      }));
+    }
+
+    // Fallback to basic chapter-based sections
+    console.warn(`No default sections found for book ${bookCode}, using chapter-based fallback`);
+    return this.getChapterBasedSections(bookCode);
+  }
+
+  /**
+   * Get metadata for default sections
+   */
+  getDefaultSectionsMetadata(bookCode: string): BookMetadata | null {
+    return getDefaultSectionsMetadata(bookCode);
+  }
+
+  /**
+   * Check if comprehensive default sections are available for a book
+   */
+  hasDefaultSections(bookCode: string): boolean {
+    return hasDefaultSections(bookCode);
+  }
+
+  /**
+   * Get basic chapter-based sections as fallback
+   */
+  private getChapterBasedSections(bookCode: string): SectionInfo[] {
     const chapterCount = this.getChapterCount(bookCode);
     const sections: SectionInfo[] = [];
     

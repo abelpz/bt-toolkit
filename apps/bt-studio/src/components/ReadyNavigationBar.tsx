@@ -15,19 +15,19 @@ export function ReadyNavigationBar() {
   // Only render navigation when workspace is fully ready
   if (!workspace.appReady) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
+        <div className="flex justify-between items-center py-2">
           {/* App Title */}
-          <div className="flex items-center space-x-4">
-            <h1 className="text-2xl font-bold text-gray-900">BT Studio</h1>
-            <div className="text-sm text-gray-500">
+          <div className="flex items-center space-x-3">
+            <h1 className="text-lg font-semibold text-gray-900">BT Studio</h1>
+            <div className="text-xs text-gray-500">
               {workspace.owner}/{workspace.language}
             </div>
           </div>
 
           {/* Loading State */}
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-500 animate-pulse">
+          <div className="flex items-center space-x-3">
+            <div className="text-xs text-gray-500 animate-pulse">
               Loading navigation...
             </div>
           </div>

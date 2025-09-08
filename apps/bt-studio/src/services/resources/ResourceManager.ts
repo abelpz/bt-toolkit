@@ -195,11 +195,54 @@ export class ResourceManagerImpl implements ResourceManager {
     try {
       // Step 1: Check storage for cached metadata
       const cachedMetadata = await this.storageAdapter!.getResourceMetadata(server, owner, language);
+      console.log(`🔍 Found ${cachedMetadata.length} cached metadata records for ${server}/${owner}/${language}`);
       
       // Find metadata for this specific adapter
-      const cachedAdapterMetadata = cachedMetadata.find(meta => 
-        meta.id === adapter.resourceId && meta.type === adapter.resourceType
-      );
+      // First check if we already have a mapping for this specific adapter instance
+      console.log(`🔍 Checking for existing mappings for adapter ${adapter.resourceId}. Current mappings:`, 
+        Array.from(this.metadataToAdapter.entries()).map(([id, adp]) => `${id} -> ${adp.resourceId}`));
+      
+      const existingMappingId = Array.from(this.metadataToAdapter.entries())
+        .find(([_, mappedAdapter]) => mappedAdapter === adapter)?.[0];
+      
+      let cachedAdapterMetadata = null;
+      if (existingMappingId) {
+        // Use the existing mapping for this specific adapter
+        cachedAdapterMetadata = cachedMetadata.find(meta => meta.id === existingMappingId);
+        console.log(`🔍 Found existing mapping for adapter ${adapter.resourceId} -> metadata ID ${existingMappingId}`);
+      } else {
+        // Look for metadata that matches this adapter's preferred resource IDs
+        // For scripture adapters, check their resourceIds array (e.g., ['ult', 'glt', 'ulb'] or ['ust', 'gst'])
+        if (adapter.resourceType === 'scripture' && 'resourceIds' in adapter) {
+          const resourceIds = (adapter as any).resourceIds as string[];
+          const availableMetadataIds = cachedMetadata.filter(meta => meta.type === 'scripture').map(meta => meta.id);
+          console.log(`🔍 Looking for scripture metadata matching adapter ${adapter.resourceId} with resourceIds: ${resourceIds.join(', ')}`);
+          console.log(`🔍 Available scripture metadata IDs: ${availableMetadataIds.join(', ')}`);
+          
+          // Find metadata that matches any of this adapter's resource IDs, in priority order
+          for (const resourceId of resourceIds) {
+            cachedAdapterMetadata = cachedMetadata.find(meta => 
+              meta.type === adapter.resourceType && meta.id === resourceId
+            );
+            if (cachedAdapterMetadata) {
+              console.log(`🔍 Found matching metadata ID ${cachedAdapterMetadata.id} for adapter ${adapter.resourceId} (priority: ${resourceIds.indexOf(resourceId) + 1}/${resourceIds.length})`);
+              break;
+            }
+          }
+          
+          if (!cachedAdapterMetadata) {
+            console.log(`🔍 No matching metadata found for adapter ${adapter.resourceId} with resourceIds: ${resourceIds.join(', ')}`);
+            console.log(`📡 Will fetch fresh metadata for adapter ${adapter.resourceId}`);
+          }
+        } else {
+          // For non-scripture adapters, look for exact match first, then any of the same type
+          cachedAdapterMetadata = cachedMetadata.find(meta => 
+            meta.id === adapter.resourceId && meta.type === adapter.resourceType
+          ) || cachedMetadata.find(meta => meta.type === adapter.resourceType);
+          
+          console.log(`🔍 Looking for ${adapter.resourceType} metadata for adapter ${adapter.resourceId}`);
+        }
+      }
 
       if (cachedAdapterMetadata) {
         // Check if metadata is fresh

@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
-import { ProcessedContent, AcademyArticle, ResourceMetadata, ResourceType } from '../../types/context';
+import { AcademyArticle, ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
 interface AcademyModalProps {
@@ -23,7 +23,7 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({
   articleId,
   title
 }) => {
-  const { resourceManager, processedResourceConfig } = useWorkspace();
+  const { resourceManager, processedResourceConfig, anchorResource } = useWorkspace();
   
   const [article, setArticle] = useState<AcademyArticle | null>(null);
   const [loading, setLoading] = useState(false);
@@ -72,11 +72,18 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({
         
         // Construct the content key for Translation Academy
         // Format: server/owner/language/resourceId/entryId
-        // Use defaults if config is not found
-        const server = academyResourceConfig?.server || 'git.door43.org';
-        const owner = academyResourceConfig?.owner || 'unfoldingWord';
-        const language = academyResourceConfig?.language || 'en';
+        // Use workspace context (anchor resource) for server/owner/language
+        const server = anchorResource?.server || academyResourceConfig?.server || 'git.door43.org';
+        const owner = anchorResource?.owner || academyResourceConfig?.owner || 'unfoldingWord';
+        const language = anchorResource?.language || academyResourceConfig?.language || 'en';
         const resourceId = 'ta'; // Always 'ta' for Translation Academy
+        
+        console.log(`📋 AcademyModal - Anchor resource:`, anchorResource);
+        console.log(`📋 AcademyModal - Server: ${server} (from: ${anchorResource?.server ? 'anchor' : academyResourceConfig?.server ? 'config' : 'default'})`);
+        console.log(`📋 AcademyModal - Owner: ${owner} (from: ${anchorResource?.owner ? 'anchor' : academyResourceConfig?.owner ? 'config' : 'default'})`);
+        console.log(`📋 AcademyModal - Language: ${language} (from: ${anchorResource?.language ? 'anchor' : academyResourceConfig?.language ? 'config' : 'default'})`);
+        console.log(`📋 AcademyModal - Resource ID: ${resourceId}`);
+        console.log(`📋 AcademyModal - Article ID: ${articleId}`);
         
         const contentKey = `${server}/${owner}/${language}/${resourceId}/${articleId}`;
         console.log(`📋 AcademyModal - Content key: ${contentKey}`);
@@ -118,7 +125,7 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({
     };
 
     loadArticle();
-  }, [isOpen, articleId, resourceManager, academyResourceConfig]);
+  }, [isOpen, articleId, resourceManager, academyResourceConfig, anchorResource]);
 
   // Close modal on Escape key
   useEffect(() => {

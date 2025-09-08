@@ -25,13 +25,19 @@ interface DropdownState {
   [panelId: string]: boolean; // panelId -> is dropdown open
 }
 
+interface PopoverState {
+  [panelId: string]: boolean; // panelId -> is info popover open
+}
+
 export function EnhancedPanelSystem() {
   const { processedResourceConfig } = useWorkspace();
   const panelConfig = useWorkspacePanels();
   const { currentReference, getBookInfo } = useNavigation();
   const [panelResourceState, setPanelResourceState] = useState<PanelResourceState>({});
   const [dropdownState, setDropdownState] = useState<DropdownState>({});
+  const [popoverState, setPopoverState] = useState<PopoverState>({});
   const dropdownRefs = useRef<{ [panelId: string]: HTMLDivElement | null }>({});
+  const popoverRefs = useRef<{ [panelId: string]: HTMLDivElement | null }>({});
   const currentResourceIds = useRef<Record<string, string>>({});
 
   console.log('🎯 EnhancedPanelSystem rendering...', { 
@@ -201,6 +207,14 @@ export function EnhancedPanelSystem() {
     }));
   };
 
+  // Toggle popover for description
+  const togglePopover = (panelId: string) => {
+    setPopoverState(prev => ({
+      ...prev,
+      [panelId]: !prev[panelId]
+    }));
+  };
+
   // Navigate to previous resource in panel
   const navigateToPrevResource = (panelId: string) => {
     const navigateFunction = navigateFunctions.current[panelId];
@@ -217,13 +231,25 @@ export function EnhancedPanelSystem() {
     }
   };
 
-  // Close dropdown when clicking outside
+  // Close dropdown and popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Handle dropdowns
       Object.keys(dropdownRefs.current).forEach(panelId => {
         const dropdownRef = dropdownRefs.current[panelId];
         if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
           setDropdownState(prev => ({
+            ...prev,
+            [panelId]: false
+          }));
+        }
+      });
+
+      // Handle popovers
+      Object.keys(popoverRefs.current).forEach(panelId => {
+        const popoverRef = popoverRefs.current[panelId];
+        if (popoverRef && !popoverRef.contains(event.target as Node)) {
+          setPopoverState(prev => ({
             ...prev,
             [panelId]: false
           }));
@@ -251,16 +277,16 @@ export function EnhancedPanelSystem() {
 
     return (
       <div 
-        className="flex items-center space-x-1" 
+        className="flex items-stretch h-full" 
         ref={(el) => { dropdownRefs.current[panelId] = el; }}
       >
         {/* Previous Resource Button */}
         <button
           onClick={() => navigateToPrevResource(panelId)}
-          className="flex items-center justify-center w-7 h-7 bg-white hover:bg-gray-50 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          className="flex items-center justify-center w-10 h-full bg-white hover:bg-gray-100 border-l border-gray-200 focus:outline-none focus:bg-gray-100 transition-colors duration-200"
           title="Previous resource"
         >
-          <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
@@ -269,11 +295,11 @@ export function EnhancedPanelSystem() {
         <div className="relative">
           <button
             onClick={() => toggleDropdown(panelId)}
-            className="flex items-center justify-center w-7 h-7 bg-white hover:bg-gray-50 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+            className="flex items-center justify-center w-10 h-full bg-white hover:bg-gray-100 border-l border-gray-200 focus:outline-none focus:bg-gray-100 transition-colors duration-200"
             title="Switch resource view"
           >
             <svg 
-              className={`w-3.5 h-3.5 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+              className={`w-3 h-3 text-gray-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
               fill="none" 
               stroke="currentColor" 
               viewBox="0 0 24 24"
@@ -317,10 +343,10 @@ export function EnhancedPanelSystem() {
         {/* Next Resource Button */}
         <button
           onClick={() => navigateToNextResource(panelId)}
-          className="flex items-center justify-center w-7 h-7 bg-white hover:bg-gray-50 border border-gray-200 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+          className="flex items-center justify-center w-10 h-full bg-white hover:bg-gray-100 border-l border-gray-200 focus:outline-none focus:bg-gray-100 transition-colors duration-200"
           title="Next resource"
         >
-          <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -343,16 +369,16 @@ export function EnhancedPanelSystem() {
   }
 
   return (
-    <div className="h-full">
+    <div className="h-full overflow-hidden">
       <LinkedPanelsContainer 
         config={panelConfig}
         plugins={plugins}
         persistence={persistenceOptions}
       >
         {/* Responsive Layout: Side-by-side on landscape, stacked on portrait */}
-        <div className="h-full flex flex-col lg:flex-row gap-4">
-          {PANEL_ASSIGNMENTS.map(panelAssignment => (
-            <div key={panelAssignment.panelId} className="flex-1">
+        <div className="h-full flex flex-col lg:flex-row overflow-hidden">
+          {PANEL_ASSIGNMENTS.map((panelAssignment, index) => (
+            <div key={panelAssignment.panelId} className="flex-1 min-h-0 overflow-hidden">
               <LinkedPanel id={panelAssignment.panelId}>
                 {({ current, navigate }) => {
                   // Store the navigate function for this panel
@@ -364,29 +390,78 @@ export function EnhancedPanelSystem() {
                     currentResourceIds.current[panelAssignment.panelId] = currentResourceId;
                   }
                   
+                  // Add border after first panel: bottom border in portrait, right border in landscape
+                  const isFirstPanel = index === 0;
+                  const borderClasses = isFirstPanel 
+                    ? "border-b-2 lg:border-b-0 lg:border-r-2 border-gray-300" 
+                    : "";
+                  
                   return (
-                  <div className="h-full flex flex-col bg-white rounded-lg shadow-sm border">
+                  <div className={`h-full flex flex-col bg-white overflow-hidden ${borderClasses}`}>
                     
                     {/* Panel Header with Resource Navigation */}
-                    <div className="flex-shrink-0 px-4 py-3 border-b bg-gray-50 rounded-t-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <h2 className="text-lg font-semibold text-gray-900">
-                            {/* Use actual resource metadata title, fallback to panel title */}
-                            {current.resource?.title || panelAssignment.title}
+                    <div className="flex-shrink-0 border-b bg-gray-50">
+                      <div className="flex items-stretch h-10">
+                        <div className="flex items-center flex-1 min-w-0 px-3">
+                          <h2 className="text-sm font-medium text-gray-900 truncate">
+                            {/* Use dynamic title for smart entries, actual resource metadata title, or fallback to panel title */}
+                            {(() => {
+                              // Check if current resource is a smart entry
+                              const availableEntries = getAvailableEntriesForPanel(panelAssignment.panelId);
+                              const currentEntry = availableEntries.find(entry => entry.id === current.resource?.id);
+                              if (currentEntry && currentEntry.type === 'smart') {
+                                return currentEntry.title;
+                              }
+                              return current.resource?.title || panelAssignment.title;
+                            })()}
                           </h2>
-                          {/* Use actual resource metadata description, fallback to panel description */}
-                          {(current.resource?.description || panelAssignment.description) && (
-                            <div className="mt-1">
-                              <p className="text-xs text-gray-500">
-                                {current.resource?.description || panelAssignment.description}
-                              </p>
+                          
+                          {/* Info Icon with Popover */}
+                          {(() => {
+                            // Get dynamic description for smart entries
+                            const availableEntries = getAvailableEntriesForPanel(panelAssignment.panelId);
+                            const currentEntry = availableEntries.find(entry => entry.id === current.resource?.id);
+                            const description = (currentEntry && currentEntry.type === 'smart') 
+                              ? currentEntry.description 
+                              : (current.resource?.description || panelAssignment.description);
+                            return description;
+                          })() && (
+                            <div className="relative ml-2" ref={(el) => { popoverRefs.current[panelAssignment.panelId] = el; }}>
+                              <button
+                                onClick={() => togglePopover(panelAssignment.panelId)}
+                                className="flex items-center justify-center w-4 h-4 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors"
+                                title="Show description"
+                              >
+                                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                </svg>
+                              </button>
+                              
+                              {/* Popover */}
+                              {popoverState[panelAssignment.panelId] && (
+                                <div className="absolute left-0 top-full mt-1 bg-gray-900 text-white text-xs rounded-lg shadow-lg py-2 px-3 max-w-xs z-40">
+                                  <div className="relative">
+                                    {(() => {
+                                      // Get dynamic description for smart entries
+                                      const availableEntries = getAvailableEntriesForPanel(panelAssignment.panelId);
+                                      const currentEntry = availableEntries.find(entry => entry.id === current.resource?.id);
+                                      return (currentEntry && currentEntry.type === 'smart') 
+                                        ? currentEntry.description 
+                                        : (current.resource?.description || panelAssignment.description);
+                                    })()}
+                                    {/* Arrow */}
+                                    <div className="absolute bottom-full left-2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
                         
                         {/* Resource Selection Dropdown */}
-                        {renderResourceDropdown(panelAssignment.panelId)}
+                        <div className="flex-shrink-0">
+                          {renderResourceDropdown(panelAssignment.panelId)}
+                        </div>
                       </div>
                     </div>
 
@@ -411,7 +486,9 @@ export function EnhancedPanelSystem() {
                       ) : (
                         <div className="h-full flex items-center justify-center text-gray-500">
                           <div className="text-center">
-                            <div className="text-gray-400 text-xl mb-2">📖</div>
+                            <div className="text-gray-400 text-xl mb-2">
+                              <span role="img" aria-label="Book">📖</span>
+                            </div>
                             <p>No resource selected</p>
                             <p className="text-sm mt-1">Panel: {panelAssignment.panelId}</p>
                           </div>

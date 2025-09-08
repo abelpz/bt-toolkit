@@ -195,19 +195,23 @@ export class USFMProcessor {
       
       // Step 3: Extract translator sections
       let translatorSections = this.extractTranslatorSections(usfmJson, bookCode);
+      console.log(`🔍 USFM extracted ${translatorSections.length} sections for ${bookCode}:`, translatorSections);
       
       // Use default sections if none found in USFM
       if (translatorSections.length === 0) {
-        
+        console.log(`📚 No USFM sections found for ${bookCode}, trying default sections...`);
         try {
           const defaultSections = await defaultSectionsService.getDefaultSections(bookCode);
+          console.log(`📚 Default sections service returned ${defaultSections.length} sections for ${bookCode}:`, defaultSections);
           if (defaultSections.length > 0) {
             translatorSections = defaultSections;
-            
+            console.log(`✅ Using ${translatorSections.length} default sections for ${bookCode}`);
           }
         } catch (error) {
           console.warn(`⚠️ Failed to load default sections for ${bookCode}:`, error);
         }
+      } else {
+        console.log(`✅ Using ${translatorSections.length} USFM sections for ${bookCode}`);
       }
       
       // Step 4: Extract alignments

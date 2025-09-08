@@ -219,8 +219,8 @@ export function ScriptureViewer({
       
 
       {/* Scripture Content using USFMRenderer */}
-      <div className="flex-1 min-h-0">
-        <div className="p-6 max-w-4xl mx-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="p-4 max-w-4xl mx-auto">
           {displayScripture && (
             <div 
               className={`${

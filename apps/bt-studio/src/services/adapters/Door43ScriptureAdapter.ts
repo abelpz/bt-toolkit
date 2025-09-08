@@ -30,6 +30,11 @@ export class Door43ScriptureAdapter implements BookOrganizedAdapter {
 
   // Priority order for scripture resources (configurable)
   private readonly resourcePriority: string[];
+  
+  // Public getter for resource IDs (used by ResourceManager)
+  get resourceIds(): string[] {
+    return [...this.resourcePriority];
+  }
 
   constructor(config: Door43ScriptureConfig) {
     this.scriptureConfig = {

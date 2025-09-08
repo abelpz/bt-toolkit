@@ -24,6 +24,7 @@ export enum ResourceType {
   SCRIPTURE = 'scripture',
   NOTES = 'notes', 
   WORDS = 'words',
+  QUESTIONS = 'questions',
   ACADEMY = 'academy',
   AUDIO = 'audio',
   VIDEO = 'video',
@@ -227,6 +228,18 @@ export interface NotesMetadata extends ResourceMetadata {
   availableBooks: BookInfo[];  // Available books with notes
   format: string;              // Content format ('tsv')
   markdownSupport: boolean;    // Whether markdown processing is enabled
+}
+
+export interface QuestionsMetadata extends ResourceMetadata {
+  resourceId: string;           // 'tq' for Translation Questions
+  repoName: string;            // Repository name (e.g., 'en_tq')
+  fullName: string;            // Full repository name
+  htmlUrl: string;             // Repository HTML URL
+  cloneUrl: string;            // Repository clone URL
+  defaultBranch: string;       // Default branch (usually 'master')
+  availableBooks: BookInfo[];  // Available books with questions
+  format: string;              // Content format ('tsv')
+  markdownSupport: boolean;    // Whether markdown processing is enabled (false for questions)
 }
 
 export interface ProcessedScripture {

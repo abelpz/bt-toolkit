@@ -18,7 +18,11 @@ import { ResourceAdapter, ResourceType } from '../../types/context';
 
 // Import adapter classes (these would be the actual implementations)
 import { Door43ScriptureAdapter, Door43ScriptureConfig } from '../adapters/Door43ScriptureAdapter';
+import { Door43ULTAdapter } from '../adapters/Door43ULTAdapter';
+import { Door43USTAdapter } from '../adapters/Door43USTAdapter';
+import { Door43OriginalAdapter } from '../adapters/Door43OriginalAdapter';
 import { Door43NotesAdapter, Door43NotesConfig } from '../adapters/Door43NotesAdapter';
+import { Door43QuestionsAdapter, Door43QuestionsConfig } from '../adapters/Door43QuestionsAdapter';
 import { Door43AcademyAdapter } from '../adapters/Door43AcademyAdapter';
 
 export class AdapterFactory implements IAdapterFactory {
@@ -71,33 +75,52 @@ export class AdapterFactory implements IAdapterFactory {
     resourceType: ResourceType
   ): ResourceAdapter {
     
-    const scriptureConfig: Door43ScriptureConfig = {
-      // Resource priority configuration
-      resourceIds: config.resourceIds,
-      
-      // Server configuration
-      serverId: config.server || 'git.door43.org',
-      
-      // Processing options
-      includeAlignments: config.includeAlignments ?? true,
-      includeSections: config.includeSections ?? true,
-      usfmVersion: config.usfmVersion || '3.0',
-      
-      // Base configuration
-      timeout: config.timeout || 30000,
-      retryAttempts: config.retryAttempts || 3,
-      retryDelay: config.retryDelay || 1000,
-      validateContent: config.validateContent ?? true
-    };
+    const primaryResourceId = config.resourceIds[0];
     
-    console.log(`🔧 Creating Door43ScriptureAdapter with resourceIds: [${config.resourceIds.join(', ')}]`);
+    console.log(`🔧 Creating specialized scripture adapter for primary resource: ${primaryResourceId}`);
     
-    const adapter = new Door43ScriptureAdapter(scriptureConfig);
-    
-    // Set the resource type
-    adapter.resourceType = resourceType;
-    
-    return adapter;
+    // Create specialized adapters based on the primary resource ID
+    switch (primaryResourceId) {
+      case 'ult': {
+        console.log(`🔧 Creating Door43ULTAdapter`);
+        return new Door43ULTAdapter();
+      }
+        
+      case 'ust': {
+        console.log(`🔧 Creating Door43USTAdapter`);
+        return new Door43USTAdapter();
+      }
+        
+      case 'uhb': {
+        console.log(`🔧 Creating Door43OriginalAdapter for Hebrew Bible`);
+        return new Door43OriginalAdapter('uhb');
+      }
+        
+      case 'ugnt': {
+        console.log(`🔧 Creating Door43OriginalAdapter for Greek New Testament`);
+        return new Door43OriginalAdapter('ugnt');
+      }
+        
+      default: {
+        // Fallback to generic adapter for other resource types
+        console.log(`🔧 Creating generic Door43ScriptureAdapter for ${primaryResourceId}`);
+        const scriptureConfig: Door43ScriptureConfig = {
+          resourceIds: config.resourceIds,
+          serverId: config.server || 'git.door43.org',
+          includeAlignments: config.includeAlignments ?? true,
+          includeSections: config.includeSections ?? true,
+          usfmVersion: config.usfmVersion || '3.0',
+          timeout: config.timeout || 30000,
+          retryAttempts: config.retryAttempts || 3,
+          retryDelay: config.retryDelay || 1000,
+          validateContent: config.validateContent ?? true
+        };
+        
+        const adapter = new Door43ScriptureAdapter(scriptureConfig);
+        adapter.resourceType = resourceType;
+        return adapter;
+      }
+    }
   }
 
   private createNotesAdapter(config: NotesAdapterConfig): ResourceAdapter {
@@ -106,7 +129,7 @@ export class AdapterFactory implements IAdapterFactory {
       resourceId: config.resourceId,
       
       // Server configuration
-      serverId: config.server || 'git.door43.org',
+      server: config.server || 'git.door43.org',
       
       // Processing options
       markdownProcessor: config.markdownProcessor || 'basic',
@@ -142,8 +165,22 @@ export class AdapterFactory implements IAdapterFactory {
   }
 
   private createQuestionsAdapter(config: NotesAdapterConfig): ResourceAdapter {
-    // TODO: Implement Door43QuestionsAdapter (or reuse NotesAdapter with special config)
-    throw new Error(`Questions adapter not yet implemented. Config: ${JSON.stringify(config)}`);
+    console.log(`🔧 Creating Door43QuestionsAdapter with config:`, config);
+    
+    // Convert NotesAdapterConfig to Door43QuestionsConfig
+    const questionsConfig: Door43QuestionsConfig = {
+      resourceId: config.resourceId,
+      serverId: config.serverId,
+      timeout: config.timeout,
+      retryAttempts: config.retryAttempts,
+      retryDelay: config.retryDelay,
+      validateContent: config.validateContent
+    };
+    
+    const adapter = new Door43QuestionsAdapter(questionsConfig);
+    console.log(`✅ Created Door43QuestionsAdapter: ${adapter.resourceId}`);
+    
+    return adapter;
   }
 
   private createAudioAdapter(config: NotesAdapterConfig): ResourceAdapter {

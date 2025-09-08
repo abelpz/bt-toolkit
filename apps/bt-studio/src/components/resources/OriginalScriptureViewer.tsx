@@ -170,7 +170,7 @@ export function OriginalScriptureViewer({
           </p>
           {testament && currentLanguageConfig && (
             <p className="text-sm text-gray-500 mt-2">
-              {testament === 'OT' ? 'Hebrew Bible' : 'Greek New Testament'} • Book: {currentReference.book}
+              Book: {currentReference.book}
             </p>
           )}
           {contentLoading && (
@@ -260,25 +260,6 @@ export function OriginalScriptureViewer({
 
   return (
     <div className="flex flex-col bg-white h-full">
-      {/* Scripture Header */}
-      <div className="border-b border-gray-200 bg-gray-50 px-4 py-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <span className="text-lg" role="img" aria-label="Languages">🏛️</span>
-            <div>
-              <h2 className="font-medium text-gray-900">
-                {currentLanguageConfig?.title}
-              </h2>
-              <p className="text-sm text-gray-600">
-                {currentLanguageConfig?.description}
-              </p>
-            </div>
-          </div>
-          <div className="text-sm text-gray-500">
-            {testament === 'OT' ? 'Hebrew' : 'Greek'} • {formatNavigationRange()}
-          </div>
-        </div>
-      </div>
 
       {/* Scripture Content using USFMRenderer */}
       <div className="flex-1 min-h-0">

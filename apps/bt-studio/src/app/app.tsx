@@ -18,10 +18,10 @@ function DefaultRedirect() {
 
 export function App() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex flex-col h-screen">
+    <div className="h-screen bg-gray-50 overflow-hidden">
+      <div className="flex flex-col h-full">
         {/* Main Content */}
-        <main className="flex-1 min-h-0">
+        <main className="flex-1 min-h-0 overflow-hidden">
           <Routes>
             <Route path="/" element={<DefaultRedirect />} />
             <Route path="/:owner/:language/:book" element={<WorkspaceView />} />
@@ -61,7 +61,7 @@ function WorkspaceView() {
       initialLanguage={resolvedParams.language}
       initialBook={resolvedParams.book}
     >
-      <div className="flex flex-col h-screen">
+      <div className="flex flex-col h-full">
         {/* Navigation Bar */}
         <header className="flex-shrink-0 bg-white shadow-sm border-b">
           <ReadyNavigationBar />
@@ -72,8 +72,8 @@ function WorkspaceView() {
           <WorkspaceStatus />
         </div>
         
-        {/* Main Content */}
-        <div className="flex-1 min-h-0 p-2">
+        {/* Main Content - Fixed height container */}
+        <div className="flex-1 min-h-0 overflow-hidden">
           <EnhancedPanelSystem />
         </div>
       </div>

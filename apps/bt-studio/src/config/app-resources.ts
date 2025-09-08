@@ -19,6 +19,7 @@ import {
 // Import resource components
 import { ScriptureViewer } from '../components/resources/ScriptureViewer';
 import { NotesViewer } from '../components/resources/NotesViewer';
+import { QuestionsViewer } from '../components/resources/QuestionsViewer';
 import { OriginalScriptureViewer } from '../components/resources/OriginalScriptureViewer';
 import { AcademyViewer } from '../components/resources/AcademyViewer';
 // TODO: Import other components when adapters are implemented
@@ -30,6 +31,8 @@ import { AcademyViewer } from '../components/resources/AcademyViewer';
 const ScriptureResourceComponent = ScriptureViewer as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const NotesResourceComponent = NotesViewer as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const QuestionsResourceComponent = QuestionsViewer as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const OriginalScriptureResourceComponent = OriginalScriptureViewer as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -168,6 +171,33 @@ export const APP_RESOURCES: AppResourceConfig[] = [
     },
     usageMode: ResourceUsageMode.PANEL,
     loadPriority: 3
+  },
+
+  // ============================================================================
+  // Translation Questions (TQ)
+  // ============================================================================
+  {
+    panelResourceId: 'tq-questions',
+    adapterType: AdapterType.DOOR43_QUESTIONS,
+    adapterConfig: {
+      // Resource configuration
+      resourceId: 'tq',
+      
+      // Performance options
+      timeout: 30000,
+      retryAttempts: 3,
+      retryDelay: 1000,
+      validateContent: true
+    } as NotesAdapterConfig,
+    panelConfig: {
+      title: 'Translation Questions',
+      description: 'Quality assurance questions for Bible translation',
+      category: PanelCategory.NOTES,
+      component: QuestionsResourceComponent,
+      icon: 'question-mark-circle'
+    },
+    usageMode: ResourceUsageMode.PANEL,
+    loadPriority: 4
   }
 ];
 
@@ -281,7 +311,9 @@ export const SMART_PANEL_ENTRIES: SmartPanelEntry[] = [
     panelEntryId: 'original-languages-smart',
     component: OriginalScriptureResourceComponent,
     getDynamicConfig: ({ testament }) => ({
-      title: testament === 'OT' ? 'Hebrew Bible' : 'Greek New Testament',
+      title: testament === 'OT' 
+        ? 'unfoldingWord® Hebrew Bible'
+        : 'unfoldingWord® Greek New Testament',
       description: testament === 'OT' 
         ? 'unfoldingWord® Hebrew Bible (UHB)'
         : 'unfoldingWord® Greek New Testament (UGNT)',
@@ -341,33 +373,33 @@ export const SMART_PANEL_ENTRIES: SmartPanelEntry[] = [
  * This allows multiple resources per panel with dropdown navigation.
  */
 export const PANEL_ASSIGNMENTS: PanelResourceAssignment[] = [
-  
   // ============================================================================
   // PANEL 1 - Literal & Simplified Text with dropdown navigation
   // ============================================================================
   {
     panelId: 'panel-1',
     title: 'Scripture Text',
-    description: 'Primary scripture reading with literal and simplified options',
+    description:
+      'Primary scripture reading with literal and simplified options',
     category: PanelCategory.SCRIPTURE,
     icon: 'book-open',
-    
+
     // Panel behavior
     defaultVisible: true,
     resizable: true,
     closable: false, // Primary panel cannot be closed
-    
+
     // Layout
     preferredWidth: 500,
     minWidth: 350,
     maxWidth: 800,
-    
+
     // Resources available in this panel (ULT, UST, and Original Languages)
     resources: ['ult-scripture', 'ust-scripture'],
     smartEntries: ['original-languages-smart'],
-    defaultResource: 'ult-scripture' // ULT as default
+    defaultResource: 'ult-scripture', // ULT as default
   },
-  
+
   // ============================================================================
   // PANEL 2 - Translation Helps (UST + Translation Notes)
   // ============================================================================
@@ -377,26 +409,27 @@ export const PANEL_ASSIGNMENTS: PanelResourceAssignment[] = [
     description: 'Simplified text and translation guidance',
     category: PanelCategory.NOTES,
     icon: 'help-circle',
-    
+
     // Panel behavior
     defaultVisible: true,
     resizable: true,
     closable: true,
-    
+
     // Layout
     preferredWidth: 450,
     minWidth: 300,
     maxWidth: 700,
-    
-    // Resources available in this panel (UST + Translation Notes)
-    resources: ['ust-scripture', 'tn-notes'],
-    defaultResource: 'ust-scripture' // UST as default, can switch to notes
-  }
-  
+
+    // Resources available in this panel (UST + Translation Notes + Translation Questions)
+    resources: ['ust-scripture', 'tn-notes', 'tq-questions'],
+    smartEntries: ['original-languages-smart'],
+    defaultResource: 'ust-scripture', // UST as default, can switch to notes or questions
+  },
+
   // ============================================================================
   // FUTURE PANELS - Examples of additional panel types
   // ============================================================================
-  
+
   // Translation Helps Panel
   // {
   //   panelId: 'translation-helps',
@@ -404,19 +437,19 @@ export const PANEL_ASSIGNMENTS: PanelResourceAssignment[] = [
   //   description: 'Notes, words, and questions for translation assistance',
   //   category: PanelCategory.NOTES,
   //   icon: 'help-circle',
-  //   
+  //
   //   defaultVisible: false,
   //   resizable: true,
   //   closable: true,
-  //   
+  //
   //   preferredWidth: 400,
   //   minWidth: 300,
   //   maxWidth: 600,
-  //   
+  //
   //   resources: ['tn-notes', 'tw-words', 'tq-questions'],
   //   defaultResource: 'tn-notes'
   // },
-  
+
   // Original Languages Panel
   // {
   //   panelId: 'original-languages',
@@ -424,15 +457,15 @@ export const PANEL_ASSIGNMENTS: PanelResourceAssignment[] = [
   //   description: 'Hebrew and Greek source texts with alignments',
   //   category: PanelCategory.SCRIPTURE,
   //   icon: 'language',
-  //   
+  //
   //   defaultVisible: false,
   //   resizable: true,
   //   closable: true,
-  //   
+  //
   //   preferredWidth: 450,
   //   minWidth: 350,
   //   maxWidth: 700,
-  //   
+  //
   //   resources: ['uhb-hebrew', 'ugnt-greek'],
   //   defaultResource: 'ugnt-greek'
   // }

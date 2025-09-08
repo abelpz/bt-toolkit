@@ -278,21 +278,47 @@ const useNavigationStore = create<NavigationStore>()(
       },
 
       getBookSections: async (bookCode: string): Promise<TranslatorSection[]> => {
+        let workspaceSections: TranslatorSection[] | null = null
+        
         // Try to load content if workspace is available
         if ((window as any).loadBookContentWithWorkspace) {
           try {
             const content = await (window as any).loadBookContentWithWorkspace(bookCode)
             
-            if (content?.translatorSections) {
-              return content.translatorSections
+            if (content?.translatorSections && content.translatorSections.length > 0) {
+              workspaceSections = content.translatorSections
             }
           } catch (error) {
             console.warn(`Failed to load sections for ${bookCode}:`, error)
           }
         }
         
-        // Return empty array as default
-        return []
+        // Check if workspace sections are meaningful
+        // Use default sections if:
+        // 1. No workspace sections available, OR
+        // 2. Only one section that covers the entire book (not useful for navigation)
+        const shouldUseDefaultSections = !workspaceSections || 
+          (workspaceSections.length === 1 && 
+           workspaceSections[0].start.chapter === 1 && 
+           workspaceSections[0].start.verse === 1 &&
+           workspaceSections[0].end.verse >= 900) // Likely covers entire book
+        
+        if (shouldUseDefaultSections) {
+          console.log(`📚 Using default sections for ${bookCode} (workspace sections not meaningful)`)
+          // Fallback to default sections
+          const { defaultSectionsService } = await import('../services/default-sections')
+          const defaultSections = defaultSectionsService.getDefaultSections(bookCode)
+          
+          // Convert SectionInfo to TranslatorSection format
+          return defaultSections.map(section => ({
+            start: section.start,
+            end: section.end
+          }))
+        }
+        
+        console.log(`📚 Using workspace sections for ${bookCode} (${workspaceSections!.length} sections)`)
+        // Use workspace sections if they're meaningful
+        return workspaceSections!
       }
     })),
     { name: 'navigation-store' }

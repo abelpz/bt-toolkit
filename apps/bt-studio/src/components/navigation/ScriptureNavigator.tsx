@@ -6,7 +6,7 @@
  * 2. Chapter/Verse navigation dropdown with range selection and sections
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { TranslatorSection } from '../../types/context';
 
@@ -34,8 +34,8 @@ export function ScriptureNavigator() {
     getBookSections
   } = useNavigation();
 
-  const [isBookDropdownOpen, setIsBookDropdownOpen] = useState(false);
-  const [isNavDropdownOpen, setIsNavDropdownOpen] = useState(false);
+  const [isBookModalOpen, setIsBookModalOpen] = useState(false);
+  const [isNavModalOpen, setIsNavModalOpen] = useState(false);
   const [navTab, setNavTab] = useState<'range' | 'sections'>('range');
   const [chapterCount, setChapterCount] = useState<number>(1);
   const [verseCountByChapter, setVerseCountByChapter] = useState<Record<number, number>>({});
@@ -43,8 +43,6 @@ export function ScriptureNavigator() {
   const [sections, setSections] = useState<Section[]>([]);
   const [currentRangeSelection, setCurrentRangeSelection] = useState<VerseRange | null>(null);
   
-  const bookDropdownRef = useRef<HTMLDivElement>(null);
-  const navDropdownRef = useRef<HTMLDivElement>(null);
 
   const currentBookInfo = getBookInfo(currentReference.book);
 
@@ -173,22 +171,6 @@ export function ScriptureNavigator() {
     loadBookData();
   }, [currentReference.book]); // Removed the individual function dependencies
 
-  // Close dropdowns when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (bookDropdownRef.current && !bookDropdownRef.current.contains(event.target as Node)) {
-        setIsBookDropdownOpen(false);
-      }
-      if (navDropdownRef.current && !navDropdownRef.current.contains(event.target as Node)) {
-        setIsNavDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const formatReferenceOnly = () => {
     const chapter = currentReference.chapter || 1;
@@ -216,22 +198,15 @@ export function ScriptureNavigator() {
 
   const handleBookSelect = (bookCode: string) => {
     navigateToBook(bookCode);
-    setIsBookDropdownOpen(false);
+    setIsBookModalOpen(false);
   };
 
-  // Close other dropdown when opening one
-  const handleBookDropdownToggle = () => {
-    if (isNavDropdownOpen) {
-      setIsNavDropdownOpen(false);
-    }
-    setIsBookDropdownOpen(!isBookDropdownOpen);
+  const handleBookModalToggle = () => {
+    setIsBookModalOpen(!isBookModalOpen);
   };
 
-  const handleNavDropdownToggle = () => {
-    if (isBookDropdownOpen) {
-      setIsBookDropdownOpen(false);
-    }
-    setIsNavDropdownOpen(!isNavDropdownOpen);
+  const handleNavModalToggle = () => {
+    setIsNavModalOpen(!isNavModalOpen);
   };
 
   const handleRangeSelect = (range: VerseRange) => {
@@ -245,107 +220,91 @@ export function ScriptureNavigator() {
     };
     
     navigateToReference(newReference);
-    setIsNavDropdownOpen(false);
+    setIsNavModalOpen(false);
   };
 
   return (
-    <div className="scripture-navigator flex items-center space-x-3 relative">
-      {/* Book Selection Dropdown */}
-      <div className="relative" ref={bookDropdownRef}>
+    <>
+      <div className="scripture-navigator flex items-center space-x-3 relative">
+        {/* Book Selection Button */}
         <button
-          onClick={handleBookDropdownToggle}
+          onClick={handleBookModalToggle}
           className="
-            flex items-center space-x-2 px-4 py-2 rounded-lg
-            bg-white dark:bg-gray-800 
-            border border-gray-200 dark:border-gray-700
-            hover:border-gray-300 dark:hover:border-gray-600
-            text-gray-900 dark:text-gray-100
+            flex items-center space-x-2 px-4 py-2 h-10
+            bg-white 
+            border border-gray-200
+            hover:bg-gray-50
+            text-gray-900
             font-medium text-sm
-            transition-all duration-200
-            shadow-sm hover:shadow-md
+            transition-colors duration-200
           "
         >
-          <span className="text-blue-600 dark:text-blue-400" role="img" aria-label="book">📖</span>
+          <span className="text-blue-600" role="img" aria-label="book">📖</span>
           <span>{currentBookInfo?.name || currentReference.book.toUpperCase()}</span>
-          <span className={`transform transition-transform duration-200 ${isBookDropdownOpen ? 'rotate-180' : ''}`}>
+          <span className="text-gray-400">
             ▼
           </span>
         </button>
 
-        {/* Book Dropdown Panel */}
-        {isBookDropdownOpen && (
-          <div className="
-            absolute top-full right-0 mt-2 z-50
-            bg-white dark:bg-gray-800 
-            border border-gray-200 dark:border-gray-700
-            rounded-xl shadow-xl dark:shadow-2xl
-            overflow-hidden
-            w-80 max-w-[calc(100vw-2rem)]
-            max-h-[calc(100vh-8rem)]
-            sm:right-0 
-            max-sm:right-1/2 max-sm:transform max-sm:translate-x-1/2
-          ">
-            <div className="p-4">
-              <BookSelector
-                availableBooks={availableBooks}
-                selectedBook={currentReference.book}
-                onBookSelect={handleBookSelect}
-              />
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Chapter/Verse Navigation Dropdown */}
-      <div className="relative" ref={navDropdownRef}>
+        {/* Chapter/Verse Navigation Button */}
         <button
-          onClick={handleNavDropdownToggle}
+          onClick={handleNavModalToggle}
           disabled={!isContentLoaded}
           className={`
-            flex items-center space-x-2 px-4 py-2 rounded-lg
+            flex items-center space-x-2 px-4 py-2 h-10
             border font-medium text-sm
-            transition-all duration-200
-            shadow-sm hover:shadow-md
+            transition-colors duration-200
             ${isContentLoaded 
-              ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 text-gray-900 dark:text-gray-100'
-              : 'bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
+              : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
             }
           `}
         >
-          <span className="text-green-600 dark:text-green-400" role="img" aria-label="target">🎯</span>
+          <span className="text-green-600" role="img" aria-label="target">🎯</span>
           <span>{formatReferenceOnly()}</span>
           {isContentLoaded ? (
-            <span className={`transform transition-transform duration-200 ${isNavDropdownOpen ? 'rotate-180' : ''}`}>
+            <span className="text-gray-400">
               ▼
             </span>
           ) : (
             <span className="animate-spin">⟳</span>
           )}
         </button>
+      </div>
 
-        {/* Chapter/Verse Navigation Panel */}
-        {isNavDropdownOpen && isContentLoaded && (
-          <div className="
-            absolute top-full right-0 mt-2 z-50
-            bg-white dark:bg-gray-800 
-            border border-gray-200 dark:border-gray-700
-            rounded-xl shadow-xl dark:shadow-2xl
-            overflow-hidden
-            w-96 max-w-[calc(100vw-2rem)]
-            max-h-[calc(100vh-8rem)]
-            sm:right-0 
-            max-sm:right-1/2 max-sm:transform max-sm:translate-x-1/2
-          ">
+      {/* Book Selection Modal */}
+      {isBookModalOpen && (
+        <Modal
+          isOpen={isBookModalOpen}
+          onClose={() => setIsBookModalOpen(false)}
+          title="Select Book"
+        >
+          <BookSelector
+            availableBooks={availableBooks}
+            selectedBook={currentReference.book}
+            onBookSelect={handleBookSelect}
+          />
+        </Modal>
+      )}
+
+      {/* Chapter/Verse Navigation Modal */}
+      {isNavModalOpen && isContentLoaded && (
+        <Modal
+          isOpen={isNavModalOpen}
+          onClose={() => setIsNavModalOpen(false)}
+          title="Navigate to Reference"
+        >
+          <div className="space-y-4">
             {/* Navigation Tabs */}
-            <div className="flex border-b border-gray-200 dark:border-gray-700">
+            <div className="flex border-b border-gray-200">
               <button
                 onClick={() => setNavTab('range')}
                 className={`
                   flex-1 px-4 py-3 text-sm font-medium
                   transition-colors duration-200
                   ${navTab === 'range'
-                    ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-b-2 border-blue-600 dark:border-blue-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }
                 `}
               >
@@ -357,8 +316,8 @@ export function ScriptureNavigator() {
                   flex-1 px-4 py-3 text-sm font-medium
                   transition-colors duration-200
                   ${navTab === 'sections'
-                    ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border-b-2 border-blue-600 dark:border-blue-400'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700/50'
+                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }
                 `}
               >
@@ -367,7 +326,7 @@ export function ScriptureNavigator() {
             </div>
 
             {/* Tab Content */}
-            <div className="p-4">
+            <div className="min-h-[300px]">
               {navTab === 'range' && (
                 <RangeSelector
                   chapterCount={chapterCount}
@@ -386,32 +345,10 @@ export function ScriptureNavigator() {
                 />
               )}
             </div>
-
-            {/* Done Button */}
-            <div className="flex justify-end p-3 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => {
-                  // Apply range selection if in range tab and has selection
-                  if (navTab === 'range' && currentRangeSelection) {
-                    handleRangeSelect(currentRangeSelection);
-                  }
-                  setIsNavDropdownOpen(false);
-                }}
-                className="
-                  px-4 py-2 text-sm font-medium rounded-lg
-                  text-gray-600 dark:text-gray-400
-                  hover:text-gray-900 dark:hover:text-gray-100
-                  hover:bg-gray-100 dark:hover:bg-gray-700
-                  transition-colors duration-200
-                "
-              >
-                Done
-              </button>
-            </div>
           </div>
-        )}
-      </div>
-    </div>
+        </Modal>
+      )}
+    </>
   );
 }
 
@@ -425,7 +362,7 @@ interface BookSelectorProps {
 function BookSelector({ availableBooks, selectedBook, onBookSelect }: BookSelectorProps) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+      <h3 className="text-sm font-medium text-gray-700 mb-3">
         Available Books ({availableBooks.length})
       </h3>
       <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto overflow-x-hidden">
@@ -436,8 +373,8 @@ function BookSelector({ availableBooks, selectedBook, onBookSelect }: BookSelect
             className={`
               p-3 rounded-lg text-left transition-colors duration-200
               ${selectedBook === book.code
-                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 border-2 border-blue-300 dark:border-blue-600'
-                : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-transparent hover:bg-gray-100 dark:hover:bg-gray-600'
+                ? 'bg-blue-100 text-blue-900 border-2 border-blue-300'
+                : 'bg-gray-50 text-gray-700 border-2 border-transparent hover:bg-gray-100'
               }
             `}
           >
@@ -549,27 +486,15 @@ function RangeSelector({ chapterCount, verseCountByChapter, currentReference, on
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Select Range
-        </h3>
-      </div>
+
       
-      {selectedStart && (
-        <div className="text-xs text-gray-600 dark:text-gray-400">
-          {selectedEnd 
-            ? `Selected: ${selectedStart.chapter}:${selectedStart.verse}-${selectedEnd.chapter}:${selectedEnd.verse}`
-            : `Start: ${selectedStart.chapter}:${selectedStart.verse} (click another verse to set range)`
-          }
-        </div>
-      )}
 
       <div className="max-h-64 overflow-y-auto space-y-3">
         {Array.from({ length: chapterCount }, (_, i) => i + 1).map((chapter) => {
           const verseCount = verseCountByChapter[chapter] || 31;
           return (
             <div key={chapter} className="space-y-2">
-              <h4 className="text-xs font-medium text-gray-600 dark:text-gray-400">
+              <h4 className="text-xs font-medium text-gray-600">
                 Chapter {chapter}
               </h4>
               <div className="grid grid-cols-10 gap-1">
@@ -590,8 +515,8 @@ function RangeSelector({ chapterCount, verseCountByChapter, currentReference, on
                         ${isSelected
                           ? 'bg-blue-600 text-white font-medium'
                           : isInRange
-                          ? 'bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                          ? 'bg-blue-200 text-blue-900'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }
                       `}
                     >
@@ -604,6 +529,26 @@ function RangeSelector({ chapterCount, verseCountByChapter, currentReference, on
           );
         })}
       </div>
+      
+      {/* Done Button */}
+      {selectedStart && (
+        <div className="flex justify-end pt-3 border-t border-gray-200">
+          <button
+            onClick={() => {
+              const range: VerseRange = {
+                startChapter: selectedStart.chapter,
+                startVerse: selectedStart.verse,
+                endChapter: selectedEnd?.chapter || selectedStart.chapter,
+                endVerse: selectedEnd?.verse || selectedStart.verse
+              };
+              onRangeSelect(range);
+            }}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+          >
+            Done
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -618,12 +563,12 @@ interface SectionsNavigatorProps {
 function SectionsNavigator({ sections, currentReference, onRangeSelect }: SectionsNavigatorProps) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+      <h3 className="text-sm font-medium text-gray-700 mb-3">
         Predefined Sections ({sections.length})
       </h3>
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {sections.length === 0 ? (
-          <div className="text-sm text-gray-500 dark:text-gray-400 p-3">
+          <div className="text-sm text-gray-500 p-3">
             No sections available for this book.
           </div>
         ) : (
@@ -641,8 +586,8 @@ function SectionsNavigator({ sections, currentReference, onRangeSelect }: Sectio
               className={`
                 w-full p-3 rounded-lg text-left transition-colors duration-200
                 ${isSelected
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-900 dark:text-blue-100 border-2 border-blue-300 dark:border-blue-600'
-                  : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-2 border-transparent hover:bg-gray-100 dark:hover:bg-gray-600'
+                  ? 'bg-blue-100 text-blue-900 border-2 border-blue-300'
+                  : 'bg-gray-50 text-gray-700 border-2 border-transparent hover:bg-gray-100'
                 }
               `}
             >
@@ -656,6 +601,69 @@ function SectionsNavigator({ sections, currentReference, onRangeSelect }: Sectio
             </button>
           );
         }))}
+      </div>
+    </div>
+  );
+}
+
+// Modal Component
+interface ModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+}
+
+function Modal({ isOpen, onClose, title, children }: ModalProps) {
+  useEffect(() => {
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      {/* Backdrop */}
+      <div 
+        className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="relative bg-white shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Content */}
+          <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );
