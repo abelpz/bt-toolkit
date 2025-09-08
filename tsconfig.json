@@ -26,6 +26,51 @@
     },
     {
       "path": "./packages/scripture/usfm-processor"
+    },
+    {
+      "path": "./packages/door43-bp"
+    },
+    {
+      "path": "./packages/core/door43-core"
+    },
+    {
+      "path": "./packages/core/door43-alignment"
+    },
+    {
+      "path": "./packages/services/door43-resources"
+    },
+    {
+      "path": "./packages/tools/door43-cli"
+    },
+    {
+      "path": "./packages/core/door43-parsers"
+    },
+    {
+      "path": "./packages/core/door43-storage"
+    },
+    {
+      "path": "./packages/plugins/door43-storage-sqlite"
+    },
+    {
+      "path": "./packages/core/door43-cache"
+    },
+    {
+      "path": "./packages/core/door43-sync"
+    },
+    {
+      "path": "./packages/core/door43-scoping"
+    },
+    {
+      "path": "./apps/web-e2e"
+    },
+    {
+      "path": "./apps/web"
+    },
+    {
+      "path": "./apps/bt-studio-e2e"
+    },
+    {
+      "path": "./apps/bt-studio"
     }
   ]
 }

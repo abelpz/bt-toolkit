@@ -1,0 +1,53 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global styles for Translation Studio Web */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  }
+}
+
+@layer components {
+  .panel-container {
+    @apply bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  }
+  
+  .panel-header {
+    @apply px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+  }
+  
+  .panel-content {
+    @apply p-4;
+  }
+  
+  .cache-indicator {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+    transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
+  }
+  
+  .cache-hit {
+    @apply bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200;
+  }
+  
+  .cache-miss {
+    @apply bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-200;
+  }
+  
+  .loading-spinner {
+    @apply animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600;
+    border-top-color: #3b82f6; /* blue-500 */
+  }
+  
+  .dark .loading-spinner {
+    border-top-color: #60a5fa; /* blue-400 */
+  }
+}

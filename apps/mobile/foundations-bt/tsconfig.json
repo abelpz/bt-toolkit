@@ -2,5 +2,25 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true
-  }
+  },
+  "references": [
+    {
+      "path": "../../../packages/ui/linked-panels"
+    },
+    {
+      "path": "../../../packages/core/door43-sync"
+    },
+    {
+      "path": "../../../packages/core/door43-storage"
+    },
+    {
+      "path": "../../../packages/core/door43-core"
+    },
+    {
+      "path": "../../../packages/scripture/scripture-utils"
+    },
+    {
+      "path": "../../../packages/scripture/usfm-processor"
+    }
+  ]
 }

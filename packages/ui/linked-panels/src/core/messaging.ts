@@ -2,6 +2,24 @@ import { BaseMessageContent, ResourceMessage } from './types';
 import { PluginRegistry } from '../plugins/base';
 // import { MessageLifecycle } from './types';
 
+// Import enableMapSet from immer for browser compatibility
+let enableMapSet: (() => void) | null = null;
+try {
+  // Dynamic import for better browser compatibility
+  import('immer').then(immer => {
+    enableMapSet = immer.enableMapSet;
+    if (enableMapSet) {
+      enableMapSet();
+    }
+  }).catch(() => {
+    // Immer not available or enableMapSet not supported
+    console.debug('Immer MapSet plugin not available, using native Map/Set');
+  });
+} catch {
+  // Import failed, continue without MapSet plugin
+  console.debug('Immer not available, using native Map/Set');
+}
+
 /**
  * Enhanced messaging system with automatic lifecycle management
  */
@@ -13,15 +31,7 @@ export class MessagingSystem {
   private pluginRegistry?: PluginRegistry;
 
   constructor(pluginRegistry?: PluginRegistry) {
-    // Ensure MapSet plugin is enabled before creating Map/Set instances
-    try {
-      const { enableMapSet } = require('immer');
-      enableMapSet();
-    } catch (e) {
-      console.warn('Failed to enable MapSet plugin:', e);
-    }
-    
-    // Now create the Map/Set instances
+    // Create the Map/Set instances (enableMapSet is handled at module level)
     this.messages = new Map();
     this.stateMessages = new Map();
     this.consumedEventIds = new Set();

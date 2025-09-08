@@ -14,6 +14,8 @@ import {
   VerseReference,
 } from '../types/translationHelps';
 
+import { IResourceService } from './interfaces/IResourceService';
+
 import {
   parseTranslationNotes,
   parseTranslationWordsLinks,
@@ -107,7 +109,7 @@ const loadSampleFile = async (relativePath: string): Promise<string> => {
 /**
  * Sample Resources Service Class
  */
-export class SampleResourcesService {
+export class SampleResourcesService implements IResourceService {
   private translationNotesCache = new Map<string, TranslationNotesData>();
   private translationWordsLinksCache = new Map<string, TranslationWordsLinksData>();
   private translationQuestionsCache = new Map<string, TranslationQuestionsData>();
@@ -116,6 +118,84 @@ export class SampleResourcesService {
   private bibleTextsCache = new Map<string, BibleText>();
   
   private initialized = false;
+
+  /**
+   * Check if the service is initialized
+   */
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+
+  /**
+   * Get available books for navigation
+   */
+  async getAvailableBooks(): Promise<string[]> {
+    await this.initialize();
+    // Extract unique books from all cached resources
+    const books = new Set<string>();
+    
+    // From translation notes
+    for (const book of this.translationNotesCache.keys()) {
+      books.add(book);
+    }
+    
+    // From bible texts
+    for (const key of this.bibleTextsCache.keys()) {
+      const book = key.split('-')[0]; // Extract book from "JON-ULT" format
+      books.add(book);
+    }
+    
+    return Array.from(books).sort();
+  }
+
+  /**
+   * Get Bible text for a specific book and text type
+   */
+  async getBibleText(book: string, textType: 'ult' | 'ust'): Promise<BibleText | null> {
+    await this.initialize();
+    const key = `${book}-${textType.toUpperCase()}`;
+    return this.bibleTextsCache.get(key) || null;
+  }
+
+  /**
+   * Get translation notes for a specific book
+   */
+  async getTranslationNotes(book: string): Promise<TranslationNotesData | null> {
+    await this.initialize();
+    return this.translationNotesCache.get(book) || null;
+  }
+
+  /**
+   * Get translation words links for a specific book
+   */
+  async getTranslationWordsLinks(book: string): Promise<TranslationWordsLinksData | null> {
+    await this.initialize();
+    return this.translationWordsLinksCache.get(book) || null;
+  }
+
+  /**
+   * Get translation questions for a specific book
+   */
+  async getTranslationQuestions(book: string): Promise<TranslationQuestionsData | null> {
+    await this.initialize();
+    return this.translationQuestionsCache.get(book) || null;
+  }
+
+  /**
+   * Get a specific translation word by ID
+   */
+  async getTranslationWord(wordId: string): Promise<TranslationWord | null> {
+    await this.initialize();
+    return this.translationWordsCache.get(wordId) || null;
+  }
+
+  /**
+   * Get a specific translation academy article by ID
+   */
+  async getTranslationAcademyArticle(articleId: string): Promise<TranslationAcademyArticle | null> {
+    await this.initialize();
+    return this.translationAcademyCache.get(articleId) || null;
+  }
 
   /**
    * Initialize the service by loading all sample resources
@@ -357,60 +437,10 @@ export class SampleResourcesService {
   }
 
   /**
-   * Get available books
-   */
-  getAvailableBooks(): string[] {
-    return Array.from(this.translationNotesCache.keys());
-  }
-
-  /**
-   * Get Translation Notes for a book
-   */
-  getTranslationNotes(book: string): TranslationNotesData | undefined {
-    return this.translationNotesCache.get(book);
-  }
-
-  /**
-   * Get Translation Questions for a book
-   */
-  getTranslationQuestions(book: string): TranslationQuestionsData | undefined {
-    return this.translationQuestionsCache.get(book);
-  }
-
-  /**
-   * Get Translation Words Links for a book
-   */
-  getTranslationWordsLinks(book: string): TranslationWordsLinksData | undefined {
-    return this.translationWordsLinksCache.get(book);
-  }
-
-  /**
-   * Get a specific Translation Word
-   */
-  getTranslationWord(wordId: string): TranslationWord | undefined {
-    return this.translationWordsCache.get(wordId.toLowerCase());
-  }
-
-  /**
-   * Get a specific Translation Academy article
-   */
-  getTranslationAcademyArticle(articlePath: string): TranslationAcademyArticle | undefined {
-    return this.translationAcademyCache.get(articlePath);
-  }
-
-  /**
    * Get all Translation Academy articles
    */
   getAllTranslationAcademyArticles(): TranslationAcademyArticle[] {
     return Array.from(this.translationAcademyCache.values());
-  }
-
-  /**
-   * Get Bible text for a specific book and translation
-   */
-  getBibleText(book: string, translation: 'ULT' | 'UST'): BibleText | undefined {
-    const key = `${book}-${translation}`;
-    return this.bibleTextsCache.get(key);
   }
 
   /**

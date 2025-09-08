@@ -1,0 +1,42 @@
+{
+  "name": "@bt-toolkit/door43-bp",
+  "version": "1.0.0",
+  "description": "Door43 Book Package Service - Fetch complete Bible translation packages from Door43 API",
+  "keywords": ["door43", "bible", "translation", "usfm", "book-package", "unfoldingword"],
+  "author": "BT Toolkit Team",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bt-toolkit/bt-toolkit",
+    "directory": "packages/door43-bp"
+  },
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "nx": {
+    "tags": [
+      "type:library",
+      "scope:shared",
+      "domain:door43"
+    ]
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "node-fetch": "^3.3.2",
+    "tsx": "^4.20.4"
+  }
+}

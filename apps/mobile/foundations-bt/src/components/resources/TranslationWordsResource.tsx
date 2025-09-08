@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useResourceAPI } from 'linked-panels';
 import { useScriptureNavigation } from '../../contexts/ScriptureNavigationContext';
-import { sampleResourcesService } from '../../services/sampleResourcesService';
+import { useResourceServiceInstance } from '../../contexts/ResourceServiceContext';
 import type { TranslationWord, TranslationWordsLink } from '../../types/translationHelps';
 
 interface TranslationWordsResourceProps {
@@ -14,6 +14,7 @@ export const TranslationWordsResource: React.FC<TranslationWordsResourceProps> =
 }) => {
   const { currentReference, formatReference } = useScriptureNavigation();
   const api = useResourceAPI(resourceId);
+  const resourceService = useResourceServiceInstance();
   const [words, setWords] = useState<TranslationWord[]>([]);
   const [wordLinks, setWordLinks] = useState<TranslationWordsLink[]>([]);
   const [loading, setLoading] = useState(false);
@@ -64,7 +65,7 @@ export const TranslationWordsResource: React.FC<TranslationWordsResourceProps> =
         ...currentReference,
         original: `${currentReference.book} ${currentReference.chapter}:${currentReference.verse}`
       };
-      const passageHelps = await sampleResourcesService.getPassageHelps(verseRef);
+      const passageHelps = await resourceService.getPassageHelps(verseRef);
       setWords(passageHelps.words);
       setWordLinks(passageHelps.wordLinks);
     } catch (err) {

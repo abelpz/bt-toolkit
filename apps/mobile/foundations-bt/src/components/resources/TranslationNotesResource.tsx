@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { useResourceAPI } from 'linked-panels';
 import { useScriptureNavigation } from '../../contexts/ScriptureNavigationContext';
-import { sampleResourcesService } from '../../services/sampleResourcesService';
+import { useBookPackageResource, useBookPackageLoading } from '../../contexts/BookPackageContext';
 import type { TranslationNote } from '../../types/translationHelps';
 
 interface TranslationNotesResourceProps {
@@ -14,14 +14,39 @@ export const TranslationNotesResource: React.FC<TranslationNotesResourceProps> =
 }) => {
   const { currentReference, formatReference } = useScriptureNavigation();
   const api = useResourceAPI(resourceId);
-  const [notes, setNotes] = useState<TranslationNote[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  // Get data from book package context
+  const isPackageLoading = useBookPackageLoading();
+  const translationNotesData = useBookPackageResource('translationNotes');
+  
+  const [filteredNotes, setFilteredNotes] = useState<TranslationNote[]>([]);
 
-  // Load notes when reference changes
+  // Filter notes based on current reference
   useEffect(() => {
-    loadNotes();
-  }, [currentReference]);
+    if (translationNotesData && translationNotesData.notes) {
+      const currentChapter = currentReference.chapter;
+      const currentVerse = currentReference.verse;
+      
+      // Filter notes for current chapter and verse
+      const relevantNotes = translationNotesData.notes.filter((note: TranslationNote) => {
+        // Parse the reference (e.g., "1:1" or "1:1-3")
+        const refMatch = note.Reference.match(/(\d+):(\d+)(?:-(\d+))?/);
+        if (!refMatch) return false;
+        
+        const noteChapter = parseInt(refMatch[1]);
+        const noteStartVerse = parseInt(refMatch[2]);
+        const noteEndVerse = refMatch[3] ? parseInt(refMatch[3]) : noteStartVerse;
+        
+        return noteChapter === currentChapter && 
+               currentVerse >= noteStartVerse && 
+               currentVerse <= noteEndVerse;
+      });
+      
+      setFilteredNotes(relevantNotes);
+    } else {
+      setFilteredNotes([]);
+    }
+  }, [translationNotesData, currentReference]);
 
   // Listen for messages from other resources
   React.useEffect(() => {
@@ -35,11 +60,8 @@ export const TranslationNotesResource: React.FC<TranslationNotesResourceProps> =
           if (content.message.startsWith('word-selected:')) {
             const data = JSON.parse(content.message.replace('word-selected:', ''));
             if (data.word) {
-              highlightRelatedNotes(data.word);
+              console.log(`📝 Word selected: ${data.word}`);
             }
-          } else if (content.message.startsWith('scripture-navigation:')) {
-            const data = JSON.parse(content.message.replace('scripture-navigation:', ''));
-            console.log('📍 Navigation update from:', data.source);
           }
         } catch (e) {
           console.warn('Failed to parse message:', e);
@@ -47,28 +69,6 @@ export const TranslationNotesResource: React.FC<TranslationNotesResourceProps> =
       }
     }
   }, [api.messaging]);
-
-  const loadNotes = async () => {
-    if (!currentReference.book) return;
-    
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Convert ScriptureReference to VerseReference format
-      const verseRef = {
-        ...currentReference,
-        original: `${currentReference.book} ${currentReference.chapter}:${currentReference.verse}`
-      };
-      const passageHelps = await sampleResourcesService.getPassageHelps(verseRef);
-      setNotes(passageHelps.notes);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load translation notes');
-      console.error('Error loading translation notes:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const highlightRelatedNotes = (word: string) => {
     // Logic to highlight notes related to the selected word
@@ -131,24 +131,22 @@ export const TranslationNotesResource: React.FC<TranslationNotesResourceProps> =
     </TouchableOpacity>
   );
 
-  if (loading) {
+  if (isPackageLoading) {
     return (
       <View style={styles.container}>
         <View style={styles.centerContent}>
-          <Text style={styles.loadingText}>Loading translation notes...</Text>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading book package...</Text>
         </View>
       </View>
     );
   }
 
-  if (error) {
+  if (!translationNotesData) {
     return (
       <View style={styles.container}>
         <View style={styles.centerContent}>
-          <Text style={styles.errorText}>⚠️ {error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadNotes}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
+          <Text style={styles.errorText}>No translation notes available for {currentReference.book}</Text>
         </View>
       </View>
     );
@@ -161,13 +159,13 @@ export const TranslationNotesResource: React.FC<TranslationNotesResourceProps> =
           Translation Notes - {formatReference(currentReference)}
         </Text>
         <Text style={styles.subHeaderText}>
-          {notes.length} note{notes.length !== 1 ? 's' : ''} available
+          {filteredNotes.length} note{filteredNotes.length !== 1 ? 's' : ''} available
         </Text>
       </View>
       
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        {notes.length > 0 ? (
-          notes.map(renderTranslationNote)
+        {filteredNotes.length > 0 ? (
+          filteredNotes.map(renderTranslationNote)
         ) : (
           <Text style={styles.emptyText}>
             No translation notes available for {formatReference(currentReference)}

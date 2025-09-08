@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useResourceAPI } from 'linked-panels';
 import ParagraphAwareScriptureRenderer from '../ParagraphAwareScriptureRenderer';
-import { useContextualScriptureRenderer } from '../../hooks/useContextualScriptureRenderer';
 import { useScriptureNavigation } from '../../contexts/ScriptureNavigationContext';
+import { useBookPackageResource, useBookPackageLoading } from '../../contexts/BookPackageContext';
 
 interface LiteralTextResourceProps {
   resourceId: string;
@@ -16,20 +16,30 @@ export const LiteralTextResource: React.FC<LiteralTextResourceProps> = ({
 }) => {
   const { currentReference, formatReference } = useScriptureNavigation();
   const api = useResourceAPI(resourceId);
+  
+  // Get data from book package context
+  const isPackageLoading = useBookPackageLoading();
+  const bibleText = useBookPackageResource('literalText');
+  
+  // Debug logging
+  React.useEffect(() => {
+    console.log(`📖 LiteralTextResource - bibleText:`, bibleText);
+    console.log(`📖 LiteralTextResource - type:`, typeof bibleText);
+    if (bibleText) {
+      console.log(`📖 LiteralTextResource - keys:`, Object.keys(bibleText));
+    }
+  }, [bibleText]);
+  
+  // Local state for word highlighting
+  const [highlightedWords, setHighlightedWords] = React.useState<string[]>([]);
 
-  const {
-    processedScripture,
-    loading: scriptureLoading,
-    error: scriptureError,
-    highlightedWords,
-    contextualReference,
-    highlightWords,
-    clearHighlights
-  } = useContextualScriptureRenderer({
-    enableWordHighlighting: true,
-    contextualChunkSize: 'paragraph',
-    autoLoadOnNavigation: true
-  });
+  const highlightWords = React.useCallback((words: string[]) => {
+    setHighlightedWords(words);
+  }, []);
+
+  const clearHighlights = React.useCallback(() => {
+    setHighlightedWords([]);
+  }, []);
 
   // Listen for word highlighting messages from other resources
   React.useEffect(() => {
@@ -70,21 +80,34 @@ export const LiteralTextResource: React.FC<LiteralTextResourceProps> = ({
     }
   }, [currentReference, api.messaging, resourceId, textType]);
 
-  if (scriptureLoading) {
+  if (isPackageLoading) {
     return (
       <View style={styles.container}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading {textType.toUpperCase()}...</Text>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Loading book package...</Text>
         </View>
       </View>
     );
   }
 
-  if (scriptureError) {
+  if (!bibleText) {
     return (
       <View style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>⚠️ {scriptureError}</Text>
+          <Text style={styles.errorText}>No literal text available for {currentReference.book}</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Validate that bibleText has the expected structure for ParagraphAwareScriptureRenderer
+  if (!bibleText.chapters || !Array.isArray(bibleText.chapters)) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Invalid scripture data structure</Text>
+          <Text style={styles.debugText}>Expected ProcessedScripture with chapters array</Text>
         </View>
       </View>
     );
@@ -103,7 +126,7 @@ export const LiteralTextResource: React.FC<LiteralTextResourceProps> = ({
       
       <View style={styles.content}>
         <ParagraphAwareScriptureRenderer
-          scripture={processedScripture}
+          scripture={bibleText}
           highlightWords={highlightedWords}
           onWordPress={(word) => {
             // Send word selection to other resources
@@ -168,6 +191,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#dc2626',
     textAlign: 'center',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 8,
   },
   scriptureRenderer: {
     flex: 1,

@@ -21,9 +21,30 @@ import ScriptureNavigator from '../modules/navigation/ScriptureNavigator';
 
 // Import contexts
 import { useScriptureNavigation } from '../contexts/ScriptureNavigationContext';
+import { useResourceService } from '../contexts/ResourceServiceContext';
 
 export const LinkedPanelsLayout: React.FC = () => {
-  const { currentReference, availableBooks, setCurrentReference } = useScriptureNavigation();
+  const { currentReference, availableBooks, setCurrentReference, setAvailableBooks } = useScriptureNavigation();
+  const { resourceService, isInitialized } = useResourceService();
+
+  // Update available books when resource service is ready
+  React.useEffect(() => {
+    const loadAvailableBooks = async () => {
+      if (isInitialized && resourceService) {
+        try {
+          const books = await resourceService.getAvailableBooks();
+          if (books.length > 0) {
+            setAvailableBooks(books);
+            console.log(`📚 Updated available books from resource service: ${books.join(', ')}`);
+          }
+      } catch (error) {
+          console.warn('⚠️ Failed to load available books from resource service:', error);
+        }
+      }
+    };
+
+    loadAvailableBooks();
+  }, [isInitialized, resourceService, setAvailableBooks]);
 
   // Create the linked panels configuration
   const config: LinkedPanelsConfig = React.useMemo(() => ({
@@ -107,9 +128,9 @@ export const LinkedPanelsLayout: React.FC = () => {
     <View style={styles.container}>
       {/* Navigation Header */}
       <View style={styles.navigationHeader}>
-                      <ScriptureNavigator
-          currentReference={currentReference}
-          availableBooks={availableBooks}
+              <ScriptureNavigator
+                currentReference={currentReference}
+                availableBooks={availableBooks}
           onNavigate={setCurrentReference}
         />
       </View>
@@ -164,7 +185,7 @@ export const LinkedPanelsLayout: React.FC = () => {
                 {/* Resource Content */}
                 <View style={styles.resourceContent}>
                   {current.resource?.component}
-                </View>
+        </View>
               </View>
             )}
           </LinkedPanel>
@@ -178,8 +199,8 @@ export const LinkedPanelsLayout: React.FC = () => {
                   {/* Resource Content */}
                 <View style={styles.resourceContent}>
                   {current.resource?.component}
-                </View>
-              </View>
+        </View>
+      </View>
             )}
           </LinkedPanel>
         </View>

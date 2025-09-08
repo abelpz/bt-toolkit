@@ -1,0 +1,28 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "files": [],
+  "include": [],
+  "references": [
+    {
+      "path": "../door43-alignment"
+    },
+    {
+      "path": "../door43-scoping"
+    },
+    {
+      "path": "../door43-cache"
+    },
+    {
+      "path": "../door43-storage"
+    },
+    {
+      "path": "../door43-core"
+    },
+    {
+      "path": "./tsconfig.lib.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}

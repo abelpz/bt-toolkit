@@ -2,12 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { processUSFMSimple } from '@bt-toolkit/usfm-processor';
 import type { ProcessedScripture } from '@bt-toolkit/usfm-processor';
 import { useScriptureNavigation } from '../contexts/ScriptureNavigationContext';
+import { useResourceServiceInstance } from '../contexts/ResourceServiceContext';
 import { getUSFMForBook } from '../data/sampleUSFMData';
 
 interface UseContextualScriptureRendererOptions {
   enableWordHighlighting?: boolean;
   contextualChunkSize?: 'verse' | 'paragraph' | 'chapter' | 'section';
   autoLoadOnNavigation?: boolean;
+  textType?: 'ult' | 'ust'; // Bible text type
 }
 
 interface UseContextualScriptureRendererResult {
@@ -35,15 +37,18 @@ export function useContextualScriptureRenderer(
   const {
     enableWordHighlighting = true,
     contextualChunkSize = 'paragraph',
-    autoLoadOnNavigation = true
+    autoLoadOnNavigation = true,
+    textType = 'ult'
   } = options;
 
-  // Get navigation context
+  // Get navigation context and resource service
   const { 
     currentReference, 
     formatReference,
     availableBooks 
   } = useScriptureNavigation();
+  
+  const resourceService = useResourceServiceInstance();
 
   // Local state
   const [processedScripture, setProcessedScripture] = useState<ProcessedScripture | null>(null);
@@ -89,8 +94,24 @@ export function useContextualScriptureRenderer(
 
       console.log('🔄 Loading contextual scripture for:', currentReference.book);
       
-      // Get USFM data for current book
-      const usfmText = getUSFMForBook(currentReference.book);
+      // Try to get Bible text from resource service first
+      let usfmText: string | null = null;
+      
+      try {
+        const bibleText = await resourceService.getBibleText(currentReference.book, textType);
+        if (bibleText && bibleText.content) {
+          usfmText = bibleText.content;
+          console.log(`📖 Loaded ${textType.toUpperCase()} from resource service for ${currentReference.book}`);
+        }
+      } catch (serviceError) {
+        console.warn('⚠️ Failed to load from resource service, falling back to sample data:', serviceError);
+      }
+      
+      // Fallback to sample data if resource service fails
+      if (!usfmText) {
+        usfmText = getUSFMForBook(currentReference.book);
+        console.log(`📖 Using sample USFM data for ${currentReference.book}`);
+      }
       
       if (!usfmText) {
         throw new Error(`No USFM data found for ${currentReference.book}`);
@@ -116,7 +137,7 @@ export function useContextualScriptureRenderer(
     } finally {
       setLoading(false);
     }
-  }, [currentReference.book, contextualReference, contextualChunkSize]);
+  }, [currentReference.book, contextualReference, contextualChunkSize, resourceService, textType]);
 
   // Auto-load on navigation changes
   useEffect(() => {

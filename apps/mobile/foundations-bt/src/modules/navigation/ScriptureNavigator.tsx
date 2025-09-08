@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Pressable, ScrollView, Modal } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ScrollView, Modal, ActivityIndicator } from 'react-native';
+import { BIBLE_BOOKS, getBibleBookById } from '../../data/bibleBooks';
 
 export interface ScriptureReference {
   book: string;
@@ -35,31 +36,30 @@ export const ScriptureNavigator: React.FC<ScriptureNavigatorProps> = ({
   const [showChapterSelector, setShowChapterSelector] = useState(false);
   const [maxChapters, setMaxChapters] = useState<Record<string, number>>({});
 
-  // Bible book data - simplified for demo
-  const bibleBooks = {
-    'Genesis': { chapters: 50, testament: 'OT' },
-    'Exodus': { chapters: 40, testament: 'OT' },
-    'Matthew': { chapters: 28, testament: 'NT' },
-    'Mark': { chapters: 16, testament: 'NT' },
-    'Luke': { chapters: 24, testament: 'NT' },
-    'John': { chapters: 21, testament: 'NT' },
-    'Romans': { chapters: 16, testament: 'NT' },
-    '1 Corinthians': { chapters: 16, testament: 'NT' },
-    'Revelation': { chapters: 22, testament: 'NT' }
-  };
+  // Use comprehensive Bible book data
+  const bibleBooks = BIBLE_BOOKS.reduce((acc, book) => {
+    acc[book.name] = { 
+      chapters: book.chapters, 
+      testament: book.testament,
+      id: book.id 
+    };
+    return acc;
+  }, {} as Record<string, { chapters: number; testament: 'OT' | 'NT'; id: string }>);
 
   useEffect(() => {
-    // Initialize max chapters for available books
+    // Initialize max chapters for all Bible books
     const chapters: Record<string, number> = {};
-    availableBooks.forEach(book => {
-      chapters[book] = bibleBooks[book as keyof typeof bibleBooks]?.chapters || 1;
+    Object.keys(bibleBooks).forEach(book => {
+      chapters[book] = bibleBooks[book].chapters;
     });
     setMaxChapters(chapters);
-  }, [availableBooks]);
+  }, []);
 
-  const handleBookSelect = (book: string) => {
+  const handleBookSelect = (bookName: string) => {
+    // Find the book data to get the ID
+    const bookData = bibleBooks[bookName];
     const newReference: ScriptureReference = {
-      book,
+      book: bookData?.id || bookName, // Use book ID (e.g., 'JON') instead of name
       chapter: 1,
       verse: 1
     };
@@ -128,11 +128,12 @@ export const ScriptureNavigator: React.FC<ScriptureNavigatorProps> = ({
   };
 
   const renderBookSelector = () => {
-    const otBooks = availableBooks.filter(book => 
-      bibleBooks[book as keyof typeof bibleBooks]?.testament === 'OT'
+    const allBookNames = Object.keys(bibleBooks);
+    const otBooks = allBookNames.filter(bookName => 
+      bibleBooks[bookName]?.testament === 'OT'
     );
-    const ntBooks = availableBooks.filter(book => 
-      bibleBooks[book as keyof typeof bibleBooks]?.testament === 'NT'
+    const ntBooks = allBookNames.filter(bookName => 
+      bibleBooks[bookName]?.testament === 'NT'
     );
 
     return (
@@ -157,46 +158,54 @@ export const ScriptureNavigator: React.FC<ScriptureNavigatorProps> = ({
             {otBooks.length > 0 && (
               <View style={styles.testamentSection}>
                 <Text style={styles.testamentTitle}>Old Testament</Text>
-                {otBooks.map(book => (
-                  <Pressable
-                    key={book}
-                    style={[
-                      styles.bookItem,
-                      book === currentReference.book && styles.selectedBookItem
-                    ]}
-                    onPress={() => handleBookSelect(book)}
-                  >
-                    <Text style={[
-                      styles.bookItemText,
-                      book === currentReference.book && styles.selectedBookItemText
-                    ]}>
-                      {book}
-                    </Text>
-                  </Pressable>
-                ))}
+                {otBooks.map(bookName => {
+                  const bookData = bibleBooks[bookName];
+                  const isSelected = currentReference.book === bookData.id;
+                  return (
+                    <Pressable
+                      key={bookName}
+                      style={[
+                        styles.bookItem,
+                        isSelected && styles.selectedBookItem
+                      ]}
+                      onPress={() => handleBookSelect(bookName)}
+                    >
+                      <Text style={[
+                        styles.bookItemText,
+                        isSelected && styles.selectedBookItemText
+                      ]}>
+                        {bookName}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             )}
             
             {ntBooks.length > 0 && (
               <View style={styles.testamentSection}>
                 <Text style={styles.testamentTitle}>New Testament</Text>
-                {ntBooks.map(book => (
-                  <Pressable
-                    key={book}
-                    style={[
-                      styles.bookItem,
-                      book === currentReference.book && styles.selectedBookItem
-                    ]}
-                    onPress={() => handleBookSelect(book)}
-                  >
-                    <Text style={[
-                      styles.bookItemText,
-                      book === currentReference.book && styles.selectedBookItemText
-                    ]}>
-                      {book}
-                    </Text>
-                  </Pressable>
-                ))}
+                {ntBooks.map(bookName => {
+                  const bookData = bibleBooks[bookName];
+                  const isSelected = currentReference.book === bookData.id;
+                  return (
+                    <Pressable
+                      key={bookName}
+                      style={[
+                        styles.bookItem,
+                        isSelected && styles.selectedBookItem
+                      ]}
+                      onPress={() => handleBookSelect(bookName)}
+                    >
+                      <Text style={[
+                        styles.bookItemText,
+                        isSelected && styles.selectedBookItemText
+                      ]}>
+                        {bookName}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
               </View>
             )}
           </ScrollView>
@@ -309,7 +318,9 @@ export const ScriptureNavigator: React.FC<ScriptureNavigatorProps> = ({
             style={styles.bookButton}
             onPress={() => setShowBookSelector(true)}
           >
-            <Text style={styles.bookButtonText}>{currentReference.book}</Text>
+            <Text style={styles.bookButtonText}>
+              {getBibleBookById(currentReference.book)?.name || currentReference.book}
+            </Text>
           </Pressable>
           
           <Pressable

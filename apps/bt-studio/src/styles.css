@@ -1,0 +1,30 @@
+/* BT Studio - Global Styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles */
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+  
+  body {
+    @apply antialiased;
+  }
+}
+
+/* Custom component styles */
+@layer components {
+  .panel-container {
+    @apply bg-white rounded-lg shadow-sm border;
+  }
+  
+  .panel-header {
+    @apply px-4 py-3 border-b bg-gray-50 rounded-t-lg;
+  }
+  
+  .panel-content {
+    @apply p-4;
+  }
+}
