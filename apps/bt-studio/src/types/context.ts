@@ -7,6 +7,7 @@
 
 import React from 'react'
 import { LinkedPanelsConfig } from 'linked-panels'
+import type { OptimizedToken, OptimizedScripture, OptimizedChapter, OptimizedVerse } from '../services/usfm-processor'
 
 // ============================================================================
 // RESOURCE TYPES
@@ -36,52 +37,78 @@ export interface ScriptureResource extends BaseResource {
   language: string
   owner: string
   repository: string
-  books: Record<string, ProcessedBook>
+  books: Record<string, OptimizedBook>
 }
 
-export interface ProcessedBook {
+export interface OptimizedBook {
   bookCode: string
   title: string
-  chapters: ProcessedChapter[]
+  chapters: OptimizedChapter[]
   metadata?: Record<string, unknown>
+  // Optimized format metadata
+  meta: {
+    type: 'untokenized' | 'original' | 'aligned'
+    totalChapters: number
+    totalVerses: number
+    totalParagraphs: number
+    hasAlignments: boolean
+    processingDate: string
+    version: string
+  }
 }
 
-// USFM Processor Types (matching @usfm-processor.ts)
-export interface ProcessedVerse {
-  number: number;
-  text: string;
-  reference: string;
-  paragraphId?: string;
-  hasSectionMarker?: boolean;
-  sectionMarkers?: number;
+// USFM Processor Types - Now using optimized format
+export type ProcessedVerse = OptimizedVerse & {
+  // Add legacy compatibility properties for gradual migration
+  reference?: string; // Computed from chapter and verse number
   alignments?: WordAlignment[];
-  // Verse span support
-  isSpan?: boolean;
-  spanStart?: number;
-  spanEnd?: number;
-  originalVerseString?: string; // e.g., "1-2", "3", "4-6"
-}
+  wordTokens?: OptimizedToken[]; // Alias to tokens
+  alignmentGroups?: never; // Removed in optimized format
+};
 
-export interface ProcessedParagraph {
-  id: string;
-  type: 'paragraph' | 'quote';
-  style: 'p' | 'q' | 'q1' | 'q2' | 'm' | 'mi' | 'pc' | 'pr' | 'cls';
-  indentLevel: number;
-  startVerse: number;
-  endVerse: number;
-  verseCount: number;
-  verseNumbers: number[];
-  combinedText: string;
-  verses: ProcessedVerse[];
-}
+export type ProcessedParagraph = OptimizedVerse['paragraphId'] extends number 
+  ? {
+      id: number;
+      type: 'paragraph' | 'quote';
+      style: 'p' | 'q' | 'q1' | 'q2' | 'm' | 'mi' | 'pc' | 'pr' | 'cls';
+      indentLevel: number;
+      startVerse: number;
+      endVerse: number;
+      verseCount: number;
+      verseNumbers: number[];
+      combinedText: string;
+      verses: ProcessedVerse[];
+    }
+  : never;
 
-export interface ProcessedChapter {
-  number: number;
-  verseCount: number;
-  paragraphCount: number;
-  verses: ProcessedVerse[];
-  paragraphs: ProcessedParagraph[];
-}
+export type ProcessedChapter = OptimizedChapter;
+
+// Token type aliases
+export type WordToken = OptimizedToken & {
+  // Legacy compatibility properties
+  uniqueId?: string; // Computed from semantic ID
+  content?: string; // Alias to text
+  occurrence?: number; // No longer used in optimized format
+  totalOccurrences?: number; // No longer used in optimized format
+  verseRef?: string; // Computed from context
+  position?: { start: number; end: number }; // No longer used in optimized format
+  type?: 'word' | 'text' | 'punctuation'; // Inferred from content
+  isHighlightable?: boolean; // Always true for tokens with align data
+  alignmentId?: string; // No longer used
+  alignmentGroupId?: string; // No longer used
+  alignedOriginalWordIds?: string[]; // No longer used - use align array
+  alignment?: {
+    strong: string;
+    lemma: string;
+    morph: string;
+    sourceContent: string;
+    sourceWordId?: string;
+    alignmentGroupId?: string;
+  }; // Legacy - data now embedded in original language tokens
+};
+
+// Scripture type aliases
+export type ProcessedScripture = OptimizedScripture;
 
 export interface TranslatorSection {
   start: {

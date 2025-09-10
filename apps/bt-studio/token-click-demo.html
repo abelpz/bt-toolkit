@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Word Token Click Demo</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+        }
+        
+        .demo-container {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .scripture-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+        
+        .verse {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: white;
+            border-radius: 5px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .verse-number {
+            font-weight: bold;
+            color: #007bff;
+            margin-right: 8px;
+        }
+        
+        .word-token {
+            cursor: pointer;
+            padding: 2px 4px;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .word-token.highlightable {
+            background: #e3f2fd;
+            border: 1px solid transparent;
+        }
+        
+        .word-token.highlightable:hover {
+            background: #bbdefb;
+            border-color: #2196f3;
+            transform: translateY(-1px);
+        }
+        
+        .word-token.selected {
+            background: #2196f3;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .word-token.aligned-group {
+            background: #fff3e0;
+            border-color: #ff9800;
+        }
+        
+        .punctuation {
+            color: #666;
+        }
+        
+        .whitespace-token {
+            /* Preserve whitespace as-is, no styling */
+        }
+        
+        .token-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #28a745;
+        }
+        
+        .token-info h3 {
+            margin: 0 0 10px 0;
+            color: #28a745;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            padding: 3px 0;
+        }
+        
+        .info-label {
+            font-weight: 600;
+            color: #495057;
+        }
+        
+        .info-value {
+            font-family: 'Monaco', 'Consolas', monospace;
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        
+        .alignment-info {
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        
+        .alignment-info h4 {
+            margin: 0 0 8px 0;
+            color: #155724;
+        }
+        
+        .greek-word {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        
+        .strong-number {
+            background: #007bff;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .group-info {
+            background: #fff3cd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            border: 1px solid #ffeaa7;
+        }
+        
+        .group-info h4 {
+            margin: 0 0 8px 0;
+            color: #856404;
+        }
+        
+        .related-words {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 8px;
+        }
+        
+        .related-word {
+            background: #ff9800;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+        
+        .related-word:hover {
+            background: #f57c00;
+        }
+        
+        .no-selection {
+            color: #6c757d;
+            font-style: italic;
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #f5c6cb;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .info-panel {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎯 Word Token Click Demo</h1>
+        <p>Click on highlighted words to see their alignment information and related tokens</p>
+    </div>
+
+    <div class="demo-container">
+        <div class="scripture-panel">
+            <h2>📖 Scripture Text</h2>
+            <div id="scripture-content" class="loading">
+                Loading scripture content...
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h2>ℹ️ Token Information</h2>
+            <div id="token-info" class="no-selection">
+                Click on a highlighted word to see its information
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class TokenClickDemo {
+            constructor() {
+                this.selectedToken = null;
+                this.scriptureData = null;
+                this.init();
+            }
+
+            async init() {
+                try {
+                    await this.loadScriptureData();
+                    this.renderScripture();
+                } catch (error) {
+                    this.showError('Failed to load scripture data: ' + error.message);
+                }
+            }
+
+            async loadScriptureData() {
+                // Simulate loading processed USFM data
+                // In real implementation, this would fetch from the enhanced USFM processor
+                this.scriptureData = {
+                    book: "Test Book",
+                    chapters: [{
+                        number: 1,
+                        paragraphs: [{
+                            id: "chapter-1-paragraph-1",
+                            type: "paragraph",
+                            combinedText: "And he is who he is.",
+                            tokenizedContent: [
+                                {
+                                    uniqueId: "TST 1:1:And:1",
+                                    content: "And",
+                                    occurrence: 1,
+                                    totalOccurrences: 1,
+                                    verseRef: "TST 1:1",
+                                    position: { start: 0, end: 3, wordIndex: 0 },
+                                    alignment: {
+                                        sourceWordId: "TST 1:1:καὶ:1",
+                                        sourceContent: "καὶ",
+                                        sourceOccurrence: 1,
+                                        strong: "G25320",
+                                        lemma: "καί",
+                                        morph: "Gr,CC,,,,,,,,"
+                                    },
+                                    isHighlightable: true,
+                                    type: "word"
+                                },
+                                {
+                                    uniqueId: "TST 1:1:he:1",
+                                    content: "he",
+                                    occurrence: 1,
+                                    totalOccurrences: 2,
+                                    verseRef: "TST 1:1",
+                                    position: { start: 4, end: 6, wordIndex: 1 },
+                                    alignment: {
+                                        sourceWordId: "TST 1:1:ὃς:1",
+                                        sourceContent: "ὃς",
+                                        sourceOccurrence: 1,
+                                        strong: "G37560",
+                                        lemma: "ὅς",
+                                        morph: "Gr,RR,,,,NMS,",
+                                        alignmentGroupId: "TST 1:1-group-2"
+                                    },
+                                    isHighlightable: true,
+                                    type: "word"
+                                },
+                                {
+                                    uniqueId: "TST 1:1:is:1",
+                                    content: "is",
+                                    occurrence: 1,
+                                    totalOccurrences: 2,
+                                    verseRef: "TST 1:1",
+                                    position: { start: 7, end: 9, wordIndex: 2 },
+                                    alignment: {
+                                        sourceWordId: "TST 1:1:ἐστιν:1",
+                                        sourceContent: "ἐστιν",
+                                        sourceOccurrence: 1,
+                                        strong: "G15100",
+                                        lemma: "εἰμί",
+                                        morph: "Gr,V,IPA3,,S,",
+                                        alignmentGroupId: "TST 1:1-group-3"
+                                    },
+                                    isHighlightable: true,
+                                    type: "word"
+                                },
+                                {
+                                    uniqueId: "TST 1:1:who:1",
+                                    content: "who",
+                                    occurrence: 1,
+                                    totalOccurrences: 1,
+                                    verseRef: "TST 1:1",
+                                    position: { start: 10, end: 13, wordIndex: 3 },
+                                    alignment: {
+                                        sourceWordId: "TST 1:1:ὃς:1",
+                                        sourceContent: "ὃς",
+                                        sourceOccurrence: 1,
+                                        strong: "G37560",
+                                        lemma: "ὅς",
+                                        morph: "Gr,RR,,,,NMS,",
+                                        alignmentGroupId: "TST 1:1-group-2"
+                                    },
+                                    isHighlightable: true,
+                                    type: "word"
+                                },
+                                {
+                                    uniqueId: "TST 1:1:he:2",
+                                    content: "he",
+                                    occurrence: 2,
+                                    totalOccurrences: 2,
+                                    verseRef: "TST 1:1",
+                                    position: { start: 14, end: 16, wordIndex: 4 },
+                                    alignment: {
+                                        sourceWordId: "TST 1:1:ἐστιν:1",
+                                        sourceContent: "ἐστιν",
+                                        sourceOccurrence: 1,
+                                        strong: "G15100",
+                                        lemma: "εἰμί",
+                                        morph: "Gr,V,IPA3,,S,",
+                                        alignmentGroupId: "TST 1:1-group-3"
+                                    },
+                                    isHighlightable: true,
+                                    type: "word"
+                                },
+                                {
+                                    uniqueId: "TST 1:1:is:2",
+                                    content: "is",
+                                    occurrence: 2,
+                                    totalOccurrences: 2,
+                                    verseRef: "TST 1:1",
+                                    position: { start: 17, end: 19, wordIndex: 5 },
+                                    alignment: {
+                                        sourceWordId: "TST 1:1:ἐστιν:1",
+                                        sourceContent: "ἐστιν",
+                                        sourceOccurrence: 1,
+                                        strong: "G15100",
+                                        lemma: "εἰμί",
+                                        morph: "Gr,V,IPA3,,S,",
+                                        alignmentGroupId: "TST 1:1-group-3"
+                                    },
+                                    isHighlightable: true,
+                                    type: "word"
+                                }
+                            ]
+                        }]
+                    }]
+                };
+            }
+
+            renderScripture() {
+                const container = document.getElementById('scripture-content');
+                container.innerHTML = '';
+
+                for (const chapter of this.scriptureData.chapters) {
+                    for (const paragraph of chapter.paragraphs) {
+                        const verseDiv = document.createElement('div');
+                        verseDiv.className = 'verse';
+                        
+                        const verseNumber = document.createElement('span');
+                        verseNumber.className = 'verse-number';
+                        verseNumber.textContent = '1';
+                        verseDiv.appendChild(verseNumber);
+
+                            // Render tokenized content
+                            for (const token of paragraph.tokenizedContent) {
+                                const tokenSpan = document.createElement('span');
+                                tokenSpan.dataset.tokenId = token.uniqueId;
+                                tokenSpan.textContent = token.content;
+
+                                // Handle whitespace tokens differently
+                                if (token.type === 'text' && /^\s+$/.test(token.content)) {
+                                    tokenSpan.className = 'whitespace-token';
+                                    tokenSpan.dataset.tokenType = 'whitespace';
+                                } else {
+                                    tokenSpan.className = `word-token ${token.type}`;
+                                    
+                                    if (token.isHighlightable) {
+                                        tokenSpan.classList.add('highlightable');
+                                        if (token.alignment?.alignmentGroupId) {
+                                            tokenSpan.classList.add('aligned-group');
+                                        }
+                                        tokenSpan.addEventListener('click', () => this.onTokenClick(token));
+                                    }
+                                }
+
+                                verseDiv.appendChild(tokenSpan);
+                            }
+
+                        container.appendChild(verseDiv);
+                    }
+                }
+            }
+
+            onTokenClick(token) {
+                // Clear previous selection
+                document.querySelectorAll('.word-token.selected').forEach(el => {
+                    el.classList.remove('selected');
+                });
+
+                // Select clicked token
+                const tokenElement = document.querySelector(`[data-token-id="${token.uniqueId}"]`);
+                if (tokenElement) {
+                    tokenElement.classList.add('selected');
+                }
+
+                // Highlight related tokens in same alignment group
+                if (token.alignment?.alignmentGroupId) {
+                    this.highlightAlignmentGroup(token.alignment.alignmentGroupId);
+                }
+
+                this.selectedToken = token;
+                this.updateTokenInfo();
+            }
+
+            highlightAlignmentGroup(groupId) {
+                // Find all tokens in the same alignment group
+                const relatedTokens = [];
+                for (const chapter of this.scriptureData.chapters) {
+                    for (const paragraph of chapter.paragraphs) {
+                        for (const token of paragraph.tokenizedContent) {
+                            if (token.alignment?.alignmentGroupId === groupId) {
+                                relatedTokens.push(token);
+                            }
+                        }
+                    }
+                }
+
+                // Highlight related tokens
+                relatedTokens.forEach(token => {
+                    const element = document.querySelector(`[data-token-id="${token.uniqueId}"]`);
+                    if (element && !element.classList.contains('selected')) {
+                        element.style.background = '#ffeb3b';
+                        element.style.fontWeight = 'bold';
+                    }
+                });
+
+                // Clear highlights after 2 seconds
+                setTimeout(() => {
+                    relatedTokens.forEach(token => {
+                        const element = document.querySelector(`[data-token-id="${token.uniqueId}"]`);
+                        if (element && !element.classList.contains('selected')) {
+                            element.style.background = '';
+                            element.style.fontWeight = '';
+                        }
+                    });
+                }, 2000);
+            }
+
+            updateTokenInfo() {
+                const container = document.getElementById('token-info');
+                
+                if (!this.selectedToken) {
+                    container.innerHTML = '<div class="no-selection">Click on a highlighted word to see its information</div>';
+                    return;
+                }
+
+                const token = this.selectedToken;
+                
+                let html = `
+                    <div class="token-info">
+                        <h3>Word Token</h3>
+                        <div class="info-row">
+                            <span class="info-label">Unique ID:</span>
+                            <span class="info-value">${token.uniqueId}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Content:</span>
+                            <span class="info-value">"${token.content}"</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Occurrence:</span>
+                            <span class="info-value">${token.occurrence} of ${token.totalOccurrences}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Position:</span>
+                            <span class="info-value">${token.position.start}-${token.position.end}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Type:</span>
+                            <span class="info-value">${token.type}</span>
+                        </div>
+                    </div>
+                `;
+
+                if (token.alignment) {
+                    const alignment = token.alignment;
+                    html += `
+                        <div class="alignment-info">
+                            <h4>🔗 Alignment Information</h4>
+                            <div class="info-row">
+                                <span class="info-label">Source Word ID:</span>
+                                <span class="info-value">${alignment.sourceWordId}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Greek Word:</span>
+                                <span class="greek-word">${alignment.sourceContent}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Strong's:</span>
+                                <span class="strong-number">${alignment.strong}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Lemma:</span>
+                                <span class="info-value">${alignment.lemma}</span>
+                            </div>
+                            ${alignment.morph ? `
+                            <div class="info-row">
+                                <span class="info-label">Morphology:</span>
+                                <span class="info-value">${alignment.morph}</span>
+                            </div>
+                            ` : ''}
+                        </div>
+                    `;
+
+                    if (alignment.alignmentGroupId) {
+                        const relatedWords = this.getRelatedWords(alignment.alignmentGroupId);
+                        html += `
+                            <div class="group-info">
+                                <h4>👥 Non-Contiguous Group</h4>
+                                <div class="info-row">
+                                    <span class="info-label">Group ID:</span>
+                                    <span class="info-value">${alignment.alignmentGroupId}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Related Words:</span>
+                                </div>
+                                <div class="related-words">
+                                    ${relatedWords.map(word => `
+                                        <span class="related-word" onclick="demo.highlightToken('${word.uniqueId}')">${word.content}</span>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                container.innerHTML = html;
+            }
+
+            getRelatedWords(groupId) {
+                const relatedWords = [];
+                for (const chapter of this.scriptureData.chapters) {
+                    for (const paragraph of chapter.paragraphs) {
+                        for (const token of paragraph.tokenizedContent) {
+                            if (token.alignment?.alignmentGroupId === groupId) {
+                                relatedWords.push(token);
+                            }
+                        }
+                    }
+                }
+                return relatedWords;
+            }
+
+            highlightToken(uniqueId) {
+                const token = this.findTokenById(uniqueId);
+                if (token) {
+                    this.onTokenClick(token);
+                }
+            }
+
+            findTokenById(uniqueId) {
+                for (const chapter of this.scriptureData.chapters) {
+                    for (const paragraph of chapter.paragraphs) {
+                        for (const token of paragraph.tokenizedContent) {
+                            if (token.uniqueId === uniqueId) {
+                                return token;
+                            }
+                        }
+                    }
+                }
+                return null;
+            }
+
+            showError(message) {
+                const container = document.getElementById('scripture-content');
+                container.innerHTML = `<div class="error">${message}</div>`;
+            }
+        }
+
+        // Initialize demo
+        const demo = new TokenClickDemo();
+    </script>
+</body>
+</html>

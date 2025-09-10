@@ -8,13 +8,13 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ProcessedScripture } from '../../types/context';
+import { OptimizedScripture } from '../../services/usfm-processor';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { USFMRenderer } from './USFMRenderer';
 
 export interface OriginalScriptureViewerProps {
-  scripture?: ProcessedScripture;
+  scripture?: OptimizedScripture;
   loading?: boolean;
   error?: string;
   currentChapter?: number;
@@ -62,7 +62,7 @@ export function OriginalScriptureViewer({
   const { resourceManager } = useWorkspace();
   
   // State for actual scripture content
-  const [actualScripture, setActualScripture] = useState<ProcessedScripture | null>(null);
+  const [actualScripture, setActualScripture] = useState<OptimizedScripture | null>(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
   const [loadingProgress, setLoadingProgress] = useState<string>('');
@@ -114,7 +114,7 @@ export function OriginalScriptureViewer({
         );
         
         console.log(`✅ OriginalScriptureViewer - Content loaded for ${testament}:`, content);
-        setActualScripture(content as ProcessedScripture);
+        setActualScripture(content as OptimizedScripture);
         
         // Set language direction based on the language (Hebrew = RTL, Greek = LTR)
         const mockMetadata = {
@@ -280,6 +280,12 @@ export function OriginalScriptureViewer({
             >
               <USFMRenderer
                 scripture={displayScripture}
+                resourceId={
+                  resourceId || 
+                  (currentLanguageConfig?.language === 'hbo' ? 'hebrew-bible-global' : 'greek-nt-global')
+                }
+                resourceType={currentLanguageConfig?.language === 'hbo' ? 'UHB' : 'UGNT'}
+                language={currentLanguageConfig?.language === 'hbo' ? 'hbo' : 'el-x-koine'}
                 startRef={
                   currentReference.chapter && currentReference.verse
                     ? { chapter: currentReference.chapter, verse: currentReference.verse }

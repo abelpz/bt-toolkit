@@ -1,16 +1,16 @@
 /**
  * Scripture Viewer Component
- * Displays ProcessedScripture content with chapters, verses, and paragraphs
+ * Displays OptimizedScripture content with chapters, verses, and paragraphs
  */
 
 import { useEffect, useState } from 'react';
-import { ProcessedScripture } from '../../types/context';
+import { OptimizedScripture } from '../../services/usfm-processor';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { USFMRenderer } from './USFMRenderer';
 
 export interface ScriptureViewerProps {
-  scripture?: ProcessedScripture;
+  scripture?: OptimizedScripture;
   loading?: boolean;
   error?: string;
   currentChapter?: number;
@@ -34,7 +34,7 @@ export function ScriptureViewer({
   const { resourceManager, processedResourceConfig } = useWorkspace();
   
   // State for actual scripture content
-  const [actualScripture, setActualScripture] = useState<ProcessedScripture | null>(null);
+  const [actualScripture, setActualScripture] = useState<OptimizedScripture | null>(null);
   const [contentLoading, setContentLoading] = useState(false);
   const [contentError, setContentError] = useState<string | null>(null);
   const [resourceMetadata, setResourceMetadata] = useState<any>(null);
@@ -93,7 +93,7 @@ export function ScriptureViewer({
         );
         
         console.log(`✅ ScriptureViewer - Content loaded for ${resourceId}:`, content);
-        setActualScripture(content as ProcessedScripture); // TODO: Fix type - should be proper ProcessedScripture
+        setActualScripture(content as OptimizedScripture); // Optimized format
         
         // Use existing metadata from resource config for language direction
         console.log(`📋 ScriptureViewer - Using existing metadata:`, resourceConfig.metadata);
@@ -233,6 +233,9 @@ export function ScriptureViewer({
             >
               <USFMRenderer
                 scripture={displayScripture}
+                resourceId={resourceId || 'unknown-resource'}
+                resourceType={getResourceType(resourceMetadata?.id)}
+                language={getLanguageCode(resourceMetadata?.language)}
                 startRef={
                   currentReference.chapter && currentReference.verse
                     ? { chapter: currentReference.chapter, verse: currentReference.verse }
@@ -259,4 +262,34 @@ export function ScriptureViewer({
       
     </div>
   );
+}
+
+/**
+ * Helper function to map resource ID to resource type
+ */
+function getResourceType(resourceId?: string): 'ULT' | 'UST' | 'UGNT' | 'UHB' {
+  if (!resourceId) return 'ULT'; // Default fallback
+  
+  const id = resourceId.toLowerCase();
+  if (id.includes('ult')) return 'ULT';
+  if (id.includes('ust')) return 'UST';
+  if (id.includes('ugnt')) return 'UGNT';
+  if (id.includes('uhb')) return 'UHB';
+  
+  // Default fallback
+  return 'ULT';
+}
+
+/**
+ * Helper function to map language to language code
+ */
+function getLanguageCode(language?: string): 'en' | 'el-x-koine' | 'hbo' {
+  if (!language) return 'en'; // Default fallback
+  
+  const lang = language.toLowerCase();
+  if (lang.includes('el-x-koine') || lang.includes('greek')) return 'el-x-koine';
+  if (lang.includes('hbo') || lang.includes('hebrew')) return 'hbo';
+  
+  // Default to English for most cases
+  return 'en';
 }

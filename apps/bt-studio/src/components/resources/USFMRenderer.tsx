@@ -4,17 +4,170 @@
  * Supports verse ranges, cross-chapter rendering, and alignment display
  */
 
-import React from 'react';
-import type { ProcessedScripture, ProcessedVerse, WordAlignment } from '../../types/context';
+import React, { useEffect, useState, useCallback } from 'react';
+import type { WordAlignment } from '../../types/context';
+import type { OptimizedToken, OptimizedScripture, OptimizedVerse } from '../../services/usfm-processor';
+import { getCrossPanelCommunicationService, type CrossPanelMessage, type TokenHighlightMessage, type OriginalLanguageToken } from '../../services/cross-panel-communication';
+
+/**
+ * Find tokens in optimized format that align to the given original language token
+ */
+function findTokensAlignedToOriginalLanguageTokenOptimized(
+  originalLanguageToken: OriginalLanguageToken,
+  scripture: OptimizedScripture,
+  resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB',
+  language: 'en' | 'el-x-koine' | 'hbo'
+): number[] {
+  const tokenIds: number[] = [];
+  
+  // For original language panels
+  if (language === 'el-x-koine' || language === 'hbo') {
+    // Find tokens with matching semantic ID
+    for (const chapter of scripture.chapters) {
+      for (const verse of chapter.verses) {
+        for (const token of verse.tokens) {
+          // Direct semantic ID match
+          if (token.id === originalLanguageToken.semanticId) {
+            tokenIds.push(token.id);
+          }
+          
+          // Check aligned semantic IDs for group matches
+          if (originalLanguageToken.alignedSemanticIds) {
+            for (const alignedId of originalLanguageToken.alignedSemanticIds) {
+              if (token.id === alignedId) {
+                tokenIds.push(token.id);
+              }
+            }
+          }
+        }
+      }
+    }
+  } else {
+    // For target language panels, find tokens that align to the original language token
+  for (const chapter of scripture.chapters) {
+    for (const verse of chapter.verses) {
+        for (const token of verse.tokens) {
+          if (token.align) {
+        // Check if this token aligns to the original language token
+            if (token.align.includes(originalLanguageToken.semanticId)) {
+              tokenIds.push(token.id);
+            }
+            
+            // Check aligned semantic IDs for group matches
+            if (originalLanguageToken.alignedSemanticIds) {
+              for (const alignedId of originalLanguageToken.alignedSemanticIds) {
+                if (token.align.includes(alignedId)) {
+                  tokenIds.push(token.id);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  return [...new Set(tokenIds)]; // Remove duplicates
+}
+
+/**
+ * Wrapper function for backward compatibility
+ */
+function findTokensAlignedToOriginalLanguageToken(
+  originalLanguageToken: OriginalLanguageToken,
+  scripture: OptimizedScripture,
+  resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB',
+  language: 'en' | 'el-x-koine' | 'hbo'
+): number[] {
+  return findTokensAlignedToOriginalLanguageTokenOptimized(originalLanguageToken, scripture, resourceType, language);
+}
+
+/**
+ * Get verses to render based on filters and range - optimized version
+ */
+function getVersesToRenderOptimized(
+  scripture: OptimizedScripture,
+  options: {
+    chapter?: number;
+    verseRange?: { start: number; end: number };
+    startRef?: { chapter: number; verse: number };
+    endRef?: { chapter: number; verse: number };
+  }
+): OptimizedVerse[] {
+  const { chapter, verseRange, startRef, endRef } = options;
+  let versesWithChapter: Array<OptimizedVerse & { chapterNumber: number }> = [];
+
+  // Collect all verses from all chapters with chapter context
+  for (const chapterData of scripture.chapters) {
+    for (const verse of chapterData.verses) {
+      versesWithChapter.push({
+        ...verse,
+        chapterNumber: chapterData.number
+      });
+    }
+  }
+
+  console.log(`🔍 getVersesToRenderOptimized: Found ${versesWithChapter.length} total verses`);
+  console.log(`📋 Options:`, { chapter, verseRange, startRef, endRef });
+
+  // Apply filters
+  if (chapter) {
+    versesWithChapter = versesWithChapter.filter(v => v.chapterNumber === chapter);
+    console.log(`📋 After chapter filter (${chapter}): ${versesWithChapter.length} verses`);
+  }
+
+  if (verseRange) {
+    versesWithChapter = versesWithChapter.filter(v => {
+      return v.number >= verseRange.start && v.number <= verseRange.end;
+    });
+    console.log(`📋 After verse range filter (${verseRange.start}-${verseRange.end}): ${versesWithChapter.length} verses`);
+  }
+
+  if (startRef && endRef) {
+    versesWithChapter = versesWithChapter.filter(v => {
+      const chapterNum = v.chapterNumber;
+      const verseNum = v.number;
+      
+      const isAfterStart = chapterNum > startRef.chapter || 
+                          (chapterNum === startRef.chapter && verseNum >= startRef.verse);
+      const isBeforeEnd = chapterNum < endRef.chapter || 
+                         (chapterNum === endRef.chapter && verseNum <= endRef.verse);
+      
+      return isAfterStart && isBeforeEnd;
+    });
+    console.log(`📋 After startRef/endRef filter (${startRef.chapter}:${startRef.verse}-${endRef.chapter}:${endRef.verse}): ${versesWithChapter.length} verses`);
+  }
+
+  // Sort by chapter and verse
+  const sortedVerses = versesWithChapter.sort((a, b) => {
+    if (a.chapterNumber !== b.chapterNumber) {
+      return a.chapterNumber - b.chapterNumber;
+    }
+    return a.number - b.number;
+  });
+
+  console.log(`📋 Final verses to render:`, sortedVerses.map(v => `${v.chapterNumber}:${v.number}`));
+
+  // Return verses without the added chapterNumber property
+  return sortedVerses.map(({ chapterNumber, ...verse }) => verse);
+}
 
 export interface USFMRendererProps {
-  scripture: ProcessedScripture;
-  /** Optional: render only specific chapter */
+  /** Processed scripture data in optimized format */
+  scripture: OptimizedScripture;
+  /** Resource identifier for cross-panel communication */
+  resourceId: string;
+  /** Resource type for alignment logic */
+  resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
+  /** Language code for alignment logic */
+  language: 'en' | 'el-x-koine' | 'hbo';
+  /** Filter by specific chapter */
   chapter?: number;
-  /** Optional: render specific verse range (e.g., "1-5" or "3") */
-  verseRange?: string;
-  /** Optional: render from start reference to end reference (can cross chapters) */
+  /** Filter by verse range within chapter */
+  verseRange?: { start: number; end: number };
+  /** Start reference for cross-chapter ranges */
   startRef?: { chapter: number; verse: number };
+  /** End reference for cross-chapter ranges */
   endRef?: { chapter: number; verse: number };
   /** Show verse numbers */
   showVerseNumbers?: boolean;
@@ -26,14 +179,19 @@ export interface USFMRendererProps {
   showAlignments?: boolean;
   /** Highlight specific words */
   highlightWords?: string[];
-  /** Callback when word is clicked */
-  onWordClick?: (word: string, verse: ProcessedVerse, alignment?: WordAlignment) => void;
+  /** Callback when word token is clicked */
+  onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
+  /** Callback when word token is clicked (enhanced) */
+  onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
   /** Custom styling */
   className?: string;
 }
 
 export const USFMRenderer: React.FC<USFMRendererProps> = ({
   scripture,
+  resourceId,
+  resourceType,
+  language,
   chapter,
   verseRange,
   startRef,
@@ -44,15 +202,110 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
   showAlignments = false,
   highlightWords = [],
   onWordClick,
+  onTokenClick,
   className = ''
 }) => {
-  // Determine which verses to render
-  const versesToRender = getVersesToRender(scripture, {
-    chapter,
-    verseRange,
-    startRef,
-    endRef
-  });
+  // Cross-panel communication state - optimized format uses number IDs
+  const [highlightedTokens, setHighlightedTokens] = useState<Set<number>>(new Set());
+  const crossPanelService = getCrossPanelCommunicationService();
+
+  // Handle highlight messages from all panels (including self-highlighting)
+  const handleHighlightMessage = useCallback((message: TokenHighlightMessage) => {
+    console.log(`🎯 HIGHLIGHT_SIGNAL_RECEIVED in ${resourceId}:`, {
+      sourceResourceId: message.sourceResourceId,
+      sourceContent: message.sourceContent,
+      sourceVerseRef: message.sourceVerseRef,
+      originalLanguageToken: message.originalLanguageToken,
+      fullMessage: message
+    });
+
+    // Find tokens in this panel that align to the original language token
+    const tokenIdsToHighlight = findTokensAlignedToOriginalLanguageToken(
+      message.originalLanguageToken,
+      scripture,
+      resourceType,
+      language
+    );
+
+    console.log(`🎯 HIGHLIGHT_TOKENS_FOR_${resourceId}:`, {
+      originalLanguageToken: message.originalLanguageToken,
+      tokensForThisPanel: tokenIdsToHighlight,
+      willHighlight: tokenIdsToHighlight.length > 0
+    });
+
+    // Update highlighted tokens
+    setHighlightedTokens(new Set(tokenIdsToHighlight));
+  }, [scripture, resourceType, language, resourceId]);
+
+  // Handle clear highlights messages
+  const handleClearHighlights = useCallback((message: any) => {
+    console.log(`🎯 CLEAR_HIGHLIGHTS_RECEIVED in ${resourceId}:`, message);
+      setHighlightedTokens(new Set());
+  }, [resourceId]);
+
+  // Handle token clicks
+  const handleTokenClick = useCallback((token: OptimizedToken, verse: OptimizedVerse) => {
+    console.log(`🖱️ USFMRenderer: Triggering cross-panel communication for token:`, token, `from resource:`, resourceId);
+    
+    // Trigger cross-panel communication
+    crossPanelService.handleTokenClick(token, resourceId);
+    
+    // Call user callback if provided
+    if (onTokenClick) {
+      onTokenClick(token, verse);
+    }
+  }, [crossPanelService, resourceId, onTokenClick]);
+
+  // Register panel and set up cross-panel communication
+  useEffect(() => {
+    console.log('🔗 USFMRenderer: Setting up cross-panel communication for', resourceId);
+    
+    // Register this panel with the cross-panel service
+    const panelResource = {
+      resourceId,
+      resourceType,
+      language,
+      chapters: scripture.chapters as any, // Legacy property for compatibility
+      isOriginalLanguage: language === 'el-x-koine' || language === 'hbo',
+      optimizedChapters: scripture.chapters,
+      isOptimized: true
+    };
+
+    console.log('✅ USFMRenderer: Registering panel with cross-panel service:', panelResource);
+    crossPanelService.registerPanel(panelResource);
+
+    // Add message handler for cross-panel highlights
+    const unsubscribe = crossPanelService.addMessageHandler((message: CrossPanelMessage) => {
+      console.log(`🎯 MESSAGE_HANDLER_${resourceId}:`, {
+        messageType: message.type,
+        message: message
+      });
+
+      if (message.type === 'HIGHLIGHT_TOKENS') {
+        handleHighlightMessage(message);
+      } else if (message.type === 'CLEAR_HIGHLIGHTS') {
+        handleClearHighlights(message);
+      }
+    });
+
+    return () => {
+      // Only remove message handler, keep panel registered
+      // Panel will be unregistered when component unmounts
+      unsubscribe();
+    };
+  }, [resourceId, resourceType, language, scripture.chapters, crossPanelService, handleHighlightMessage, handleClearHighlights]);
+
+  // Separate effect for component unmount - unregister panel only then
+  useEffect(() => {
+    return () => {
+      console.log('🔗 USFMRenderer: Unregistering panel on unmount:', resourceId);
+      crossPanelService.unregisterPanel(resourceId);
+    };
+  }, [resourceId, crossPanelService]);
+
+  console.log('USFMRenderer: scripture', scripture);
+  const versesToRender = getVersesToRender(scripture, { chapter, verseRange, startRef, endRef });
+  console.log('USFMRenderer: versesToRender', versesToRender);
 
   if (versesToRender.length === 0) {
     return (
@@ -67,12 +320,16 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
   if (showParagraphs) {
     return (
       <div className={`usfm-renderer prose prose-lg max-w-none ${className}`}>
-        {renderByParagraphs(versesToRender, {
+        {renderByParagraphs(versesToRender, scripture, {
           showVerseNumbers,
           showChapterNumbers,
           showAlignments,
           highlightWords,
-          onWordClick
+          highlightedTokens,
+          onWordClick,
+          onTokenClick: handleTokenClick,
+          resourceType,
+          language
         })}
       </div>
     );
@@ -81,16 +338,24 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
   // Render as simple verse list
   return (
     <div className={`usfm-renderer prose prose-lg max-w-none ${className}`}>
-      {versesToRender.map((verse) => (
+      {versesToRender.map((verse) => {
+        const chapterNumber = getChapterForVerse(verse, scripture);
+        return (
         <VerseRenderer
-          key={verse.reference}
+            key={`${chapterNumber}:${verse.number}`}
           verse={verse}
+            chapterNumber={chapterNumber}
           showVerseNumbers={showVerseNumbers}
           showAlignments={showAlignments}
           highlightWords={highlightWords}
+          highlightedTokens={highlightedTokens}
           onWordClick={onWordClick}
+          onTokenClick={handleTokenClick}
+            resourceType={resourceType}
+            language={language}
         />
-      ))}
+        );
+      })}
     </div>
   );
 };
@@ -99,391 +364,499 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
  * Render verses grouped by paragraphs with chapter headers
  */
 function renderByParagraphs(
-  verses: ProcessedVerse[],
+  verses: OptimizedVerse[],
+  scripture: OptimizedScripture,
   options: {
     showVerseNumbers: boolean;
     showChapterNumbers: boolean;
     showAlignments: boolean;
     highlightWords: string[];
-    onWordClick?: (word: string, verse: ProcessedVerse, alignment?: WordAlignment) => void;
+    highlightedTokens: Set<number>;
+    onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
+    onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
+    resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
+    language: 'en' | 'el-x-koine' | 'hbo';
   }
 ): React.ReactNode {
-  // Group verses by chapter first, then by paragraph
-  const chapterGroups: { [chapterNum: number]: ProcessedVerse[] } = {};
+  // Group verses by chapter first
+  const chapterGroups: { [chapterNum: number]: OptimizedVerse[] } = {};
   
   verses.forEach(verse => {
-    const chapterNum = extractChapterFromReference(verse.reference);
+    const chapterNum = getChapterForVerse(verse, scripture);
     if (!chapterGroups[chapterNum]) {
       chapterGroups[chapterNum] = [];
     }
     chapterGroups[chapterNum].push(verse);
   });
 
+  return Object.keys(chapterGroups)
+    .map(Number)
+    .sort((a, b) => a - b)
+    .map(chapterNum => {
+      const chapterVerses = chapterGroups[chapterNum];
+      const chapterData = scripture.chapters.find(ch => ch.number === chapterNum);
+      
+
   return (
-    <>
-      {Object.entries(chapterGroups)
-        .sort(([a], [b]) => parseInt(a) - parseInt(b))
-        .map(([chapterNumStr, chapterVerses]) => {
-          const chapterNum = parseInt(chapterNumStr);
-          
-          // Group verses by paragraph within this chapter
-          const paragraphGroups: { [paragraphId: string]: ProcessedVerse[] } = {};
-          const orphanVerses: ProcessedVerse[] = [];
-
-          chapterVerses.forEach(verse => {
-            if (verse.paragraphId) {
-              if (!paragraphGroups[verse.paragraphId]) {
-                paragraphGroups[verse.paragraphId] = [];
-              }
-              paragraphGroups[verse.paragraphId].push(verse);
-            } else {
-              orphanVerses.push(verse);
-            }
-          });
-
-          return (
-            <div key={chapterNum} className="chapter-container">
-              {/* Chapter Header */}
+        <div key={`chapter-${chapterNum}`} className="chapter-group mb-6">
               {options.showChapterNumbers && (
-                <div className="chapter-header mb-8 mt-10 first:mt-0">
-                  <h2 className="
-                    text-3xl font-bold 
-                    text-gray-800 
-                    border-b-2 border-gray-300 
-                    pb-3 mb-6
-                    bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent
-                  ">
-                    {chapterNum}
+            <h2 className="chapter-header text-2xl font-bold mb-4 text-gray-800 border-b border-gray-200 pb-2">
+              {chapterNum}
                   </h2>
-                </div>
-              )}
-
-              {/* Render paragraph groups for this chapter */}
-              {Object.entries(paragraphGroups).map(([paragraphId, paragraphVerses]) => (
-                <ParagraphRenderer
-                  key={paragraphId}
-                  paragraphId={paragraphId}
-                  verses={paragraphVerses}
-                  showVerseNumbers={options.showVerseNumbers}
-                  showAlignments={options.showAlignments}
-                  highlightWords={options.highlightWords}
-                  onWordClick={options.onWordClick}
-                />
-              ))}
-
-              {/* Render orphan verses for this chapter */}
-              {orphanVerses.map((verse) => (
-                <VerseRenderer
-                  key={verse.reference}
-                  verse={verse}
-                  showVerseNumbers={options.showVerseNumbers}
-                  showAlignments={options.showAlignments}
-                  highlightWords={options.highlightWords}
-                  onWordClick={options.onWordClick}
-                />
-              ))}
+          )}
+          
+          {/* Group verses by paragraph within chapter */}
+          {renderParagraphsForChapter(chapterVerses, chapterData, chapterNum, options)}
             </div>
           );
-        })}
-    </>
-  );
+    });
 }
 
 /**
- * Paragraph Renderer Component
+ * Render paragraphs for a specific chapter using token-based paragraph detection
+ * Creates separate <p> elements for each paragraph segment
  */
-interface ParagraphRendererProps {
-  paragraphId: string;
-  verses: ProcessedVerse[];
+function renderParagraphsForChapter(
+  verses: OptimizedVerse[],
+  chapterData: any,
+  chapterNumber: number,
+  options: {
   showVerseNumbers: boolean;
   showAlignments: boolean;
   highlightWords: string[];
-  onWordClick?: (word: string, verse: ProcessedVerse, alignment?: WordAlignment) => void;
-}
-
-const ParagraphRenderer: React.FC<ParagraphRendererProps> = ({
-  paragraphId,
-  verses,
-  showVerseNumbers,
-  showAlignments,
-  highlightWords,
-  onWordClick
-}) => {
-  // Determine paragraph style from ID or first verse
-  const isQuote = paragraphId.includes('quote') || verses[0]?.paragraphId?.includes('q');
-  const indentLevel = getIndentLevelFromId(paragraphId);
-
-  return (
-    <div 
+    highlightedTokens: Set<number>;
+    onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
+    onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
+    resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
+    language: 'en' | 'el-x-koine' | 'hbo';
+  }
+): React.ReactNode {
+  // Create paragraph segments by splitting verses at paragraph marker boundaries
+  const paragraphSegments: {
+    style: string;
+    indentLevel: number;
+    type: string;
+    content: { verse: OptimizedVerse; tokens: OptimizedToken[]; showVerseNumber: boolean }[];
+  }[] = [];
+  
+  let currentSegment: {
+    style: string;
+    indentLevel: number;
+    type: string;
+    content: { verse: OptimizedVerse; tokens: OptimizedToken[]; showVerseNumber: boolean }[];
+  } | null = null;
+  
+  verses.forEach((verse) => {
+    const tokens = verse.tokens;
+    let currentTokens: OptimizedToken[] = [];
+    let isFirstSegmentInVerse = true;
+    
+    for (let i = 0; i < tokens.length; i++) {
+      const token = tokens[i];
+      
+      if (token.type === 'paragraph-marker' && token.paragraphMarker?.isNewParagraph) {
+        // Save current tokens to current segment if any
+        if (currentTokens.length > 0 && currentSegment) {
+          currentSegment.content.push({
+            verse,
+            tokens: [...currentTokens],
+            showVerseNumber: isFirstSegmentInVerse
+          });
+          currentTokens = [];
+          isFirstSegmentInVerse = false;
+        }
+        
+        // Close current segment and start new one
+        if (currentSegment) {
+          paragraphSegments.push(currentSegment);
+        }
+        
+        currentSegment = {
+          style: token.paragraphMarker.style,
+          indentLevel: token.paragraphMarker.indentLevel,
+          type: token.paragraphMarker.type,
+          content: []
+        };
+      } else {
+        // Add non-paragraph-marker tokens to current tokens
+        currentTokens.push(token);
+      }
+    }
+    
+    // Add remaining tokens to current segment
+    if (currentTokens.length > 0) {
+      if (!currentSegment) {
+        // This shouldn't happen if we added default paragraph marker, but just in case
+        currentSegment = {
+          style: 'p',
+          indentLevel: 0,
+          type: 'paragraph',
+          content: []
+        };
+      }
+      
+      currentSegment.content.push({
+        verse,
+        tokens: currentTokens,
+        showVerseNumber: isFirstSegmentInVerse
+      });
+    }
+  });
+  
+  // Close final segment
+  if (currentSegment) {
+    paragraphSegments.push(currentSegment);
+  }
+  
+  // Render each paragraph segment as a separate <p> element
+  return paragraphSegments.map((segment, segmentIndex) => (
+    <p
+      key={`paragraph-segment-${segmentIndex}`}
       className={`
-        paragraph-container mb-6 leading-relaxed
-        ${isQuote ? 'italic text-gray-700 border-l-4 border-blue-300 pl-4' : ''}
-        ${indentLevel > 0 ? `ml-${indentLevel * 4}` : ''}
-        text-gray-900
+        mb-4 leading-relaxed
+        ${segment.indentLevel === 1 ? 'ml-2' : segment.indentLevel === 2 ? 'ml-4' : segment.indentLevel > 2 ? 'ml-6' : ''}
+        ${segment.type === 'quote' ? 'italic' : ''}
+        ${segment.style === 'q2' ? 'text-gray-600' : ''}
       `}
     >
-      {verses.map((verse, index) => (
-        <span key={verse.reference} className="verse-in-paragraph">
-          {showVerseNumbers && (
-            <span className="
-              verse-number text-xs font-semibold mr-1.5
-              text-blue-600
-              bg-blue-50
-              px-1.5 py-0.5 rounded-full
-              border border-blue-200
-            ">
-              {verse.number}
+      {segment.content.map((contentItem, contentIndex) => (
+        <React.Fragment key={`content-${contentIndex}`}>
+          {/* Show verse number if this is the first content item for this verse */}
+          {contentItem.showVerseNumber && options.showVerseNumbers && (
+            <span className="verse-number text-sm font-bold text-blue-600 mr-1 select-none">
+              {contentItem.verse.number}
             </span>
           )}
-          <VerseTextRenderer
-            verse={verse}
-            showAlignments={showAlignments}
-            highlightWords={highlightWords}
-            onWordClick={onWordClick}
-            inline={true}
-          />
-          {index < verses.length - 1 && ' '}
-        </span>
+          
+          {/* Render tokens */}
+          {contentItem.tokens.map((token, tokenIndex) => {
+            const nextToken = contentItem.tokens[tokenIndex + 1];
+            return (
+              <React.Fragment key={`token-${token.id}`}>
+                <WordTokenRenderer
+                  token={token}
+                  verse={contentItem.verse}
+                  isHighlighted={options.highlightedTokens.has(token.id)}
+                  showAlignments={options.showAlignments}
+                  onWordClick={options.onWordClick}
+                  onTokenClick={options.onTokenClick}
+                  isOriginalLanguage={options.language === 'el-x-koine' || options.language === 'hbo'}
+                  resourceType={options.resourceType}
+                  language={options.language}
+                />
+                {shouldAddSpaceAfterToken(token, nextToken, options.language) && <span> </span>}
+              </React.Fragment>
+            );
+          })}
+          
+          {/* Add space between content items within the same paragraph */}
+          {contentIndex < segment.content.length - 1 && <span> </span>}
+        </React.Fragment>
       ))}
-    </div>
-  );
-};
+    </p>
+  ));
+}
 
 /**
- * Verse Renderer Component
+ * Render a single verse with word tokens and alignments (for non-paragraph mode)
  */
-interface VerseRendererProps {
-  verse: ProcessedVerse;
+const VerseRenderer: React.FC<{
+  verse: OptimizedVerse;
+  chapterNumber: number;
   showVerseNumbers: boolean;
   showAlignments: boolean;
   highlightWords: string[];
-  onWordClick?: (word: string, verse: ProcessedVerse, alignment?: WordAlignment) => void;
-}
-
-const VerseRenderer: React.FC<VerseRendererProps> = ({
+  highlightedTokens: Set<number>;
+  onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
+  onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
+  resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
+  language: 'en' | 'el-x-koine' | 'hbo';
+}> = ({
   verse,
+  chapterNumber,
   showVerseNumbers,
   showAlignments,
   highlightWords,
-  onWordClick
+  highlightedTokens,
+  onWordClick,
+  onTokenClick,
+  resourceType,
+  language
 }) => {
+  const isOriginalLanguage = language === 'el-x-koine' || language === 'hbo';
+  
   return (
-    <div className="verse-container mb-4 flex space-x-4">
+    <div className="verse-container mb-2 leading-relaxed">
       {showVerseNumbers && (
-        <div className="flex-shrink-0 w-10 text-right">
-          <span className="
-            inline-flex items-center justify-center w-8 h-8 text-sm font-bold 
-            text-blue-600 
-            bg-blue-50 
-            border-2 border-blue-200
-            rounded-full shadow-sm
-          ">
+        <span className="verse-number text-sm font-bold text-blue-600 mr-2 select-none">
             {verse.number}
           </span>
-        </div>
       )}
-      <div className="flex-1">
-        <VerseTextRenderer
+      
+      <span className="verse-text">
+        {verse.tokens
+          .filter(token => token.type !== 'whitespace') // Skip whitespace tokens
+          .map((token, index, filteredTokens) => {
+            const nextToken = filteredTokens[index + 1];
+            return (
+              <React.Fragment key={`token-${token.id}`}>
+                <WordTokenRenderer
+                  token={token}
           verse={verse}
+                  isHighlighted={highlightedTokens.has(token.id)}
           showAlignments={showAlignments}
-          highlightWords={highlightWords}
           onWordClick={onWordClick}
-          inline={false}
-        />
-        {verse.hasSectionMarker && (
-          <div className="
-            mt-2 text-xs font-medium
-            text-blue-600
-            bg-blue-50
-            border border-blue-200
-            rounded-lg px-3 py-1.5
-            flex items-center space-x-2
-          ">
-            <span>📖</span>
-            <span>Section marker ({verse.sectionMarkers} marker{verse.sectionMarkers !== 1 ? 's' : ''})</span>
+          onTokenClick={onTokenClick}
+                  isOriginalLanguage={isOriginalLanguage}
+                  resourceType={resourceType}
+                  language={language}
+                />
+                {shouldAddSpaceAfterToken(token, nextToken, language) && <span> </span>}
+              </React.Fragment>
+            );
+          })}
+      </span>
+      
+      {showAlignments && verse.tokens.some(t => t.align) && (
+        <div className="alignment-info mt-2 text-xs text-gray-500">
+          <details>
+            <summary className="cursor-pointer hover:text-gray-700">
+              Alignments ({verse.tokens.filter(t => t.align).length})
+            </summary>
+            <div className="mt-1 pl-4 space-y-1">
+              {verse.tokens.filter(t => t.align).map((token, i) => (
+                <div key={i} className="alignment-item">
+                  <strong>{token.text}</strong> → aligned to {token.align?.length} original word(s)
+                  {token.strong && <span className="ml-2 text-blue-600">({token.strong})</span>}
+          </div>
+              ))}
+      </div>
+          </details>
           </div>
         )}
-      </div>
     </div>
   );
 };
 
 /**
- * Verse Text Renderer with word-level interaction
+ * Determine if a space should be added after a token based on token types and text direction
  */
-interface VerseTextRendererProps {
-  verse: ProcessedVerse;
-  showAlignments: boolean;
-  highlightWords: string[];
-  onWordClick?: (word: string, verse: ProcessedVerse, alignment?: WordAlignment) => void;
-  inline: boolean;
+function shouldAddSpaceAfterToken(
+  currentToken: OptimizedToken, 
+  nextToken: OptimizedToken | undefined, 
+  language: 'en' | 'el-x-koine' | 'hbo'
+): boolean {
+  // No space if there's no next token
+  if (!nextToken) {
+    return false;
+  }
+
+  // Never add space after or before paragraph markers
+  if (currentToken.type === 'paragraph-marker' || nextToken.type === 'paragraph-marker') {
+    return false;
+  }
+
+  // Determine text direction
+  const isRTL = language === 'hbo'; // Hebrew is RTL
+  const isLTR = !isRTL; // Greek and English are LTR
+
+  // Get token types
+  const currentType = currentToken.type;
+  const nextType = nextToken.type;
+
+  // LTR spacing rules (English, Greek, Spanish)
+  if (isLTR) {
+    // Add space after words (except when followed by punctuation)
+    if (currentType === 'word' && nextType !== 'punctuation') {
+      return true;
+    }
+    
+    // Add space after numbers (except when followed by punctuation)
+    if (currentType === 'number' && nextType !== 'punctuation') {
+      return true;
+    }
+    
+    // Handle punctuation spacing more precisely
+    if (currentType === 'punctuation') {
+      const currentPunct = currentToken.text;
+      
+      // Opening punctuation: never add space after
+      if (/^["''"„«‹([{¿¡]$/.test(currentPunct)) {
+        return false;
+      }
+      
+      // Colons: no space after (Spanish style: "dijo:" not "dijo: ")
+      if (currentPunct === ':') {
+        return false;
+      }
+      
+      // When followed by words or numbers, add space after:
+      if (nextType === 'word' || nextType === 'number') {
+        // Sentence-ending punctuation
+        if (/^[.!?]$/.test(currentPunct)) {
+          return true;
+        }
+        
+        // Commas and semicolons
+        if (/^[,;]$/.test(currentPunct)) {
+          return true;
+        }
+        
+        // Closing punctuation (quotes, brackets, etc.)
+        if (/^["''"»›)\]}]$/.test(currentPunct)) {
+          return true;
+        }
+      }
+      
+      // Default: no space for other punctuation combinations
+      return false;
+    }
+  }
+
+  // RTL spacing rules (Hebrew)
+  if (isRTL) {
+    // Add space after words (except when followed by punctuation)
+    if (currentType === 'word' && nextType !== 'punctuation') {
+      return true;
+    }
+    
+    // Add space after numbers (except when followed by punctuation)
+    if (currentType === 'number' && nextType !== 'punctuation') {
+      return true;
+    }
+    
+    // Handle punctuation spacing (same logic as LTR for now)
+    if (currentType === 'punctuation') {
+      const currentPunct = currentToken.text;
+      
+      // Opening punctuation: never add space after
+      if (/^["''"„«‹([{¿¡]$/.test(currentPunct)) {
+        return false;
+      }
+      
+      // Colons: no space after
+      if (currentPunct === ':') {
+        return false;
+      }
+      
+      // When followed by words or numbers, add space after:
+      if (nextType === 'word' || nextType === 'number') {
+        // Sentence-ending punctuation
+        if (/^[.!?]$/.test(currentPunct)) {
+          return true;
+        }
+        
+        // Commas and semicolons
+        if (/^[,;]$/.test(currentPunct)) {
+          return true;
+        }
+        
+        // Closing punctuation (quotes, brackets, etc.)
+        if (/^["''"»›)\]}]$/.test(currentPunct)) {
+          return true;
+        }
+      }
+      
+      // Default: no space for other punctuation combinations
+      return false;
+    }
+  }
+
+  return false;
 }
 
-const VerseTextRenderer: React.FC<VerseTextRendererProps> = ({
+/**
+ * Render a single word token with highlighting and click handling
+ */
+const WordTokenRenderer: React.FC<{
+  token: OptimizedToken;
+  verse: OptimizedVerse;
+  isHighlighted: boolean;
+  showAlignments: boolean;
+  onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
+  onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
+  isOriginalLanguage: boolean;
+  resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
+  language: 'en' | 'el-x-koine' | 'hbo';
+}> = ({
+  token,
   verse,
+  isHighlighted,
   showAlignments,
-  highlightWords,
   onWordClick,
-  inline
+  onTokenClick,
+  isOriginalLanguage,
+  resourceType,
+  language
 }) => {
-  const words = verse.text.split(/(\s+)/);
-  
-  return (
-    <span className={`verse-text ${inline ? 'inline' : 'block'} text-gray-900 leading-relaxed`}>
-      {words.map((word, index) => {
-        const cleanWord = word.replace(/[^\w]/g, '').toLowerCase();
-        const isHighlighted = highlightWords.some(hw => 
-          cleanWord.includes(hw.toLowerCase()) || hw.toLowerCase().includes(cleanWord)
-        );
-        const isWhitespace = /^\s+$/.test(word);
-        
-        // Find alignment for this word
-        const alignment = verse.alignments?.find(a => 
-          a.targetWords.some(tw => tw.toLowerCase().includes(cleanWord))
-        );
+  // Don't render paragraph marker tokens - they're handled by the parent component
+  if (token.type === 'paragraph-marker') {
+    return null;
+  }
 
-        if (isWhitespace) {
-          return <span key={index}>{word}</span>;
-        }
+  const handleClick = () => {
+    if (onTokenClick) {
+              onTokenClick(token, verse);
+    } else if (onWordClick) {
+      onWordClick(token.text, verse);
+    }
+  };
+
+  // Determine if token is clickable
+  const isClickable = isOriginalLanguage || (token.align && token.align.length > 0);
+  
+  // Use token type from the processor
+  const isPunctuation = token.type === 'punctuation';
+  const isNumber = token.type === 'number';
 
         return (
           <span
-            key={index}
             className={`
-              word transition-colors duration-150
-              ${onWordClick ? 'cursor-pointer hover:bg-blue-100 hover:rounded px-0.5' : ''}
-              ${isHighlighted ? 'bg-yellow-200 rounded px-1 font-medium' : ''}
-              ${alignment && showAlignments ? 'border-b border-blue-400 border-dotted' : ''}
-            `}
-            onClick={() => onWordClick?.(word, verse, alignment)}
-            title={alignment && showAlignments ? 
-              `Strong: ${alignment.alignmentData[0]?.strong || 'N/A'}\nLemma: ${alignment.alignmentData[0]?.lemma || 'N/A'}` : 
-              undefined
-            }
-          >
-            {word}
-          </span>
-        );
-      })}
-      
-      {showAlignments && verse.alignments && verse.alignments.length > 0 && (
-        <div className="
-          mt-3 text-xs 
-          text-gray-600 
-          bg-gray-50 
-          border border-gray-200
-          p-3 rounded-lg
-        ">
-          <strong className="text-gray-800">Alignments ({verse.alignments.length}):</strong>
-          {verse.alignments.slice(0, 3).map((alignment, i) => (
-            <div key={i} className="ml-2 mt-1">
-              • {alignment.targetWords.join(' ')} → {alignment.sourceWords.join(' ')} 
-              {alignment.alignmentData[0]?.strong && (
-                <span className="text-blue-600 font-mono">
-                  ({alignment.alignmentData[0].strong})
-                </span>
-              )}
-            </div>
-          ))}
-          {verse.alignments.length > 3 && (
-            <div className="ml-2 text-gray-500 mt-1">
-              ... and {verse.alignments.length - 3} more
-            </div>
-          )}
-        </div>
-      )}
+        ${isHighlighted ? 'bg-yellow-200 font-semibold shadow-sm' : ''}
+        ${isClickable ? 'cursor-pointer hover:bg-blue-100 hover:shadow-sm transition-colors duration-150' : ''}
+        ${isOriginalLanguage ? 'font-medium' : ''}
+        ${isNumber ? 'text-gray-600' : ''}
+        inline-block rounded-sm ${isPunctuation ? '' : 'px-0.5'}
+      `}
+      onClick={isClickable ? handleClick : undefined}
+      title={
+        isClickable 
+          ? `Click to highlight ${isOriginalLanguage ? 'aligned words' : 'original language words'}${showAlignments && token.strong ? ` (${token.strong})` : ''}` 
+          : undefined
+      }
+    >
+      {token.text}
     </span>
   );
 };
 
 /**
- * Utility function to get verses to render based on various criteria
+ * Get verses to render based on filters and range - wrapper for optimized function
  */
 function getVersesToRender(
-  scripture: ProcessedScripture,
+  scripture: OptimizedScripture,
   options: {
     chapter?: number;
-    verseRange?: string;
+    verseRange?: { start: number; end: number };
     startRef?: { chapter: number; verse: number };
     endRef?: { chapter: number; verse: number };
   }
-): ProcessedVerse[] {
-  const { chapter, verseRange, startRef, endRef } = options;
-
-  // If start and end references are provided (can cross chapters)
-  if (startRef && endRef) {
-    const verses: ProcessedVerse[] = [];
-    
-    for (const chapterData of scripture.chapters) {
-      if (chapterData.number < startRef.chapter || chapterData.number > endRef.chapter) {
-        continue;
-      }
-      
-      for (const verse of chapterData.verses) {
-        let isInRange = false;
-        
-        if (startRef.chapter === endRef.chapter) {
-          // Same chapter: check both start and end boundaries
-          isInRange = chapterData.number === startRef.chapter && 
-                     verse.number >= startRef.verse && 
-                     verse.number <= endRef.verse;
-        } else {
-          // Cross-chapter: use original logic
-          isInRange = 
-            (chapterData.number === startRef.chapter && verse.number >= startRef.verse) ||
-            (chapterData.number > startRef.chapter && chapterData.number < endRef.chapter) ||
-            (chapterData.number === endRef.chapter && verse.number <= endRef.verse);
-        }
-          
-        if (isInRange) {
-          verses.push(verse);
-        }
-      }
-    }
-    
-    return verses;
-  }
-
-  // Single chapter with optional verse range
-  if (chapter) {
-    const chapterData = scripture.chapters.find(ch => ch.number === chapter);
-    if (!chapterData) return [];
-
-    if (verseRange) {
-      if (verseRange.includes('-')) {
-        const [start, end] = verseRange.split('-').map(n => parseInt(n.trim()));
-        return chapterData.verses.filter(v => v.number >= start && v.number <= end);
-      } else {
-        const verseNum = parseInt(verseRange.trim());
-        return chapterData.verses.filter(v => v.number === verseNum);
-      }
-    }
-
-    return chapterData.verses;
-  }
-
-  // Return all verses
-  return scripture.chapters.flatMap(ch => ch.verses);
+): OptimizedVerse[] {
+  return getVersesToRenderOptimized(scripture, options);
 }
 
 /**
- * Get indent level from paragraph ID
+ * Get chapter number for a verse
  */
-function getIndentLevelFromId(paragraphId: string): number {
-  if (paragraphId.includes('q1')) return 1;
-  if (paragraphId.includes('q2')) return 2;
-  if (paragraphId.includes('q3')) return 3;
-  if (paragraphId.includes('q4')) return 4;
-  if (paragraphId.includes('q')) return 1;
-  return 0;
+function getChapterForVerse(verse: OptimizedVerse, scripture: OptimizedScripture): number {
+  for (const chapter of scripture.chapters) {
+    if (chapter.verses.some(v => v.number === verse.number && v.text === verse.text)) {
+      return chapter.number;
+    }
+  }
+  return 1; // Fallback
 }
 
-/**
- * Extract chapter number from verse reference (e.g., "JON 2:3" -> 2)
- */
-function extractChapterFromReference(reference: string): number {
-  const match = reference.match(/\s(\d+):/);
-  return match ? parseInt(match[1]) : 1;
-}
+// Removed unused functions - paragraph information is now embedded in tokens
 
 export default USFMRenderer;

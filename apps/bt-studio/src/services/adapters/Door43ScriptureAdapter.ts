@@ -5,7 +5,7 @@
  */
 
 import { BookOrganizedAdapter, ResourceType, ScriptureMetadata, BookInfo, ResourceAdapterInfo, AdapterConfig } from '../../types/context';
-import { ProcessedScripture, usfmProcessor } from '../usfm-processor';
+import { OptimizedScripture, usfmProcessor } from '../usfm-processor';
 
 export interface Door43ScriptureConfig {
   resourceIds: string[];          // Priority list: ['ult', 'glt', 'ulb'] or ['ust', 'gst']
@@ -170,7 +170,7 @@ export class Door43ScriptureAdapter implements BookOrganizedAdapter {
     }
   }
 
-  async getBookContent(server: string, owner: string, language: string, bookCode: string): Promise<ProcessedScripture> {
+  async getBookContent(server: string, owner: string, language: string, bookCode: string): Promise<OptimizedScripture> {
     console.log(`📖 Fetching scripture content for ${bookCode} from ${owner}/${language} (${this.resourcePriority.join(' → ')})`);
     
     try {
@@ -247,22 +247,18 @@ export class Door43ScriptureAdapter implements BookOrganizedAdapter {
       // Step 4: Process USFM using our local processor
       const bookName = this.getBookName(bookCode);
       
-      console.log(`🔄 Processing ${selectedType.toUpperCase()} USFM for ${bookCode} (${bookName})`);
-      const processingResult = await usfmProcessor.processUSFM(usfmContent, bookCode, bookName);
+      console.log(`🔄 Processing ${selectedType.toUpperCase()} USFM for ${bookCode} (${bookName}) - OPTIMIZED FORMAT`);
+      const processingResult = await usfmProcessor.processUSFMOptimized(usfmContent, bookCode, bookName, language);
       
-      console.log(`✅ ${selectedType.toUpperCase()} USFM processing complete for ${bookCode}`);
-      console.log(`   Chapters: ${processingResult.metadata.statistics.totalChapters}`);
-      console.log(`   Verses: ${processingResult.metadata.statistics.totalVerses}`);
-      console.log(`   Sections: ${processingResult.metadata.statistics.totalSections}`);
+      console.log(`✅ ${selectedType.toUpperCase()} USFM processing complete for ${bookCode} - OPTIMIZED FORMAT`);
+      console.log(`   Chapters: ${processingResult.meta.totalChapters}`);
+      console.log(`   Verses: ${processingResult.meta.totalVerses}`);
+      console.log(`   Paragraphs: ${processingResult.meta.totalParagraphs}`);
+      console.log(`   Type: ${processingResult.meta.type}`);
+      console.log(`   Has Alignments: ${processingResult.meta.hasAlignments}`);
       
-      // Merge translator sections and alignments into the structured text
-      const processedScripture: ProcessedScripture = {
-        ...processingResult.structuredText,
-        translatorSections: processingResult.translatorSections,
-        alignments: processingResult.alignments
-      };
-      
-      return processedScripture;
+      // Return the optimized scripture directly
+      return processingResult;
       
     } catch (error) {
       console.error(`❌ Failed to fetch scripture content for ${bookCode}:`, error);
