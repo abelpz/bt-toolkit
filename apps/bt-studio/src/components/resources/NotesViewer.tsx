@@ -4,7 +4,7 @@
  * Displays Translation Notes (TN) content with filtering and navigation
  */
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useCurrentState } from 'linked-panels';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -383,6 +383,64 @@ export function NotesViewer({
     }
   }, [scriptureTokensBroadcast]);
 
+  // Helper function to get tokens between two IDs from the received tokens
+  const getMissingTokensBetween = useCallback((startId: number, endId: number, allTokens: OptimizedToken[]): OptimizedToken[] => {
+    return allTokens.filter(token => token.id > startId && token.id < endId);
+  }, []);
+
+  // Helper function to check if all tokens are punctuation
+  const areAllPunctuation = useCallback((tokens: OptimizedToken[]): boolean => {
+    return tokens.every(token => 
+      token.type === 'punctuation' || 
+      /^[.,;:!?'"()[\]{}\-–—…]+$/.test(token.text.trim())
+    );
+  }, []);
+
+  // Helper function to build quote with ellipsis for non-contiguous tokens
+  const buildQuoteWithEllipsis = useCallback((alignedTokens: OptimizedToken[]): string => {
+    if (alignedTokens.length === 0) return '';
+    
+    // Sort tokens by ID to maintain natural order
+    const sortedTokens = alignedTokens.sort((a, b) => a.id - b.id);
+    
+    if (sortedTokens.length === 1) {
+      return sortedTokens[0].text.trim();
+    }
+    
+    const result: string[] = [];
+    
+    for (let i = 0; i < sortedTokens.length; i++) {
+      const currentToken = sortedTokens[i];
+      const nextToken = sortedTokens[i + 1];
+      
+      // Add current token text
+      result.push(currentToken.text.trim());
+      
+      // Check if there's a gap between current and next token
+      if (nextToken) {
+        const gap = nextToken.id - currentToken.id;
+        
+        // If gap is more than 1, there are missing tokens in between
+        if (gap > 1) {
+          // Check if the missing tokens are only punctuation
+          const missingTokens = getMissingTokensBetween(currentToken.id, nextToken.id, scriptureTokens);
+          
+          if (missingTokens.length > 0 && areAllPunctuation(missingTokens)) {
+            // Include the punctuation tokens
+            missingTokens.forEach(token => {
+              result.push(token.text.trim());
+            });
+          } else {
+            // Use ellipsis for non-punctuation gaps
+            result.push('...');
+          }
+        }
+      }
+    }
+    
+    return result.join(' ').trim();
+  }, [scriptureTokens, getMissingTokensBetween, areAllPunctuation]);
+
   // Process target language quotes when we have both quote matches and received tokens
   useEffect(() => {
     if (!scriptureTokens.length || !quoteMatches.size || !tokenBroadcastInfo) {
@@ -445,7 +503,7 @@ export function NotesViewer({
     };
 
     buildTargetLanguageQuotes();
-  }, [scriptureTokens, quoteMatches, tokenBroadcastInfo]);
+  }, [scriptureTokens, quoteMatches, tokenBroadcastInfo, buildQuoteWithEllipsis]);
 
   // Helper function to find received tokens aligned to original language tokens
   const findAlignedTokens = (originalTokens: OptimizedToken[], receivedTokens: OptimizedToken[]): OptimizedToken[] => {
@@ -471,40 +529,6 @@ export function NotesViewer({
     );
 
     return uniqueTokens;
-  };
-
-  // Helper function to build quote with ellipsis for non-contiguous tokens
-  const buildQuoteWithEllipsis = (alignedTokens: OptimizedToken[]): string => {
-    if (alignedTokens.length === 0) return '';
-    
-    // Sort tokens by ID to maintain natural order
-    const sortedTokens = alignedTokens.sort((a, b) => a.id - b.id);
-    
-    if (sortedTokens.length === 1) {
-      return sortedTokens[0].text.trim();
-    }
-    
-    const result: string[] = [];
-    
-    for (let i = 0; i < sortedTokens.length; i++) {
-      const currentToken = sortedTokens[i];
-      const nextToken = sortedTokens[i + 1];
-      
-      // Add current token text
-      result.push(currentToken.text.trim());
-      
-      // Check if there's a gap between current and next token
-      if (nextToken) {
-        const gap = nextToken.id - currentToken.id;
-        
-        // If gap is more than 1, there are missing tokens in between
-        if (gap > 1) {
-          result.push('...');
-        }
-      }
-    }
-    
-    return result.join(' ').trim();
   };
 
   // Filter notes by current navigation range (like NotesPanel.tsx)
@@ -619,151 +643,34 @@ export function NotesViewer({
           </div>
         ) : (
           <>
-            {/* Debug info for quote matching (only show in development) */}
-            {process.env.NODE_ENV === 'development' && (
-              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="text-sm text-blue-800">
-                  <div className="font-medium mb-2">Quote Matching Debug Info:</div>
-                  <div className="space-y-1 text-xs">
-                    <div>Original Scripture: {originalScripture ? '✅ Loaded' : '❌ Not loaded'}</div>
-                    <div>Language Config: {originalLanguageConfig ? `${originalLanguageConfig.title} (${originalLanguageConfig.language})` : 'Not set'}</div>
-                    <div>Quote Matches: {quoteMatches.size} processed</div>
-                    <div>Notes with Quotes: {filteredNotes.filter(n => n.quote).length} / {filteredNotes.length}</div>
-                    {tokenBroadcastInfo && (
-                      <div className="mt-2 pt-2 border-t border-blue-300">
-                        <div className="font-medium">Token Broadcast Info:</div>
-                        <div>Source: {tokenBroadcastInfo.sourceResourceId}</div>
-                        <div>Language: {tokenBroadcastInfo.resourceMetadata.language}</div>
-                        <div>Tokens Received: {scriptureTokens.length}</div>
-                        <div>Target Quotes Built: {targetLanguageQuotes.size}</div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
             
-          <div className="space-y-4">
+          <div className="space-y-3">
             {filteredNotes.map((note, index) => (
-              <div key={note.id || index} className="border border-gray-200 rounded-lg p-3 bg-white">
+              <div key={note.id || index} className="border border-gray-200 rounded p-2 bg-white">
                 {/* Note header */}
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-2">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {note.reference}
-                    </span>
-                    {note.occurrence && note.occurrence !== '1' && (
-                      <span className="text-xs text-gray-500">
-                        occurrence {note.occurrence}
-                      </span>
-                    )}
-                  </div>
-                  {note.id && (
-                    <span className="text-xs text-gray-400 font-mono">
-                      {note.id}
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="text-xs font-medium text-blue-600">
+                    {note.reference}
+                  </span>
+                  {note.occurrence && note.occurrence !== '1' && (
+                    <span className="text-xs text-gray-500">
+                      #{note.occurrence}
                     </span>
                   )}
                 </div>
 
-                {/* Quoted text with quote matching info */}
+                {/* Quoted text */}
                 {note.quote && (
-                  <div className="mb-3 p-3 bg-gray-50 rounded border-l-4 border-blue-500">
-                    <div className="flex items-start justify-between mb-1">
-                      <p className="text-sm font-medium text-gray-700">Quoted text:</p>
-                      {(() => {
-                        const noteKey = note.id || `${note.reference}-${note.quote}`;
-                        const quoteMatch = quoteMatches.get(noteKey);
-                        const targetQuote = targetLanguageQuotes.get(noteKey);
-                        
-                        if (quoteMatch?.success) {
-                          return (
-                            <div className="flex items-center space-x-2 text-xs">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800">
-                                <span className="mr-1" role="img" aria-label="target">🎯</span>
-                                {quoteMatch.totalTokens.length} tokens matched
-                              </span>
-                              {targetQuote && (
-                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-purple-100 text-purple-800">
-                                  <span className="mr-1" role="img" aria-label="translation">🔄</span>
-                                  {targetQuote.tokens.length} aligned
-                                </span>
-                              )}
-                              {originalLanguageConfig && (
-                                <span className="text-gray-500">
-                                  {originalLanguageConfig.language === 'hbo' ? 'Hebrew' : 'Greek'}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        } else if (originalScripture && quoteMatch) {
-                          return (
-                            <div className="flex items-center space-x-2 text-xs">
-                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
-                                <span className="mr-1" role="img" aria-label="warning">⚠️</span>
-                                No match found
-                              </span>
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
-                    </div>
-                    
-                    {/* Original quote */}
-                    <p className="text-gray-900 italic mb-2">"{note.quote}"</p>
+                  <div className="mb-1 p-2 bg-gray-50 rounded">
+                    <p className="text-gray-900 italic text-sm">"{note.quote}"</p>
                     
                     {/* Target language quote if available */}
                     {(() => {
                       const noteKey = note.id || `${note.reference}-${note.quote}`;
                       const targetQuote = targetLanguageQuotes.get(noteKey);
-                      if (targetQuote && tokenBroadcastInfo) {
+                      if (targetQuote) {
                         return (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
-                            <div className="flex items-center justify-between mb-1">
-                              <p className="text-xs font-medium text-purple-700">
-                                Target language ({tokenBroadcastInfo.resourceMetadata.language}):
-                              </p>
-                              <span className="text-xs text-gray-500">
-                                from {tokenBroadcastInfo.sourceResourceId}
-                              </span>
-                            </div>
-                            <p className="text-purple-900 italic font-medium">"{targetQuote.quote}"</p>
-                            <div className="mt-1 text-xs text-gray-600">
-                              Built from {targetQuote.tokens.length} aligned tokens
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                    
-                    {/* Show matched tokens if available */}
-                    {(() => {
-                      const noteKey = note.id || `${note.reference}-${note.quote}`;
-                      const quoteMatch = quoteMatches.get(noteKey);
-                      if (quoteMatch?.success && quoteMatch.totalTokens.length > 0) {
-                        return (
-                          <div className="mt-2 pt-2 border-t border-gray-200">
-                            <p className="text-xs font-medium text-gray-600 mb-1">
-                              Original language tokens ({originalLanguageConfig?.title}):
-                            </p>
-                            <div className="flex flex-wrap gap-1">
-                              {quoteMatch.totalTokens.slice(0, 10).map((token, idx) => (
-                                <span
-                                  key={`${token.id}-${idx}`}
-                                  className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 font-mono"
-                                  title={`Token ID: ${token.id}${token.lemma ? ` | Lemma: ${token.lemma}` : ''}${token.strong ? ` | Strong's: ${token.strong}` : ''}`}
-                                >
-                                  {token.text}
-                                </span>
-                              ))}
-                              {quoteMatch.totalTokens.length > 10 && (
-                                <span className="text-xs text-gray-500">
-                                  +{quoteMatch.totalTokens.length - 10} more
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                          <p className="text-purple-700 italic text-sm mt-1">"{targetQuote.quote}"</p>
                         );
                       }
                       return null;
@@ -780,24 +687,14 @@ export function NotesViewer({
 
                 {/* Translation Academy button */}
                 {note.supportReference && isTranslationAcademyLink(note.supportReference) && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
+                  <div className="mt-2">
                     <button
                       onClick={() => handleSupportReferenceClick(note.supportReference)}
-                      className="inline-flex items-center px-3 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 hover:border-blue-300 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
-                      title="Open Translation Academy article"
+                      className="inline-flex items-center px-2 py-1 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
                     >
-                      <span className="mr-2" role="img" aria-label="graduation cap">🎓</span>
+                      <span className="mr-1" role="img" aria-label="graduation cap">🎓</span>
                       {parseRcLink(note.supportReference).articleId}
                     </button>
-                  </div>
-                )}
-                
-                {/* Non-academy support reference (fallback) */}
-                {note.supportReference && !isTranslationAcademyLink(note.supportReference) && (
-                  <div className="mt-3 pt-3 border-t border-gray-100">
-                    <p className="text-xs text-gray-500">
-                      Support reference: <span className="font-mono text-gray-600">{note.supportReference}</span>
-                    </p>
                   </div>
                 )}
               </div>
