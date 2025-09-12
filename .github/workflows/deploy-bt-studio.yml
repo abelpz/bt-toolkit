@@ -1,0 +1,87 @@
+name: Deploy BT Studio to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apps/bt-studio/**'
+      - 'packages/**'
+      - 'scripts/build-bt-studio.js'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'apps/bt-studio/**'
+      - 'packages/**'
+      - 'scripts/build-bt-studio.js'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy BT Studio
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+          run_install: false
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build BT Studio
+        run: pnpm build:bt-studio
+        env:
+          NODE_ENV: production
+          VITE_APP_NAME: BT Studio
+          VITE_APP_VERSION: ${{ github.sha }}
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/pages-action@v1
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          projectName: bt-studio
+          directory: apps/bt-studio/dist
+          # Optional: Use a custom domain
+          # gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project:** BT Studio" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ github.ref == 'refs/heads/main' && 'Production' || 'Preview' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build Status:** ✅ Success" >> $GITHUB_STEP_SUMMARY

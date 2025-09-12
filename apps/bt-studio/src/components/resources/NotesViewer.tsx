@@ -4,8 +4,8 @@
  * Displays Translation Notes (TN) content with filtering and navigation
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useCurrentState } from 'linked-panels';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useCurrentState, useResourceAPI } from 'linked-panels';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { ProcessedNotes, TranslationNote } from '../../services/notes-processor';
@@ -16,6 +16,11 @@ import { parseRcLink, isTranslationAcademyLink, getArticleDisplayTitle } from '.
 import { QuoteMatcher, QuoteMatchResult } from '../../services/quote-matcher';
 import { OptimizedScripture, OptimizedToken } from '../../services/usfm-processor';
 import { ScriptureTokensBroadcast } from '../../types/scripture-messages';
+import { 
+  NotesTokenGroupsBroadcast, 
+  NoteTokenGroup, 
+  createNotesTokenGroupsBroadcast 
+} from '../../plugins/notes-scripture-plugin';
 
 export interface NotesViewerProps {
   resourceId: string;
@@ -35,6 +40,12 @@ export function NotesViewer({
   const { resourceManager, processedResourceConfig } = useWorkspace();
   const { currentReference } = useNavigation();
   
+  // Get linked-panels API for broadcasting note token groups
+  const linkedPanelsAPI = useResourceAPI<NotesTokenGroupsBroadcast>(resourceId);
+  
+  // Track the last broadcast state to prevent infinite loops
+  const lastBroadcastRef = useRef<string>('');
+  
   const [actualNotes, setActualNotes] = useState<ProcessedNotes | null>(propNotes || null);
   const [contentLoading, setContentLoading] = useState(false);
   const [displayError, setDisplayError] = useState<string | null>(error || null);
@@ -42,12 +53,6 @@ export function NotesViewer({
   
   // Original language content for quote matching
   const [originalScripture, setOriginalScripture] = useState<OptimizedScripture | null>(null);
-  const [originalLanguageConfig, setOriginalLanguageConfig] = useState<{
-    owner: string;
-    language: string;
-    resourceId: string;
-    title: string;
-  } | null>(null);
   const [quoteMatches, setQuoteMatches] = useState<Map<string, QuoteMatchResult>>(new Map());
   const [quoteMatcher] = useState(() => new QuoteMatcher());
   
@@ -199,7 +204,6 @@ export function NotesViewer({
 
         // Get configuration for the testament
         const config = ORIGINAL_LANGUAGE_CONFIG[testament];
-        setOriginalLanguageConfig(config);
         
         console.log(`🔄 NotesViewer - Loading ${testament} content for quote matching:`, config);
         
@@ -350,15 +354,25 @@ export function NotesViewer({
   // Handle scripture token broadcasts (similar to TranslationWordsLinksViewer)
   useEffect(() => {
     if (scriptureTokensBroadcast) {
+      // Guard: Ignore broadcasts from non-scripture resources to prevent feedback loops
+      if (scriptureTokensBroadcast.sourceResourceId === resourceId) {
+        console.log(`🛡️ NotesViewer ignoring broadcast from self (${resourceId}) to prevent feedback loop`);
+        return;
+      }
+
       // Check if this is a clear message (empty tokens and empty book)
       const isClearMessage = scriptureTokensBroadcast.tokens.length === 0 && 
                             !scriptureTokensBroadcast.reference.book;
       
       if (isClearMessage) {
         console.log(`🧹 NotesViewer received clear signal from ${scriptureTokensBroadcast.sourceResourceId}`);
-        setScriptureTokens([]);
-        setTokenBroadcastInfo(null);
-        setTargetLanguageQuotes(new Map());
+        // Proper state cleanup - clear local state but don't trigger new broadcasts
+        if (scriptureTokens.length > 0 || tokenBroadcastInfo || targetLanguageQuotes.size > 0) {
+          setScriptureTokens([]);
+          setTokenBroadcastInfo(null);
+          setTargetLanguageQuotes(new Map());
+        }
+        return;
       } else {
         console.log(`🎯 NotesViewer received scripture tokens from ${scriptureTokensBroadcast.sourceResourceId}:`, {
           tokenCount: scriptureTokensBroadcast.tokens.length,
@@ -387,6 +401,7 @@ export function NotesViewer({
   const getMissingTokensBetween = useCallback((startId: number, endId: number, allTokens: OptimizedToken[]): OptimizedToken[] => {
     return allTokens.filter(token => token.id > startId && token.id < endId);
   }, []);
+
 
   // Helper function to check if all tokens are punctuation
   const areAllPunctuation = useCallback((tokens: OptimizedToken[]): boolean => {
@@ -486,7 +501,8 @@ export function NotesViewer({
                 });
               }
             } else {
-              console.warn(`⚠️ NotesViewer - No aligned tokens found for ${noteKey}`);
+              // Temporarily disabled to prevent console flooding
+              // console.debug(`⚠️ NotesViewer - No aligned tokens found for ${noteKey}`);
             }
           } catch (err) {
             console.error(`❌ NotesViewer - Error building target quote for ${noteKey}:`, err);
@@ -580,6 +596,117 @@ export function NotesViewer({
   // Use navigation-filtered notes directly (they're already filtered by the current range)
   const filteredNotes = filteredNotesByNavigation;
 
+
+  // Send note token groups when quote matches are updated (with debouncing)
+  useEffect(() => {
+    // Guard against invalid states that could cause infinite loops
+    if (!currentReference.book || !resourceMetadata?.id || isLoading || !processedResourceConfig || !linkedPanelsAPI?.messaging) {
+      return; // Early return if invalid state
+    }
+
+    // Additional guard: Don't broadcast if we're in a cleanup phase (no notes or no original scripture)
+    if (!displayNotes?.notes?.length || !originalScripture) {
+      console.log('🛡️ NotesViewer: Skipping broadcast during cleanup phase (no notes or original scripture)');
+      return;
+    }
+    
+    // Create a stable hash of the current state to prevent duplicate broadcasts
+    const stateHash = `${currentReference.book}-${currentReference.chapter}-${currentReference.verse}-${quoteMatches.size}-${resourceMetadata.id}`;
+    
+    // Only broadcast if the state has actually changed
+    if (lastBroadcastRef.current !== stateHash) {
+      // Add a small delay to avoid broadcasting during rapid state changes
+      const timeoutId = setTimeout(() => {
+        try {
+          const tokenGroups: NoteTokenGroup[] = [];
+          
+          // Create a stable snapshot of quoteMatches to avoid reference issues
+          const quoteMatchesSnapshot = Array.from(quoteMatches.entries());
+          
+          for (const [noteKey, quoteMatch] of quoteMatchesSnapshot) {
+            // Find note using the same key construction logic as quote matching
+            const note = filteredNotes.find(n => {
+              const key = n.id || `${n.reference}-${n.quote}`;
+              return key === noteKey;
+            });
+            if (note && quoteMatch.totalTokens.length > 0) {
+              tokenGroups.push({
+                noteId: note.id || noteKey,
+                noteReference: note.reference,
+                quote: note.quote,
+                occurrence: parseInt(note.occurrence) || 1,
+                tokens: quoteMatch.totalTokens
+              });
+            }
+          }
+
+          // Always send a broadcast (either with tokens or empty for cleanup)
+          const broadcastContent = createNotesTokenGroupsBroadcast(
+            resourceId,
+            {
+              book: currentReference.book,
+              chapter: currentReference.chapter || 1,
+              verse: currentReference.verse || 1,
+              endChapter: currentReference.endChapter,
+              endVerse: currentReference.endVerse
+            },
+            tokenGroups,
+            resourceMetadata
+          );
+
+          // Send state message - linked-panels will handle deduplication automatically
+          linkedPanelsAPI.messaging.sendToAll(broadcastContent);
+          
+          if (tokenGroups.length > 0) {
+            console.log(`📤 NotesViewer (${resourceId}) - Broadcasted ${tokenGroups.length} note token groups for ${currentReference.book} ${currentReference.chapter}:${currentReference.verse}:`, 
+              tokenGroups.map(g => `${g.noteId}(${g.tokens.length} tokens)`).join(', '));
+          } else {
+            console.log(`📤 NotesViewer (${resourceId}) - Sent empty token groups for ${currentReference.book} ${currentReference.chapter}:${currentReference.verse}`);
+          }
+        } catch (error) {
+          console.error('❌ Error broadcasting note token groups:', error);
+        }
+        
+        lastBroadcastRef.current = stateHash;
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+    
+    // Return empty cleanup function if no broadcast was scheduled
+    return undefined;
+  }, [currentReference, resourceMetadata, quoteMatches.size, isLoading, processedResourceConfig, linkedPanelsAPI, resourceId, filteredNotes.length]);
+
+  // Cleanup: Silent cleanup without broadcasts to prevent infinite loops
+  // Unmount cleanup pattern from team-review: Send superseding clear state message
+  useEffect(() => {
+    // Cleanup function to clear all note token groups when component unmounts
+    return () => {
+      // Send superseding empty state message (following team-review pattern)
+      // This works even if component state is stale because we create a minimal clear message
+      if (linkedPanelsAPI?.messaging) {
+        try {
+          const clearBroadcast: NotesTokenGroupsBroadcast = {
+            type: 'notes-token-groups-broadcast',
+            lifecycle: 'state',
+            stateKey: 'current-notes-token-groups',
+            sourceResourceId: resourceId,
+            reference: { book: '', chapter: 1, verse: 1 }, // Minimal reference for clear message
+            tokenGroups: [], // Empty array clears all token groups
+            resourceMetadata: { id: 'cleared', language: '', type: 'notes' }, // Special marker
+            timestamp: Date.now()
+          };
+
+          linkedPanelsAPI.messaging.sendToAll(clearBroadcast);
+          console.log(`🧹 NotesViewer (${resourceId}) - Unmount cleanup: Sent superseding clear state`);
+        } catch (error) {
+          console.error('❌ Error during NotesViewer unmount cleanup:', error);
+        }
+      }
+    };
+  }, []); // Empty dependency array is INTENTIONAL - ensures cleanup only on unmount (team-review pattern)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+
   if (isLoading) {
     return (
       <div className="h-full flex items-center justify-center">
@@ -622,9 +749,9 @@ export function NotesViewer({
     );
   }
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Notes content */}
+    return (
+      <div className="h-full flex flex-col">
+        {/* Notes content */}
       <div 
         className={`flex-1 overflow-y-auto p-3 ${
           // Apply RTL styling based on metadata
@@ -642,8 +769,6 @@ export function NotesViewer({
             <p>No notes for this selection</p>
           </div>
         ) : (
-          <>
-            
           <div className="space-y-3">
             {filteredNotes.map((note, index) => (
               <div key={note.id || index} className="border border-gray-200 rounded p-2 bg-white">
@@ -700,7 +825,6 @@ export function NotesViewer({
               </div>
             ))}
           </div>
-          </>
         )}
       </div>
 

@@ -46,16 +46,20 @@ export function ScriptureViewer({
   const [resourceMetadata, setResourceMetadata] = useState<any>(null);
   const [loadingProgress, setLoadingProgress] = useState<string>('');
   
+  // Listen for notes token groups broadcasts using the plugin system
+  // Note: NotesTokenGroupsBroadcast is handled by USFMRenderer via TokenUnderliningContext
+  // const notesTokenGroupsBroadcast = useCurrentState<NotesTokenGroupsBroadcast>(
+  //   resourceId || 'default',
+  //   'current-notes-token-groups'
+  // );
+  
   // Use actual loaded content if available, otherwise fall back to prop
   const displayScripture = actualScripture || scripture;
   const isLoading = loading || contentLoading;
   const displayError = error || contentError;
   
-  // Debug logging
-  console.log('🔍 ScriptureViewer - resourceId:', resourceId);
-  console.log('🔍 ScriptureViewer - currentReference:', currentReference);
-  console.log('🔍 ScriptureViewer - resourceManager:', resourceManager);
-  console.log('🔍 ScriptureViewer - processedResourceConfig:', processedResourceConfig);
+  // Debug logging (reduced)
+  // console.log('🔍 ScriptureViewer - resourceId:', resourceId);
   
   // Load actual content when component mounts or navigation changes
   useEffect(() => {
@@ -129,131 +133,129 @@ export function ScriptureViewer({
       return;
     }
 
-    try {
-      // Extract tokens from the current verse range
-      const tokens = extractTokensFromVerseRange(displayScripture, {
-        book: currentReference.book,
-        chapter: currentReference.chapter || 1,
-        verse: currentReference.verse || 1,
-        endChapter: currentReference.endChapter,
-        endVerse: currentReference.endVerse
-      });
-
-      // Get token summary for logging
-      const summary = getTokenSummary(tokens);
-      console.log(`📡 Broadcasting ${summary.totalTokens} tokens from ${resourceId} (aligned resource):`, {
-        reference: currentReference,
-        summary,
-        sampleTokens: summary.sampleTokens.slice(0, 5),
-        hasAlignments: displayScripture.meta.hasAlignments
-      });
-
-      // Create the broadcast message
-      const broadcast: ScriptureTokensBroadcast = {
-        type: 'scripture-tokens-broadcast',
-        lifecycle: 'state',
-        stateKey: 'current-scripture-tokens',
-        sourceResourceId: resourceId,
-        reference: {
+    // Debounce the broadcast to prevent rapid-fire updates
+    const timeoutId = setTimeout(() => {
+      try {
+        // Extract tokens from the current verse range
+        const tokens = extractTokensFromVerseRange(displayScripture, {
           book: currentReference.book,
           chapter: currentReference.chapter || 1,
           verse: currentReference.verse || 1,
           endChapter: currentReference.endChapter,
           endVerse: currentReference.endVerse
-        },
-        tokens,
-        resourceMetadata: {
-          id: resourceMetadata?.id || resourceId,
-          language: resourceMetadata?.language || 'en',
-          languageDirection: resourceMetadata?.languageDirection,
-          type: resourceMetadata?.type || 'scripture'
-        },
-        timestamp: Date.now()
-      };
+        });
 
-      // Broadcast to all non-scripture resources only
-      // This prevents infinite loops when multiple scripture resources are mounted
-      const allResourceIds = processedResourceConfig?.map((config: any) => config.panelResourceId) || [];
-      const scriptureResourceIds = processedResourceConfig
-        ?.filter((config: any) => config.metadata?.type === 'scripture')
-        ?.map((config: any) => config.panelResourceId) || [];
-      
-      const nonScriptureResourceIds = allResourceIds.filter((id: string) => 
-        !scriptureResourceIds.includes(id) && id !== resourceId
-      );
+        // Get token summary for logging
+        const summary = getTokenSummary(tokens);
+        console.log(`📡 Broadcasting ${summary.totalTokens} tokens from ${resourceId} (aligned resource):`, {
+          reference: currentReference,
+          summary,
+          sampleTokens: summary.sampleTokens.slice(0, 5),
+          hasAlignments: displayScripture.meta.hasAlignments
+        });
 
-      console.log(`📡 Filtering broadcast targets:`, {
-        allResources: allResourceIds.length,
-        scriptureResources: scriptureResourceIds.length,
-        nonScriptureTargets: nonScriptureResourceIds.length,
-        scriptureResourceIds,
-        nonScriptureResourceIds
-      });
+        // Create the broadcast message
+        const broadcast: ScriptureTokensBroadcast = {
+          type: 'scripture-tokens-broadcast',
+          lifecycle: 'state',
+          stateKey: 'current-scripture-tokens',
+          sourceResourceId: resourceId,
+          reference: {
+            book: currentReference.book,
+            chapter: currentReference.chapter || 1,
+            verse: currentReference.verse || 1,
+            endChapter: currentReference.endChapter,
+            endVerse: currentReference.endVerse
+          },
+          tokens,
+          resourceMetadata: {
+            id: resourceMetadata?.id || resourceId,
+            language: resourceMetadata?.language || 'en',
+            languageDirection: resourceMetadata?.languageDirection,
+            type: resourceMetadata?.type || 'scripture'
+          },
+          timestamp: Date.now()
+        };
 
-      let sentCount = 0;
-      nonScriptureResourceIds.forEach((targetId: string) => {
-        try {
-          if (linkedPanelsAPI.messaging.send(targetId, broadcast)) {
-            sentCount++;
-          }
-        } catch (error) {
-          console.warn(`⚠️ Failed to send broadcast to ${targetId}:`, error);
-        }
-      });
+        // Broadcast to all non-scripture resources only
+        // This prevents infinite loops when multiple scripture resources are mounted
+        const allResourceIds = processedResourceConfig?.map((config: any) => config.panelResourceId) || [];
+        const scriptureResourceIds = processedResourceConfig
+          ?.filter((config: any) => config.metadata?.type === 'scripture')
+          ?.map((config: any) => config.panelResourceId) || [];
+        
+        const nonScriptureResourceIds = allResourceIds.filter((id: string) => 
+          !scriptureResourceIds.includes(id) && id !== resourceId
+        );
 
-      console.log(`✅ Scripture tokens broadcast sent to ${sentCount} non-scripture resources`);
+        console.log(`📡 Filtering broadcast targets:`, {
+          allResources: allResourceIds.length,
+          scriptureResources: scriptureResourceIds.length,
+          nonScriptureTargets: nonScriptureResourceIds.length,
+          scriptureResourceIds,
+          nonScriptureResourceIds
+        });
 
-    } catch (err) {
-      console.error('❌ Failed to broadcast scripture tokens:', err);
-    }
-  }, [linkedPanelsAPI, displayScripture, resourceId, currentReference, resourceMetadata, processedResourceConfig]);
-
-  // Clear scripture tokens broadcast when component unmounts or resource changes
-  useEffect(() => {
-    return () => {
-      if (linkedPanelsAPI && resourceId && displayScripture?.meta?.hasAlignments) {
-        try {
-          console.log(`🧹 Clearing scripture tokens broadcast from ${resourceId} (aligned resource)`);
-          
-          // Create a clear message to remove the state
-          const clearBroadcast: ScriptureTokensBroadcast = {
-            type: 'scripture-tokens-broadcast',
-            lifecycle: 'state',
-            stateKey: 'current-scripture-tokens',
-            sourceResourceId: resourceId,
-            reference: { book: '', chapter: 0, verse: 0 },
-            tokens: [],
-            resourceMetadata: { id: '', language: '', type: 'scripture' },
-            timestamp: Date.now()
-          };
-
-          // Send clear message to non-scripture resources
-          const allResourceIds = processedResourceConfig?.map((config: any) => config.panelResourceId) || [];
-          const scriptureResourceIds = processedResourceConfig
-            ?.filter((config: any) => config.metadata?.type === 'scripture')
-            ?.map((config: any) => config.panelResourceId) || [];
-          
-          const nonScriptureResourceIds = allResourceIds.filter((id: string) => 
-            !scriptureResourceIds.includes(id) && id !== resourceId
-          );
-
-          nonScriptureResourceIds.forEach((targetId: string) => {
-            try {
-              linkedPanelsAPI.messaging.send(targetId, clearBroadcast);
-            } catch (error) {
-              console.warn(`⚠️ Failed to send clear broadcast to ${targetId}:`, error);
+        let sentCount = 0;
+        nonScriptureResourceIds.forEach((targetId: string) => {
+          try {
+            if (linkedPanelsAPI.messaging.send(targetId, broadcast)) {
+              sentCount++;
             }
-          });
+          } catch (error) {
+            console.warn(`⚠️ Failed to send broadcast to ${targetId}:`, error);
+          }
+        });
 
-          console.log(`✅ Scripture tokens cleared for ${nonScriptureResourceIds.length} resources`);
-        } catch (err) {
-          console.error('❌ Failed to clear scripture tokens broadcast:', err);
-        }
-      } else if (linkedPanelsAPI && resourceId) {
-        console.log(`⏭️ Skipping clear broadcast from ${resourceId} - no alignments were broadcast`);
+        console.log(`✅ Scripture tokens broadcast sent to ${sentCount} non-scripture resources`);
+
+      } catch (err) {
+        console.error('❌ Failed to broadcast scripture tokens:', err);
+      }
+    }, 200); // Debounce for 200ms
+
+    return () => clearTimeout(timeoutId);
+  }, [
+    linkedPanelsAPI, 
+    resourceId, 
+    currentReference.book, 
+    currentReference.chapter, 
+    currentReference.verse,
+    displayScripture?.meta?.book,
+    displayScripture?.meta?.hasAlignments,
+    resourceMetadata?.id,
+    processedResourceConfig?.length
+  ]);
+
+  // Proper cleanup using state lifecycle pattern (inspired by team-review)
+  useEffect(() => {
+    // Only register cleanup when we have valid alignment data to clean
+    if (!linkedPanelsAPI?.messaging || !resourceId || !displayScripture?.meta?.hasAlignments) {
+      return;
+    }
+
+    return () => {
+      // State lifecycle cleanup - send a single superseding empty state
+      // This follows the linked-panels state lifecycle pattern
+      try {
+        const clearBroadcast: ScriptureTokensBroadcast = {
+          type: 'scripture-tokens-broadcast',
+          lifecycle: 'state',
+          stateKey: 'current-scripture-tokens',
+          sourceResourceId: resourceId,
+          reference: { book: '', chapter: 0, verse: 0 }, // Empty reference indicates clear
+          tokens: [],
+          resourceMetadata: { id: '', language: '', type: 'scripture' },
+          timestamp: Date.now()
+        };
+
+        linkedPanelsAPI.messaging.sendToAll(clearBroadcast);
+        console.log(`🧹 ScriptureViewer (${resourceId}) - State lifecycle cleanup: sent superseding empty state`);
+      } catch (error) {
+        console.error('❌ Error during ScriptureViewer state cleanup:', error);
       }
     };
-  }, [linkedPanelsAPI, resourceId, processedResourceConfig, displayScripture]);
+  }, [linkedPanelsAPI?.messaging, resourceId, displayScripture?.meta?.hasAlignments]); // Stable dependencies only
   
   // Helper function to format the navigation reference range
   const formatNavigationRange = () => {
@@ -309,7 +311,9 @@ export function ScriptureViewer({
     return (
       <div className="h-full flex items-center justify-center bg-red-50">
         <div className="text-center max-w-md">
-          <div className="text-red-500 text-xl mb-2">⚠️</div>
+          <div className="text-red-500 text-xl mb-2">
+            <span role="img" aria-label="Warning">⚠️</span>
+          </div>
           <h3 className="text-lg font-medium text-red-900 mb-2">Failed to Load Scripture</h3>
           <p className="text-red-700 text-sm">{error}</p>
         </div>
@@ -322,7 +326,9 @@ export function ScriptureViewer({
     return (
       <div className="h-full flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md">
-          <div className="text-gray-400 text-xl mb-2">📖</div>
+          <div className="text-gray-400 text-xl mb-2">
+            <span role="img" aria-label="Book">📖</span>
+          </div>
           <p className="text-gray-600 mb-4">No scripture content available</p>
           
           {/* Resource Information Display */}
@@ -349,7 +355,7 @@ export function ScriptureViewer({
           {/* Navigation Reference Display for testing */}
           <div className="mt-4 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 rounded text-sm inline-block">
             <span className="text-blue-800 dark:text-blue-200 font-medium">
-              📍 Navigation: {formatNavigationRange()}
+              <span role="img" aria-label="Location">📍</span> Navigation: {formatNavigationRange()}
             </span>
           </div>
         </div>

@@ -69,7 +69,7 @@ export function parseRcLink(rcLink: string): ParsedRcLink {
     result.fullArticleId = `${category}/${articleId}`;
     result.isValid = true;
 
-    console.log(`✅ Parsed rc:// link: ${rcLink} -> ${result.fullArticleId}`);
+
     return result;
 
   } catch (error) {

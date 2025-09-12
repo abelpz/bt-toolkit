@@ -28,6 +28,8 @@
     "deploy:apps": "npm run build:apps && npm run deploy:web && npm run package:desktop",
     "package:desktop": "node scripts/package-desktop.js",
     "build:mobile": "node scripts/build-mobile.js",
+    "build:bt-studio": "node scripts/build-bt-studio.js",
+    "deploy:bt-studio": "node scripts/deploy-bt-studio-local.js",
     "docs:generate": "typedoc",
     "docs:serve": "cd docs/linked-panels && npx http-server -p 8080",
     "docs:build": "npm run docs:generate",

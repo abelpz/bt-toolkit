@@ -5,9 +5,13 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { useCurrentState } from 'linked-panels';
 import type { WordAlignment } from '../../types/context';
 import type { OptimizedToken, OptimizedScripture, OptimizedVerse } from '../../services/usfm-processor';
 import { getCrossPanelCommunicationService, type CrossPanelMessage, type TokenHighlightMessage, type OriginalLanguageToken } from '../../services/cross-panel-communication';
+import { TokenUnderliningProvider, useTokenUnderlining, type TokenGroup } from '../../contexts/TokenUnderliningContext';
+import type { NotesTokenGroupsBroadcast } from '../../plugins/notes-scripture-plugin';
+import { useNavigation } from '../../contexts/NavigationContext';
 
 /**
  * Find tokens in optimized format that align to the given original language token
@@ -271,7 +275,8 @@ export interface USFMRendererProps {
   className?: string;
 }
 
-export const USFMRenderer: React.FC<USFMRendererProps> = ({
+// Internal component that uses the context
+const USFMRendererInternal: React.FC<USFMRendererProps> = ({
   scripture,
   resourceId,
   resourceType,
@@ -289,6 +294,79 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
   onTokenClick,
   className = ''
 }) => {
+  const { currentReference } = useNavigation();
+  const { addTokenGroup, clearTokenGroups } = useTokenUnderlining();
+
+  // Listen for notes token groups broadcasts
+  const notesTokenGroupsBroadcast = useCurrentState<NotesTokenGroupsBroadcast>(
+    resourceId || 'default', 
+    'current-notes-token-groups'
+  );
+  
+
+  // Update token groups when notes broadcast changes
+  useEffect(() => {
+    // Always clear existing notes token groups first
+    clearTokenGroups('notes');
+    
+    if (notesTokenGroupsBroadcast && 
+        notesTokenGroupsBroadcast.tokenGroups && 
+        notesTokenGroupsBroadcast.tokenGroups.length > 0) {
+      
+      // Check if the broadcast is for the current book - ignore stale broadcasts
+      const currentBook = currentReference?.book;
+      const broadcastBook = notesTokenGroupsBroadcast.reference?.book;
+      
+      if (currentBook && broadcastBook && currentBook !== broadcastBook) {
+        console.log(`🚫 USFMRenderer: Ignoring stale broadcast for ${broadcastBook}, current book is ${currentBook}`);
+        return;
+      }
+      
+      console.log(`🎯 USFMRenderer received notes token groups:`, {
+        sourceResourceId: notesTokenGroupsBroadcast.sourceResourceId,
+        tokenGroupsCount: notesTokenGroupsBroadcast.tokenGroups.length,
+        reference: notesTokenGroupsBroadcast.reference,
+        book: broadcastBook,
+        currentBook: currentBook,
+        timestamp: notesTokenGroupsBroadcast.timestamp
+      });
+
+      // Add new token groups
+      notesTokenGroupsBroadcast.tokenGroups.forEach(noteGroup => {
+        const tokenGroup: TokenGroup = {
+          id: `notes-${noteGroup.noteId}`,
+          sourceType: 'notes',
+          sourceId: noteGroup.noteId,
+          tokens: noteGroup.tokens,
+          label: `${noteGroup.quote} (#${noteGroup.occurrence})`
+        };
+        addTokenGroup(tokenGroup);
+      });
+    } else if (notesTokenGroupsBroadcast && 
+               (notesTokenGroupsBroadcast.tokenGroups?.length === 0 || 
+                notesTokenGroupsBroadcast.resourceMetadata?.id === 'cleared')) {
+      // Handle explicit empty broadcast (cleanup) or cleared marker
+      console.log(`🧹 USFMRenderer: Received clear signal - clearing all notes underlining`, {
+        isEmpty: notesTokenGroupsBroadcast.tokenGroups?.length === 0,
+        isCleared: notesTokenGroupsBroadcast.resourceMetadata?.id === 'cleared'
+      });
+    } else {
+      // No broadcast or invalid broadcast
+      console.log(`🧹 USFMRenderer: No token groups to add`, {
+        hasBroadcast: !!notesTokenGroupsBroadcast,
+        hasTokenGroups: !!(notesTokenGroupsBroadcast?.tokenGroups),
+        tokenGroupsLength: notesTokenGroupsBroadcast?.tokenGroups?.length || 0,
+        broadcastReference: notesTokenGroupsBroadcast?.reference
+      });
+    }
+  }, [notesTokenGroupsBroadcast, addTokenGroup, clearTokenGroups, currentReference?.book]);
+
+  // Clear token groups when navigating to a different book
+  useEffect(() => {
+    clearTokenGroups('notes');
+    console.log(`📖 USFMRenderer: Cleared token groups for book navigation to ${currentReference?.book}`);
+  }, [currentReference?.book, clearTokenGroups]);
+
   // Cross-panel communication state - store the original language token to highlight
   const [highlightTarget, setHighlightTarget] = useState<OriginalLanguageToken | null>(null);
   const crossPanelService = getCrossPanelCommunicationService();
@@ -299,12 +377,12 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
 
     // Store the original language token - renderer will check alignment during rendering
     setHighlightTarget(message.originalLanguageToken);
-  }, [scripture, resourceType, language, resourceId]);
+  }, []);
 
   // Handle clear highlights messages
-  const handleClearHighlights = useCallback((message: any) => {
+  const handleClearHighlights = useCallback((message: CrossPanelMessage) => {
     setHighlightTarget(null);
-  }, [resourceId]);
+  }, []);
 
   // Handle token clicks
   const handleTokenClick = useCallback((token: OptimizedToken, verse: OptimizedVerse) => {
@@ -316,7 +394,7 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
     if (onTokenClick) {
       onTokenClick(token, verse);
     }
-  }, [crossPanelService, resourceId, onTokenClick, language]);
+  }, [crossPanelService, resourceId, onTokenClick]);
 
   // Register panel and set up cross-panel communication
   useEffect(() => {
@@ -865,6 +943,7 @@ const WordTokenRenderer: React.FC<{
   resourceType,
   language
 }) => {
+  const { getTokenGroupForAlignedId, getColorClassForGroup } = useTokenUnderlining();
   // Don't render paragraph marker tokens - they're handled by the parent component
   if (token.type === 'paragraph-marker') {
     return null;
@@ -887,6 +966,25 @@ const WordTokenRenderer: React.FC<{
   const isPunctuation = token.type === 'punctuation';
   const isNumber = token.type === 'number';
 
+  // Check if this token should be underlined based on token groups
+  let underlineClass = '';
+  if (isOriginalLanguage) {
+    // For original language tokens, check if this token ID matches any group
+    const matchingGroup = getTokenGroupForAlignedId(token.id);
+    if (matchingGroup) {
+      underlineClass = getColorClassForGroup(matchingGroup.id);
+    }
+  } else if (token.align && token.align.length > 0) {
+    // For target language tokens, check if any of their aligned IDs match any group
+    for (const alignedId of token.align) {
+      const matchingGroup = getTokenGroupForAlignedId(alignedId);
+      if (matchingGroup) {
+        underlineClass = getColorClassForGroup(matchingGroup.id);
+        break; // Use the first match
+      }
+    }
+  }
+
         return (
           <span
             className={`
@@ -894,6 +992,7 @@ const WordTokenRenderer: React.FC<{
         ${isClickable ? 'cursor-pointer hover:bg-blue-100 hover:shadow-sm transition-colors duration-150' : ''}
         ${isOriginalLanguage ? 'font-medium' : ''}
         ${isNumber ? 'text-gray-600' : ''}
+        ${underlineClass}
         inline-block rounded-sm ${isPunctuation ? '' : 'px-0.5'}
       `}
       onClick={isClickable ? handleClick : undefined}
@@ -936,5 +1035,14 @@ function getChapterForVerse(verse: OptimizedVerse, scripture: OptimizedScripture
 }
 
 // Removed unused functions - paragraph information is now embedded in tokens
+
+// Main component that provides the TokenUnderliningProvider
+export const USFMRenderer: React.FC<USFMRendererProps> = (props) => {
+  return (
+    <TokenUnderliningProvider>
+      <USFMRendererInternal {...props} />
+    </TokenUnderliningProvider>
+  );
+};
 
 export default USFMRenderer;

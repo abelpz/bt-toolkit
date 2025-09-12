@@ -645,7 +645,7 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
       <div className="flex-1 overflow-y-auto">
         <div className="p-4">
           {/* Debug section for scripture tokens */}
-          {tokenBroadcastInfo && scriptureTokens.length > 0 && (
+          {/* {tokenBroadcastInfo && scriptureTokens.length > 0 && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm">
               <div className="font-semibold text-blue-800 mb-2">
                 <span role="img" aria-label="broadcast">📡</span> Scripture Tokens Received
@@ -673,7 +673,7 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
                 )}
               </div>
             </div>
-          )}
+          )} */}
                    
           <div className="space-y-3">
             {filteredLinks.map((link, index) => renderLink(link, index))}
