@@ -10,8 +10,8 @@ name = "bt-studio-preview"
 
 # Build configuration
 [build]
-command = "pnpm build:bt-studio"
-cwd = "../.."
+command = "pnpm build:bt-studio:cf"
+cwd = "."
 publish = "apps/bt-studio/dist"
 
 # Environment variables (set these in Cloudflare dashboard)

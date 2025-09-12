@@ -29,6 +29,7 @@
     "package:desktop": "node scripts/package-desktop.js",
     "build:mobile": "node scripts/build-mobile.js",
     "build:bt-studio": "node scripts/build-bt-studio.js",
+    "build:bt-studio:cf": "node scripts/build-bt-studio-cf.js",
     "deploy:bt-studio": "node scripts/deploy-bt-studio-local.js",
     "docs:generate": "typedoc",
     "docs:serve": "cd docs/linked-panels && npx http-server -p 8080",

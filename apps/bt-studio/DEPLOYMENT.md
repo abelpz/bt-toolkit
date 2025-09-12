@@ -14,7 +14,7 @@ This guide explains how to deploy the BT Studio app to Cloudflare Pages from thi
 2. **Configure build settings:**
    ```
    Framework preset: None
-   Build command: pnpm build:bt-studio
+   Build command: pnpm build:bt-studio:cf
    Build output directory: apps/bt-studio/dist
    Root directory: (leave empty - uses repo root)
    ```
@@ -24,6 +24,8 @@ This guide explains how to deploy the BT Studio app to Cloudflare Pages from thi
    NODE_ENV=production
    VITE_APP_NAME=BT Studio
    VITE_APP_VERSION=1.0.0
+   NX_CLOUD_DISTRIBUTED_EXECUTION=false
+   NX_SKIP_NX_CACHE=true
    ```
 
 4. **Deploy:**
@@ -128,7 +130,7 @@ CLOUDFLARE_ACCOUNT_ID=your_cloudflare_account_id
 Alternative to GitHub Actions:
 - **Production branch:** `main` or `master`
 - **Preview branches:** All other branches
-- **Build command:** `pnpm build:bt-studio`
+- **Build command:** `pnpm build:bt-studio:cf`
 - **Output directory:** `apps/bt-studio/dist`
 
 ## 🛠️ Local Development
@@ -175,6 +177,18 @@ pnpm install
 # Solution: Build dependencies first
 npx nx build @bt-toolkit/bt-studio --skip-nx-cache
 ```
+
+**Problem:** Nx Cloud authorization error in Cloudflare Pages
+```
+NX   Nx Cloud: Workspace is unable to be authorized. Exited with error code: 1
+```
+- **Cause:** Nx Cloud trying to connect but workspace not authorized
+- **Solution:** Use the Cloudflare-specific build command `pnpm build:bt-studio:cf` which disables Nx Cloud
+- **Alternative:** Set environment variables in Cloudflare Pages:
+  ```
+  NX_CLOUD_DISTRIBUTED_EXECUTION=false
+  NX_SKIP_NX_CACHE=true
+  ```
 
 ### Deployment Issues
 

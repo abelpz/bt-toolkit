@@ -1,0 +1,6 @@
+# Nx ignore file for Cloudflare Pages
+# This helps avoid Nx Cloud issues during deployment
+
+# Disable Nx Cloud for CI environments
+NX_CLOUD_DISTRIBUTED_EXECUTION=false
+NX_CLOUD_ACCESS_TOKEN=

@@ -62,7 +62,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build BT Studio
-        run: pnpm build:bt-studio
+        run: pnpm build:bt-studio:cf
         env:
           NODE_ENV: production
           VITE_APP_NAME: BT Studio
