@@ -12,6 +12,8 @@ import {
   ScriptureAdapterConfig,
   NotesAdapterConfig,
   AcademyAdapterConfig,
+  TranslationWordsAdapterConfig,
+  TranslationWordsLinksAdapterConfig,
   ResourceUsageMode,
   SmartPanelEntry
 } from '../types/resource-config';
@@ -22,6 +24,7 @@ import { NotesViewer } from '../components/resources/NotesViewer';
 import { QuestionsViewer } from '../components/resources/QuestionsViewer';
 import { OriginalScriptureViewer } from '../components/resources/OriginalScriptureViewer';
 import { AcademyViewer } from '../components/resources/AcademyViewer';
+import { TranslationWordsLinksViewer } from '../components/resources/TranslationWordsLinksViewer';
 // TODO: Import other components when adapters are implemented
 // import { WordsViewer } from '../components/resources/WordsViewer';
 
@@ -37,6 +40,10 @@ const QuestionsResourceComponent = QuestionsViewer as any;
 const OriginalScriptureResourceComponent = OriginalScriptureViewer as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const AcademyResourceComponent = AcademyViewer as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TranslationWordsResourceComponent = AcademyViewer as any; // Reuse AcademyViewer for now
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const TranslationWordsLinksResourceComponent = TranslationWordsLinksViewer as any;
 
 /**
  * Panel Resource Assignment
@@ -198,6 +205,37 @@ export const APP_RESOURCES: AppResourceConfig[] = [
     },
     usageMode: ResourceUsageMode.PANEL,
     loadPriority: 4
+  },
+
+  // ============================================================================
+  // Translation Words Links (TWL)
+  // ============================================================================
+  {
+    panelResourceId: 'twl-links',
+    adapterType: AdapterType.DOOR43_WORDS_LINKS,
+    adapterConfig: {
+      // Resource configuration
+      resourceId: 'twl',
+      
+      // Processing options
+      categories: ['kt', 'names', 'other'], // All categories
+      includeOriginalWords: true,
+      
+      // Performance options
+      timeout: 30000,
+      retryAttempts: 3,
+      retryDelay: 1000,
+      validateContent: true
+    } as TranslationWordsLinksAdapterConfig,
+    panelConfig: {
+      title: 'Translation Words Links',
+      description: 'Cross-reference links between Bible words and Translation Words definitions',
+      category: PanelCategory.NOTES,
+      component: TranslationWordsLinksResourceComponent,
+      icon: 'link'
+    },
+    usageMode: ResourceUsageMode.PANEL,
+    loadPriority: 5
   }
 ];
 
@@ -298,6 +336,37 @@ export const GLOBAL_RESOURCES: AppResourceConfig[] = [
     },
     usageMode: ResourceUsageMode.GLOBAL,
     loadPriority: 7
+    // Note: No resource-specific server/owner/language - uses app context
+  },
+
+  // ============================================================================
+  // TRANSLATION WORDS GLOBAL RESOURCE
+  // ============================================================================
+  {
+    panelResourceId: 'translation-words-global',
+    adapterType: AdapterType.DOOR43_WORDS,
+    adapterConfig: {
+      resourceId: 'tw',
+      
+      // Processing options
+      categories: ['keyTerm', 'properName', 'generalTerm'], // All categories
+      includeStrongsNumbers: true,
+      
+      // Performance options
+      timeout: 30000,
+      retryAttempts: 3,
+      retryDelay: 1000,
+      validateContent: true
+    } as TranslationWordsAdapterConfig,
+    panelConfig: {
+      title: 'Translation Words',
+      description: 'Biblical term definitions and explanations',
+      category: PanelCategory.REFERENCE,
+      component: TranslationWordsResourceComponent,
+      icon: 'book-open'
+    },
+    usageMode: ResourceUsageMode.GLOBAL,
+    loadPriority: 8
     // Note: No resource-specific server/owner/language - uses app context
   }
 ];
@@ -420,8 +489,8 @@ export const PANEL_ASSIGNMENTS: PanelResourceAssignment[] = [
     minWidth: 300,
     maxWidth: 700,
 
-    // Resources available in this panel (UST + Translation Notes + Translation Questions)
-    resources: ['ust-scripture', 'tn-notes', 'tq-questions'],
+    // Resources available in this panel (UST + Translation Notes + Translation Questions + Translation Words Links)
+    resources: ['ust-scripture', 'tn-notes', 'tq-questions', 'twl-links'],
     smartEntries: ['original-languages-smart'],
     defaultResource: 'ust-scripture', // UST as default, can switch to notes or questions
   },

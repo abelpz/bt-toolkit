@@ -11,6 +11,8 @@ import {
   ScriptureAdapterConfig,
   NotesAdapterConfig,
   AcademyAdapterConfig,
+  TranslationWordsAdapterConfig,
+  TranslationWordsLinksAdapterConfig,
   CustomAdapterConfig,
   AdapterFactory as IAdapterFactory
 } from '../../types/resource-config';
@@ -24,6 +26,8 @@ import { Door43OriginalAdapter } from '../adapters/Door43OriginalAdapter';
 import { Door43NotesAdapter, Door43NotesConfig } from '../adapters/Door43NotesAdapter';
 import { Door43QuestionsAdapter, Door43QuestionsConfig } from '../adapters/Door43QuestionsAdapter';
 import { Door43AcademyAdapter } from '../adapters/Door43AcademyAdapter';
+import { Door43TranslationWordsAdapter } from '../adapters/Door43TranslationWordsAdapter';
+import { Door43TranslationWordsLinksAdapter } from '../adapters/Door43TranslationWordsLinksAdapter';
 
 export class AdapterFactory implements IAdapterFactory {
   
@@ -44,7 +48,10 @@ export class AdapterFactory implements IAdapterFactory {
         return this.createNotesAdapter(config as NotesAdapterConfig);
         
       case AdapterType.DOOR43_WORDS:
-        return this.createWordsAdapter(config as NotesAdapterConfig);
+        return this.createWordsAdapter(config as TranslationWordsAdapterConfig);
+        
+      case AdapterType.DOOR43_WORDS_LINKS:
+        return this.createWordsLinksAdapter(config as TranslationWordsLinksAdapterConfig);
         
       case AdapterType.DOOR43_ACADEMY:
         return this.createAcademyAdapter(config as AcademyAdapterConfig);
@@ -148,9 +155,32 @@ export class AdapterFactory implements IAdapterFactory {
     return adapter;
   }
 
-  private createWordsAdapter(config: NotesAdapterConfig): ResourceAdapter {
-    // TODO: Implement Door43WordsAdapter (or reuse NotesAdapter with special config)
-    throw new Error(`Words adapter not yet implemented. Config: ${JSON.stringify(config)}`);
+  private createWordsAdapter(config: TranslationWordsAdapterConfig): ResourceAdapter {
+    console.log(`🔧 Creating Door43TranslationWordsAdapter with resourceId: ${config.resourceId}`);
+    
+    const adapter = new Door43TranslationWordsAdapter(
+      config.server || 'git.door43.org',
+      config.resourceId
+    );
+    
+    return adapter;
+  }
+
+  private createWordsLinksAdapter(config: TranslationWordsLinksAdapterConfig): ResourceAdapter {
+    console.log(`🔧 Creating Door43TranslationWordsLinksAdapter with resourceId: ${config.resourceId}`);
+    
+    const linksConfig = {
+      resourceId: config.resourceId,
+      serverId: config.server || 'git.door43.org',
+      timeout: config.timeout,
+      retryAttempts: config.retryAttempts,
+      retryDelay: config.retryDelay,
+      validateContent: config.validateContent
+    };
+    
+    const adapter = new Door43TranslationWordsLinksAdapter(linksConfig);
+    
+    return adapter;
   }
 
   private createAcademyAdapter(config: AcademyAdapterConfig): ResourceAdapter {
@@ -252,6 +282,40 @@ export interface Door43AcademyAdapterConfig {
   serverId: string;              // Server identifier
   categories: string[];          // Filter categories
   includeImages: boolean;        // Include embedded images
+  
+  // Base options
+  timeout: number;
+  retryAttempts: number;
+  retryDelay: number;
+  validateContent: boolean;
+  cacheExpiry: number;
+}
+
+/**
+ * Configuration interface for Door43TranslationWordsAdapter
+ */
+export interface Door43TranslationWordsAdapterConfig {
+  resourceId: string;             // Resource ID (usually 'tw')
+  serverId: string;              // Server identifier
+  categories: string[];          // Filter categories: 'keyTerm', 'properName', 'generalTerm'
+  includeStrongsNumbers: boolean; // Include Strong's numbers in content
+  
+  // Base options
+  timeout: number;
+  retryAttempts: number;
+  retryDelay: number;
+  validateContent: boolean;
+  cacheExpiry: number;
+}
+
+/**
+ * Configuration interface for Door43TranslationWordsLinksAdapter
+ */
+export interface Door43TranslationWordsLinksAdapterConfig {
+  resourceId: string;             // Resource ID (usually 'twl')
+  serverId: string;              // Server identifier
+  categories: string[];          // Filter categories: 'kt', 'names', 'other'
+  includeOriginalWords: boolean; // Include original language words in content
   
   // Base options
   timeout: number;

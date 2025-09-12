@@ -6,7 +6,7 @@
 
 import * as usfm from 'usfm-js';
 import { defaultSectionsService } from './default-sections';
-import { generateSemanticId, generateSemanticIdWithOccurrence } from '../utils/semantic-id-generator';
+import { generateSemanticId } from '../utils/semantic-id-generator';
 
 // USFM Types (simplified from @bt-toolkit/usfm-processor)
 export interface USFMHeader {
@@ -1096,16 +1096,21 @@ export class USFMProcessor {
       return 'number';
     }
     
-    // Check if it's purely punctuation (including quotes, dashes, spaces, etc.)
-    // Use a simpler approach: if it contains NO actual letters or digits, it's punctuation
-    // Exclude specific punctuation characters from the letter ranges
-    if (!/[a-zA-Z\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u00C0-\u017F\u1E00-\u1EFF\d]/.test(text)) {
+    // Special case: Hebrew maqaf (־) should always be treated as punctuation
+    if (text === '־') {
       return 'punctuation';
     }
     
-    // Check if it contains word characters (including Unicode for Hebrew, Arabic, etc.)
+    // Check if it's purely punctuation (including quotes, dashes, spaces, etc.)
+    // Use a simpler approach: if it contains NO actual letters or digits, it's punctuation
+    // Include Unicode ranges for: Latin, Greek, Hebrew, Arabic, Syriac, Latin Extended
+    if (!/[a-zA-Z\u0370-\u03FF\u1F00-\u1FFF\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u00C0-\u017F\u1E00-\u1EFF\d]/.test(text)) {
+      return 'punctuation';
+    }
+    
+    // Check if it contains word characters (including Unicode for Greek, Hebrew, Arabic, etc.)
     // Use more specific ranges that exclude punctuation
-    if (/[a-zA-Z\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u00C0-\u017F\u1E00-\u1EFF]/.test(text)) {
+    if (/[a-zA-Z\u0370-\u03FF\u1F00-\u1FFF\u0590-\u05FF\u0600-\u06FF\u0700-\u074F\u00C0-\u017F\u1E00-\u1EFF]/.test(text)) {
       return 'word';
     }
     
@@ -1723,10 +1728,11 @@ export class USFMProcessor {
    * Check if USFM document contains word objects
    */
   private checkForWordObjects(usfmJson: USFMDocument): boolean {
-    for (const [, chapterData] of Object.entries(usfmJson.chapters)) {
-      for (const [, verseData] of Object.entries(chapterData)) {
+    for (const [chapterNum, chapterData] of Object.entries(usfmJson.chapters)) {
+      for (const [verseNum, verseData] of Object.entries(chapterData)) {
         for (const obj of verseData.verseObjects) {
-          if (this.isWordObject(obj)) {
+          const isWord = this.isWordObject(obj);
+          if (isWord) {
             return true;
           }
         }
@@ -1944,8 +1950,9 @@ export class USFMProcessor {
         }
         
         // Insert default paragraph marker at the beginning
+        const paragraphId = Math.abs(defaultStyle.charCodeAt(0)) + firstVerse.tokens.length + 10000;
         firstVerse.tokens.unshift({
-          id: 0, // Will be renumbered
+          id: paragraphId, // Use unique ID, don't renumber existing tokens
           text: '',
           type: 'paragraph-marker',
           paragraphMarker: {
@@ -1956,10 +1963,7 @@ export class USFMProcessor {
           }
         });
         
-        // Renumber token IDs to maintain sequence
-        firstVerse.tokens.forEach((token, index) => {
-          token.id = index + 1;
-        });
+        // Don't renumber existing tokens - preserve semantic IDs!
       }
     }
 
@@ -1987,6 +1991,7 @@ export class USFMProcessor {
     text = this.extractTextFromVerseObjects(verseData.verseObjects);
     
     // Process tokens based on document type
+    
     switch (documentType) {
       case 'untokenized':
         this.processUntokenizedOptimized(verseData.verseObjects, tokens, verseRef);
@@ -2001,6 +2006,7 @@ export class USFMProcessor {
     
     // Apply paragraph segments to tokens based on intra-verse paragraph markers
     this.applyParagraphSegments(verseData.verseObjects, tokens);
+    
     
     return {
       number: verseNumber,
@@ -2110,14 +2116,13 @@ export class USFMProcessor {
     tokens: OptimizedToken[],
     verseRef: string
   ): void {
-    let tokenId = 1;
-    
     // Process each verse object to handle paragraph markers and text content
     for (const obj of verseObjects) {
       if (this.isParagraphObject(obj)) {
         // Create paragraph marker token
+        const paragraphId = Math.abs(obj.tag.charCodeAt(0)) + tokens.length + 10000; // Ensure unique ID
         tokens.push({
-          id: tokenId++,
+          id: paragraphId,
           text: '', // Paragraph markers don't have visible text
           type: 'paragraph-marker',
           paragraphMarker: {
@@ -2131,10 +2136,21 @@ export class USFMProcessor {
         // Simple word splitting for text content
         const words = obj.text.split(/(\s+|[^\w\s])/);
         
+        
         for (const word of words) {
           if (word.trim()) {
+            // For untokenized content, calculate occurrence of this word in the verse so far
+            const occurrence = tokens.filter(t => t.text === word && t.type === 'word').length + 1;
+            
+            const semanticId = generateSemanticId(
+              word,
+              verseRef,
+              occurrence
+            );
+            
+            
             tokens.push({
-              id: tokenId++,
+              id: semanticId,
               text: word,
               type: this.classifyTokenType(word)
             });
@@ -2156,6 +2172,7 @@ export class USFMProcessor {
       if (this.isParagraphObject(obj)) {
         // Create paragraph marker token
         const paragraphId = Math.abs(obj.tag.charCodeAt(0)) + tokens.length + 10000; // Ensure unique ID
+        
         tokens.push({
           id: paragraphId,
           text: '', // Paragraph markers don't have visible text
@@ -2170,16 +2187,23 @@ export class USFMProcessor {
       } else if (this.isWordObject(obj)) {
         const wordObj = obj as any; // Cast to access word properties
         
+        // For original language, calculate occurrence since word objects don't have x-occurrence
+        const wordText = wordObj.text || '';
+        
+        // Calculate occurrence by counting how many times this word has appeared in this verse
+        const occurrence = tokens.filter(t => t.text === wordText && t.type === 'word').length + 1;
+        
         const semanticId = generateSemanticId(
-          wordObj.text || '',
-          wordObj.strong || '',
-          verseRef
+          wordText,
+          verseRef,
+          occurrence
         );
+        
         
         tokens.push({
           id: semanticId,
-          text: wordObj.text || '',
-          type: this.classifyTokenType(wordObj.text || ''),
+          text: wordText,
+          type: this.classifyTokenType(wordText),
           strong: wordObj.strong || '',
           lemma: wordObj.lemma || '',
           morph: wordObj.morph || wordObj['x-morph'] || ''
@@ -2187,11 +2211,11 @@ export class USFMProcessor {
       } else if (this.isTextObject(obj)) {
         // Handle punctuation and spaces
         const text = obj.text.trim();
-        if (text && /[^\w\s]/.test(text)) {
-          // Generate a simple ID for punctuation
-          const punctuationId = Math.abs(text.charCodeAt(0)) + tokens.length;
+        if (text) {
+          // Generate a simple ID for text content
+          const textId = Math.abs(text.charCodeAt(0)) + tokens.length;
           tokens.push({
-            id: punctuationId,
+            id: textId,
             text: text,
             type: this.classifyTokenType(text)
           });
@@ -2212,7 +2236,7 @@ export class USFMProcessor {
   ): void {
     let tokenId = 1;
     
-    const processObject = (obj: USFMVerseObject): void => {
+    const processObject = (obj: USFMVerseObject, parentAlignmentIds?: number[]): void => {
       if (this.isParagraphObject(obj)) {
         // Create paragraph marker token
         tokens.push({
@@ -2229,15 +2253,19 @@ export class USFMProcessor {
       } else if (this.isAlignmentObject(obj)) {
         const alignmentObj = obj as any; // Cast to access alignment properties
         
-        // Collect alignment IDs
-        const alignmentIds: number[] = [];
+        // Collect alignment IDs (preserve parent alignments)
+        const alignmentIds: number[] = [...(parentAlignmentIds || [])];
         
         // Add current alignment
-        if (alignmentObj.content && alignmentObj.strong) {
+        if (alignmentObj.content) {
+          // For alignment objects, use the x-occurrence value from USFM markup
+          const alignmentContent = alignmentObj.content;
+          const occurrence = parseInt(alignmentObj.occurrence || '1');
+          
           const semanticId = generateSemanticId(
-            alignmentObj.content,
-            alignmentObj.strong,
-            verseRef
+            alignmentContent,
+            verseRef,
+            occurrence
           );
           alignmentIds.push(semanticId);
         }
@@ -2276,16 +2304,8 @@ export class USFMProcessor {
                 });
               }
             } else if (this.isAlignmentObject(child)) {
-              // Handle nested alignments
-              if (child.content && child.strong) {
-                const nestedSemanticId = generateSemanticId(
-                  child.content,
-                  child.strong,
-                  verseRef
-                );
-                alignmentIds.push(nestedSemanticId);
-              }
-              processObject(child);
+              // Handle nested alignments - pass current alignment IDs as parent context
+              processObject(child, alignmentIds);
             }
           }
         }
@@ -2301,7 +2321,7 @@ export class USFMProcessor {
       }
     };
     
-    verseObjects.forEach(processObject);
+    verseObjects.forEach(obj => processObject(obj));
   }
 }
 

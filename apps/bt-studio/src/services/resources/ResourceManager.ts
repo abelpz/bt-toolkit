@@ -592,12 +592,14 @@ export class ResourceManagerImpl implements ResourceManager {
     const language = parts[2];
     const resourceId = parts[3];
     
-    // For academy resources (ta), the contentId includes the category and article
+    // For academy resources (ta) and translation words (tw), the contentId includes the category and article
     // e.g., git.door43.org/unfoldingWord/en/ta/translate/figs-abstractnouns
     // contentId should be "translate/figs-abstractnouns"
+    // e.g., git.door43.org/unfoldingWord/en/tw/bible/other/cry
+    // contentId should be "bible/other/cry"
     let contentId: string;
-    if (resourceId === 'ta' && parts.length >= 6) {
-      // Academy resource: join remaining parts as category/article-id
+    if ((resourceId === 'ta' || resourceId === 'tw') && parts.length >= 6) {
+      // Academy/Words resource: join remaining parts as category/article-id
       contentId = parts.slice(4).join('/');
     } else {
       // Book-based resource: just the book code

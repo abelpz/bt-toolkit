@@ -109,6 +109,7 @@ export enum AdapterType {
   DOOR43_SCRIPTURE = 'door43-scripture',     // Reusable for ULT, GLT, ULB, UST, GST
   DOOR43_NOTES = 'door43-notes',             // Translation Notes (TN)
   DOOR43_WORDS = 'door43-words',             // Translation Words (TW)  
+  DOOR43_WORDS_LINKS = 'door43-words-links', // Translation Words Links (TWL)
   DOOR43_ACADEMY = 'door43-academy',         // Translation Academy (TA)
   DOOR43_QUESTIONS = 'door43-questions',     // Translation Questions (TQ)
   DOOR43_AUDIO = 'door43-audio',             // Audio Bible
@@ -162,6 +163,24 @@ export interface AcademyAdapterConfig extends BaseAdapterConfig {
 }
 
 /**
+ * Translation Words adapter configuration
+ */
+export interface TranslationWordsAdapterConfig extends BaseAdapterConfig {
+  resourceId: string;               // e.g., 'tw'
+  categories?: string[];            // Filter by categories: 'keyTerm', 'properName', 'generalTerm' (default: all)
+  includeStrongsNumbers?: boolean;  // Include Strong's numbers in content (default: true)
+}
+
+/**
+ * Translation Words Links adapter configuration
+ */
+export interface TranslationWordsLinksAdapterConfig extends BaseAdapterConfig {
+  resourceId: string;               // e.g., 'twl'
+  categories?: string[];            // Filter by categories: 'kt', 'names', 'other' (default: all)
+  includeOriginalWords?: boolean;   // Include original language words (default: true)
+}
+
+/**
  * Custom adapter configuration
  */
 export interface CustomAdapterConfig extends BaseAdapterConfig {
@@ -176,6 +195,8 @@ export type AdapterConfiguration =
   | ScriptureAdapterConfig
   | NotesAdapterConfig  
   | AcademyAdapterConfig
+  | TranslationWordsAdapterConfig
+  | TranslationWordsLinksAdapterConfig
   | CustomAdapterConfig;
 
 // ============================================================================

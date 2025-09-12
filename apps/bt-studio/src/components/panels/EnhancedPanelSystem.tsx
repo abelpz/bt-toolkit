@@ -16,6 +16,7 @@ import {
 import { useWorkspace, useWorkspacePanels } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { PANEL_ASSIGNMENTS, getDefaultResourceForPanel, getSmartPanelEntries } from '../../config/app-resources';
+import { scripturePlugin } from '../../plugins/scripture-plugin';
 
 interface PanelResourceState {
   [panelId: string]: string; // panelId -> currently selected resourceId
@@ -135,7 +136,12 @@ export function EnhancedPanelSystem() {
   // Create plugin registry (memoized to prevent recreation)
   const plugins = useMemo(() => {
     const pluginRegistry = createDefaultPluginRegistry();
+    
+    // Register our scripture plugin for token broadcasting
+    pluginRegistry.register(scripturePlugin);
+    
     console.log('📦 Plugins created:', pluginRegistry);
+    console.log('📖 Scripture plugin registered for token broadcasting');
     return pluginRegistry;
   }, []);
 

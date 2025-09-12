@@ -5,6 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
+import { useCurrentState } from 'linked-panels';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { ProcessedNotes, TranslationNote } from '../../services/notes-processor';
@@ -12,6 +13,9 @@ import { ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 import { AcademyModal } from '../modals/AcademyModal';
 import { parseRcLink, isTranslationAcademyLink, getArticleDisplayTitle } from '../../utils/rc-link-parser';
+import { QuoteMatcher, QuoteMatchResult } from '../../services/quote-matcher';
+import { OptimizedScripture, OptimizedToken } from '../../services/usfm-processor';
+import { ScriptureTokensBroadcast } from '../../types/scripture-messages';
 
 export interface NotesViewerProps {
   resourceId: string;
@@ -36,10 +40,80 @@ export function NotesViewer({
   const [displayError, setDisplayError] = useState<string | null>(error || null);
   const [resourceMetadata, setResourceMetadata] = useState<ResourceMetadata | null>(null);
   
+  // Original language content for quote matching
+  const [originalScripture, setOriginalScripture] = useState<OptimizedScripture | null>(null);
+  const [originalLanguageConfig, setOriginalLanguageConfig] = useState<{
+    owner: string;
+    language: string;
+    resourceId: string;
+    title: string;
+  } | null>(null);
+  const [quoteMatches, setQuoteMatches] = useState<Map<string, QuoteMatchResult>>(new Map());
+  const [quoteMatcher] = useState(() => new QuoteMatcher());
+  
+  // Token broadcast reception for building target language quotes
+  const [scriptureTokens, setScriptureTokens] = useState<OptimizedToken[]>([]);
+  const [tokenBroadcastInfo, setTokenBroadcastInfo] = useState<{
+    sourceResourceId: string;
+    reference: {
+      book: string;
+      chapter: number;
+      verse: number;
+      endChapter?: number;
+      endVerse?: number;
+    };
+    resourceMetadata: {
+      id: string;
+      language: string;
+      languageDirection?: 'ltr' | 'rtl';
+      type: string;
+    };
+    timestamp: number;
+  } | null>(null);
+  const [targetLanguageQuotes, setTargetLanguageQuotes] = useState<Map<string, {
+    quote: string;
+    tokens: OptimizedToken[];
+    sourceLanguage: string;
+  }>>(new Map());
+  
   // Academy modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string>('');
   const [selectedArticleTitle, setSelectedArticleTitle] = useState<string>('');
+
+  // Listen for scripture token broadcasts using useCurrentState hook
+  const scriptureTokensBroadcast = useCurrentState<ScriptureTokensBroadcast>(
+    resourceId, 
+    'current-scripture-tokens'
+  );
+
+  // Testament-specific original language configuration (same as OriginalScriptureViewer)
+  const ORIGINAL_LANGUAGE_CONFIG = useMemo(() => ({
+    OT: {
+      owner: 'unfoldingWord',
+      language: 'hbo',
+      resourceId: 'uhb',
+      title: 'Hebrew Bible'
+    },
+    NT: {
+      owner: 'unfoldingWord', 
+      language: 'el-x-koine',
+      resourceId: 'ugnt',
+      title: 'Greek New Testament'
+    }
+  } as const), []);
+
+  // Helper function to determine testament from book code
+  const getTestamentFromBook = (bookCode: string): 'OT' | 'NT' | null => {
+    if (!bookCode) return null;
+    
+    // Simple testament detection based on book codes
+    // OT books: gen, exo, lev, num, deu, jos, jdg, rut, 1sa, 2sa, 1ki, 2ki, 1ch, 2ch, ezr, neh, est, job, psa, pro, ecc, sng, isa, jer, lam, ezk, dan, hos, jol, amo, oba, jon, mic, nam, hab, zep, hag, zec, mal
+    // NT books: mat, mrk, luk, jhn, act, rom, 1co, 2co, gal, eph, php, col, 1th, 2th, 1ti, 2ti, tit, phm, heb, jas, 1pe, 2pe, 1jn, 2jn, 3jn, jud, rev
+    const ntBooks = ['mat', 'mrk', 'luk', 'jhn', 'act', 'rom', '1co', '2co', 'gal', 'eph', 'php', 'col', '1th', '2th', '1ti', '2ti', 'tit', 'phm', 'heb', 'jas', '1pe', '2pe', '1jn', '2jn', '3jn', 'jud', 'rev'];
+    
+    return ntBooks.includes(bookCode.toLowerCase()) ? 'NT' : 'OT';
+  };
 
   // Handle clicking on support reference links
   const handleSupportReferenceClick = (supportReference: string) => {
@@ -105,8 +179,333 @@ export function NotesViewer({
     fetchContent();
   }, [resourceManager, resourceId, currentReference.book, propNotes, processedResourceConfig]);
 
+  // Load original language content for quote matching
+  useEffect(() => {
+    if (!resourceManager || !currentReference.book) {
+      console.log('⏳ NotesViewer - Missing dependencies for original language loading');
+      return;
+    }
+
+    const loadOriginalLanguageContent = async () => {
+      try {
+        console.log('🔄 NotesViewer - Loading original language content for quote matching');
+        
+        // Determine testament from current book
+        const testament = getTestamentFromBook(currentReference.book);
+        if (!testament) {
+          console.warn(`⚠️ NotesViewer - Cannot determine testament for book: ${currentReference.book}`);
+          return;
+        }
+
+        // Get configuration for the testament
+        const config = ORIGINAL_LANGUAGE_CONFIG[testament];
+        setOriginalLanguageConfig(config);
+        
+        console.log(`🔄 NotesViewer - Loading ${testament} content for quote matching:`, config);
+        
+        // Construct content key for the original language resource (same pattern as OriginalScriptureViewer)
+        // Format: server/owner/language/resourceId/book
+        const contentKey = `git.door43.org/${config.owner}/${config.language}/${config.resourceId}/${currentReference.book}`;
+        console.log(`📋 NotesViewer - Original language content key: ${contentKey}`);
+        
+        // Try to get content using the resource manager
+        const content = await resourceManager.getOrFetchContent(
+          contentKey,
+          'scripture' as ResourceType // Resource type
+        );
+        
+        console.log(`✅ NotesViewer - Original language content loaded for ${testament}:`, content);
+        setOriginalScripture(content as OptimizedScripture);
+        
+      } catch (err) {
+        console.error(`❌ NotesViewer - Failed to load original language content:`, err);
+        // Don't set error state - quote matching is optional functionality
+        setOriginalScripture(null);
+      }
+    };
+
+    loadOriginalLanguageContent();
+  }, [resourceManager, currentReference.book, ORIGINAL_LANGUAGE_CONFIG]);
+
   const displayNotes = actualNotes || propNotes;
   const isLoading = loading || contentLoading;
+
+  // Process quote matches when we have both notes and original scripture
+  useEffect(() => {
+    if (!originalScripture || !displayNotes?.notes || !currentReference.book) {
+      console.log('⏳ NotesViewer - Missing dependencies for quote matching');
+      setQuoteMatches(new Map());
+      return;
+    }
+
+    const processQuoteMatches = async () => {
+      try {
+        console.log('🔄 NotesViewer - Processing quote matches for notes');
+        const newQuoteMatches = new Map<string, QuoteMatchResult>();
+
+        // Process each note that has a quote
+        for (const note of displayNotes.notes) {
+          if (!note.quote || !note.reference) {
+            continue;
+          }
+
+          try {
+            // Parse the note reference to get chapter and verse info (supports ranges like "2:3-4")
+            const refParts = note.reference.split(':');
+            const noteChapter = parseInt(refParts[0] || '1');
+            
+            // Parse verse part which might be a range (e.g., "3-4" or just "3")
+            const versePart = refParts[1] || '1';
+            let noteStartVerse: number;
+            let noteEndVerse: number;
+            
+            if (versePart.includes('-')) {
+              // Handle verse range (e.g., "3-4")
+              const verseParts = versePart.split('-');
+              noteStartVerse = parseInt(verseParts[0] || '1');
+              noteEndVerse = parseInt(verseParts[1] || noteStartVerse.toString());
+            } else {
+              // Single verse
+              noteStartVerse = parseInt(versePart);
+              noteEndVerse = noteStartVerse;
+            }
+            
+            // Validate parsed values
+            if (isNaN(noteChapter) || isNaN(noteStartVerse) || isNaN(noteEndVerse) || 
+                noteChapter < 1 || noteStartVerse < 1 || noteEndVerse < noteStartVerse) {
+              console.warn(`⚠️ NotesViewer - Invalid reference format for note ${note.id}: ${note.reference}`);
+              continue;
+            }
+            
+            // Create quote reference for the matcher [[memory:8491101]]
+            const quoteReference = {
+              book: currentReference.book,
+              startChapter: noteChapter,
+              startVerse: noteStartVerse,
+              endChapter: noteChapter, // Same chapter for now (could be extended for multi-chapter ranges)
+              endVerse: noteEndVerse
+            };
+
+            // Validate quote text (trim whitespace and check for meaningful content)
+            const cleanQuote = note.quote.trim();
+            if (cleanQuote.length < 2) {
+              console.warn(`⚠️ NotesViewer - Quote too short for note ${note.id}: "${cleanQuote}"`);
+              continue;
+            }
+
+            // Parse occurrence with validation
+            const occurrence = Math.max(1, parseInt(note.occurrence || '1'));
+            if (isNaN(occurrence)) {
+              console.warn(`⚠️ NotesViewer - Invalid occurrence for note ${note.id}: ${note.occurrence}`);
+              continue;
+            }
+
+            // Use quote matcher to find original tokens
+            const matchResult = quoteMatcher.findOriginalTokens(
+              originalScripture.chapters,
+              cleanQuote,
+              occurrence,
+              quoteReference
+            );
+
+            const noteKey = note.id || `${note.reference}-${cleanQuote}`;
+            
+            if (matchResult.success) {
+              console.log(`✅ NotesViewer - Found quote match for note ${note.id}:`, {
+                quote: cleanQuote,
+                occurrence,
+                tokensFound: matchResult.totalTokens.length,
+                matches: matchResult.matches.length
+              });
+              newQuoteMatches.set(noteKey, matchResult);
+            } else {
+              console.warn(`⚠️ NotesViewer - No quote match found for note ${note.id}:`, {
+                quote: cleanQuote,
+                occurrence,
+                reference: note.reference,
+                error: matchResult.error
+              });
+              // Store failed match result for UI feedback
+              newQuoteMatches.set(noteKey, matchResult);
+            }
+          } catch (noteError) {
+            console.error(`❌ NotesViewer - Error processing note ${note.id}:`, noteError);
+            // Continue processing other notes
+            continue;
+          }
+        }
+
+        setQuoteMatches(newQuoteMatches);
+        console.log(`✅ NotesViewer - Processed ${newQuoteMatches.size} quote matches`);
+
+      } catch (err) {
+        console.error('❌ NotesViewer - Failed to process quote matches:', err);
+        setQuoteMatches(new Map());
+      }
+    };
+
+    processQuoteMatches();
+  }, [originalScripture, displayNotes?.notes, currentReference.book, quoteMatcher]);
+
+  // Handle scripture token broadcasts (similar to TranslationWordsLinksViewer)
+  useEffect(() => {
+    if (scriptureTokensBroadcast) {
+      // Check if this is a clear message (empty tokens and empty book)
+      const isClearMessage = scriptureTokensBroadcast.tokens.length === 0 && 
+                            !scriptureTokensBroadcast.reference.book;
+      
+      if (isClearMessage) {
+        console.log(`🧹 NotesViewer received clear signal from ${scriptureTokensBroadcast.sourceResourceId}`);
+        setScriptureTokens([]);
+        setTokenBroadcastInfo(null);
+        setTargetLanguageQuotes(new Map());
+      } else {
+        console.log(`🎯 NotesViewer received scripture tokens from ${scriptureTokensBroadcast.sourceResourceId}:`, {
+          tokenCount: scriptureTokensBroadcast.tokens.length,
+          reference: scriptureTokensBroadcast.reference,
+          language: scriptureTokensBroadcast.resourceMetadata.language,
+          timestamp: new Date(scriptureTokensBroadcast.timestamp).toLocaleTimeString()
+        });
+
+        setScriptureTokens(scriptureTokensBroadcast.tokens);
+        setTokenBroadcastInfo({
+          sourceResourceId: scriptureTokensBroadcast.sourceResourceId,
+          reference: scriptureTokensBroadcast.reference,
+          resourceMetadata: scriptureTokensBroadcast.resourceMetadata,
+          timestamp: scriptureTokensBroadcast.timestamp
+        });
+      }
+    } else {
+      console.log('📭 NotesViewer: No scripture token broadcast found');
+      setScriptureTokens([]);
+      setTokenBroadcastInfo(null);
+      setTargetLanguageQuotes(new Map());
+    }
+  }, [scriptureTokensBroadcast]);
+
+  // Process target language quotes when we have both quote matches and received tokens
+  useEffect(() => {
+    if (!scriptureTokens.length || !quoteMatches.size || !tokenBroadcastInfo) {
+      console.log('⏳ NotesViewer - Missing dependencies for target quote building');
+      setTargetLanguageQuotes(new Map());
+      return;
+    }
+
+    const buildTargetLanguageQuotes = () => {
+      try {
+        console.log('🔄 NotesViewer - Building target language quotes from received tokens');
+        const newTargetQuotes = new Map<string, {
+          quote: string;
+          tokens: OptimizedToken[];
+          sourceLanguage: string;
+        }>();
+
+        // Process each quote match
+        for (const [noteKey, quoteMatch] of quoteMatches.entries()) {
+          if (!quoteMatch.success || !quoteMatch.totalTokens.length) {
+            continue;
+          }
+
+          try {
+            // Find received tokens that are aligned to the original language tokens
+            const alignedTokens = findAlignedTokens(quoteMatch.totalTokens, scriptureTokens);
+            
+            if (alignedTokens.length > 0) {
+              // Build the target language quote from aligned tokens with ellipsis for gaps
+              const targetQuote = buildQuoteWithEllipsis(alignedTokens);
+
+              if (targetQuote) {
+                newTargetQuotes.set(noteKey, {
+                  quote: targetQuote,
+                  tokens: alignedTokens,
+                  sourceLanguage: tokenBroadcastInfo.resourceMetadata.language
+                });
+
+                console.log(`✅ NotesViewer - Built target quote for ${noteKey}:`, {
+                  originalTokens: quoteMatch.totalTokens.length,
+                  alignedTokens: alignedTokens.length,
+                  targetQuote: targetQuote.substring(0, 50) + (targetQuote.length > 50 ? '...' : '')
+                });
+              }
+            } else {
+              console.warn(`⚠️ NotesViewer - No aligned tokens found for ${noteKey}`);
+            }
+          } catch (err) {
+            console.error(`❌ NotesViewer - Error building target quote for ${noteKey}:`, err);
+          }
+        }
+
+        setTargetLanguageQuotes(newTargetQuotes);
+        console.log(`✅ NotesViewer - Built ${newTargetQuotes.size} target language quotes`);
+
+      } catch (err) {
+        console.error('❌ NotesViewer - Failed to build target language quotes:', err);
+        setTargetLanguageQuotes(new Map());
+      }
+    };
+
+    buildTargetLanguageQuotes();
+  }, [scriptureTokens, quoteMatches, tokenBroadcastInfo]);
+
+  // Helper function to find received tokens aligned to original language tokens
+  const findAlignedTokens = (originalTokens: OptimizedToken[], receivedTokens: OptimizedToken[]): OptimizedToken[] => {
+    const alignedTokens: OptimizedToken[] = [];
+
+    for (const originalToken of originalTokens) {
+      // Look for received tokens that have alignment to this original token
+      const matchingTokens = receivedTokens.filter(receivedToken => {
+        // Check if the received token has alignment data pointing to the original token
+        if (receivedToken.align && originalToken.id) {
+          // The align field contains references to original language token IDs
+          return receivedToken.align.includes(originalToken.id);
+        }
+        return false;
+      });
+
+      alignedTokens.push(...matchingTokens);
+    }
+
+    // Remove duplicates based on token ID
+    const uniqueTokens = alignedTokens.filter((token, index, array) => 
+      array.findIndex(t => t.id === token.id) === index
+    );
+
+    return uniqueTokens;
+  };
+
+  // Helper function to build quote with ellipsis for non-contiguous tokens
+  const buildQuoteWithEllipsis = (alignedTokens: OptimizedToken[]): string => {
+    if (alignedTokens.length === 0) return '';
+    
+    // Sort tokens by ID to maintain natural order
+    const sortedTokens = alignedTokens.sort((a, b) => a.id - b.id);
+    
+    if (sortedTokens.length === 1) {
+      return sortedTokens[0].text.trim();
+    }
+    
+    const result: string[] = [];
+    
+    for (let i = 0; i < sortedTokens.length; i++) {
+      const currentToken = sortedTokens[i];
+      const nextToken = sortedTokens[i + 1];
+      
+      // Add current token text
+      result.push(currentToken.text.trim());
+      
+      // Check if there's a gap between current and next token
+      if (nextToken) {
+        const gap = nextToken.id - currentToken.id;
+        
+        // If gap is more than 1, there are missing tokens in between
+        if (gap > 1) {
+          result.push('...');
+        }
+      }
+    }
+    
+    return result.join(' ').trim();
+  };
 
   // Filter notes by current navigation range (like NotesPanel.tsx)
   const filteredNotesByNavigation = useMemo(() => {
@@ -219,6 +618,31 @@ export function NotesViewer({
             <p>No notes for this selection</p>
           </div>
         ) : (
+          <>
+            {/* Debug info for quote matching (only show in development) */}
+            {process.env.NODE_ENV === 'development' && (
+              <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="text-sm text-blue-800">
+                  <div className="font-medium mb-2">Quote Matching Debug Info:</div>
+                  <div className="space-y-1 text-xs">
+                    <div>Original Scripture: {originalScripture ? '✅ Loaded' : '❌ Not loaded'}</div>
+                    <div>Language Config: {originalLanguageConfig ? `${originalLanguageConfig.title} (${originalLanguageConfig.language})` : 'Not set'}</div>
+                    <div>Quote Matches: {quoteMatches.size} processed</div>
+                    <div>Notes with Quotes: {filteredNotes.filter(n => n.quote).length} / {filteredNotes.length}</div>
+                    {tokenBroadcastInfo && (
+                      <div className="mt-2 pt-2 border-t border-blue-300">
+                        <div className="font-medium">Token Broadcast Info:</div>
+                        <div>Source: {tokenBroadcastInfo.sourceResourceId}</div>
+                        <div>Language: {tokenBroadcastInfo.resourceMetadata.language}</div>
+                        <div>Tokens Received: {scriptureTokens.length}</div>
+                        <div>Target Quotes Built: {targetLanguageQuotes.size}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
           <div className="space-y-4">
             {filteredNotes.map((note, index) => (
               <div key={note.id || index} className="border border-gray-200 rounded-lg p-3 bg-white">
@@ -241,11 +665,109 @@ export function NotesViewer({
                   )}
                 </div>
 
-                {/* Quoted text */}
+                {/* Quoted text with quote matching info */}
                 {note.quote && (
                   <div className="mb-3 p-3 bg-gray-50 rounded border-l-4 border-blue-500">
-                    <p className="text-sm font-medium text-gray-700 mb-1">Quoted text:</p>
-                    <p className="text-gray-900 italic">"{note.quote}"</p>
+                    <div className="flex items-start justify-between mb-1">
+                      <p className="text-sm font-medium text-gray-700">Quoted text:</p>
+                      {(() => {
+                        const noteKey = note.id || `${note.reference}-${note.quote}`;
+                        const quoteMatch = quoteMatches.get(noteKey);
+                        const targetQuote = targetLanguageQuotes.get(noteKey);
+                        
+                        if (quoteMatch?.success) {
+                          return (
+                            <div className="flex items-center space-x-2 text-xs">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800">
+                                <span className="mr-1" role="img" aria-label="target">🎯</span>
+                                {quoteMatch.totalTokens.length} tokens matched
+                              </span>
+                              {targetQuote && (
+                                <span className="inline-flex items-center px-2 py-1 rounded-full bg-purple-100 text-purple-800">
+                                  <span className="mr-1" role="img" aria-label="translation">🔄</span>
+                                  {targetQuote.tokens.length} aligned
+                                </span>
+                              )}
+                              {originalLanguageConfig && (
+                                <span className="text-gray-500">
+                                  {originalLanguageConfig.language === 'hbo' ? 'Hebrew' : 'Greek'}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        } else if (originalScripture && quoteMatch) {
+                          return (
+                            <div className="flex items-center space-x-2 text-xs">
+                              <span className="inline-flex items-center px-2 py-1 rounded-full bg-yellow-100 text-yellow-800">
+                                <span className="mr-1" role="img" aria-label="warning">⚠️</span>
+                                No match found
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
+                    
+                    {/* Original quote */}
+                    <p className="text-gray-900 italic mb-2">"{note.quote}"</p>
+                    
+                    {/* Target language quote if available */}
+                    {(() => {
+                      const noteKey = note.id || `${note.reference}-${note.quote}`;
+                      const targetQuote = targetLanguageQuotes.get(noteKey);
+                      if (targetQuote && tokenBroadcastInfo) {
+                        return (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <div className="flex items-center justify-between mb-1">
+                              <p className="text-xs font-medium text-purple-700">
+                                Target language ({tokenBroadcastInfo.resourceMetadata.language}):
+                              </p>
+                              <span className="text-xs text-gray-500">
+                                from {tokenBroadcastInfo.sourceResourceId}
+                              </span>
+                            </div>
+                            <p className="text-purple-900 italic font-medium">"{targetQuote.quote}"</p>
+                            <div className="mt-1 text-xs text-gray-600">
+                              Built from {targetQuote.tokens.length} aligned tokens
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                    
+                    {/* Show matched tokens if available */}
+                    {(() => {
+                      const noteKey = note.id || `${note.reference}-${note.quote}`;
+                      const quoteMatch = quoteMatches.get(noteKey);
+                      if (quoteMatch?.success && quoteMatch.totalTokens.length > 0) {
+                        return (
+                          <div className="mt-2 pt-2 border-t border-gray-200">
+                            <p className="text-xs font-medium text-gray-600 mb-1">
+                              Original language tokens ({originalLanguageConfig?.title}):
+                            </p>
+                            <div className="flex flex-wrap gap-1">
+                              {quoteMatch.totalTokens.slice(0, 10).map((token, idx) => (
+                                <span
+                                  key={`${token.id}-${idx}`}
+                                  className="inline-flex items-center px-2 py-1 rounded text-xs bg-blue-100 text-blue-800 font-mono"
+                                  title={`Token ID: ${token.id}${token.lemma ? ` | Lemma: ${token.lemma}` : ''}${token.strong ? ` | Strong's: ${token.strong}` : ''}`}
+                                >
+                                  {token.text}
+                                </span>
+                              ))}
+                              {quoteMatch.totalTokens.length > 10 && (
+                                <span className="text-xs text-gray-500">
+                                  +{quoteMatch.totalTokens.length - 10} more
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                 )}
 
@@ -281,6 +803,7 @@ export function NotesViewer({
               </div>
             ))}
           </div>
+          </>
         )}
       </div>
 

@@ -19,6 +19,12 @@ function findTokensAlignedToOriginalLanguageTokenOptimized(
   language: 'en' | 'el-x-koine' | 'hbo'
 ): number[] {
   const tokenIds: number[] = [];
+  const debugInfo = {
+    searchingFor: originalLanguageToken.semanticId,
+    alignedSemanticIds: originalLanguageToken.alignedSemanticIds,
+    isOriginalLanguage: language === 'el-x-koine' || language === 'hbo',
+    matchedTokens: [] as Array<{tokenId: number, tokenText: string, matchType: string}>
+  };
   
   // For original language panels
   if (language === 'el-x-koine' || language === 'hbo') {
@@ -29,13 +35,24 @@ function findTokensAlignedToOriginalLanguageTokenOptimized(
           // Direct semantic ID match
           if (token.id === originalLanguageToken.semanticId) {
             tokenIds.push(token.id);
+            debugInfo.matchedTokens.push({
+              tokenId: token.id,
+              tokenText: token.text,
+              matchType: 'direct_semantic_id'
+            });
           }
           
-          // Check aligned semantic IDs for group matches
+          // Check aligned semantic IDs for group matches (but skip if it's the same as primary)
           if (originalLanguageToken.alignedSemanticIds) {
             for (const alignedId of originalLanguageToken.alignedSemanticIds) {
-              if (token.id === alignedId) {
+              // Skip if this alignedId is the same as the primary semanticId (avoid duplicates)
+              if (alignedId !== originalLanguageToken.semanticId && token.id === alignedId) {
                 tokenIds.push(token.id);
+                debugInfo.matchedTokens.push({
+                  tokenId: token.id,
+                  tokenText: token.text,
+                  matchType: 'aligned_semantic_id'
+                });
               }
             }
           }
@@ -44,20 +61,42 @@ function findTokensAlignedToOriginalLanguageTokenOptimized(
     }
   } else {
     // For target language panels, find tokens that align to the original language token
-  for (const chapter of scripture.chapters) {
-    for (const verse of chapter.verses) {
+    let totalTokensChecked = 0;
+    let tokensWithAlignment = 0;
+    
+    for (const chapter of scripture.chapters) {
+      for (const verse of chapter.verses) {
         for (const token of verse.tokens) {
+          totalTokensChecked++;
+          
           if (token.align) {
-        // Check if this token aligns to the original language token
-            if (token.align.includes(originalLanguageToken.semanticId)) {
+            tokensWithAlignment++;
+            
+            const hasMatch = token.align.includes(originalLanguageToken.semanticId);
+            
+            // Check if this token aligns to the original language token
+            if (hasMatch) {
               tokenIds.push(token.id);
+              debugInfo.matchedTokens.push({
+                tokenId: token.id,
+                tokenText: token.text,
+                matchType: 'align_to_primary',
+              });
             }
             
-            // Check aligned semantic IDs for group matches
+            // Check aligned semantic IDs for group matches (but skip if it's the same as primary)
             if (originalLanguageToken.alignedSemanticIds) {
               for (const alignedId of originalLanguageToken.alignedSemanticIds) {
-                if (token.align.includes(alignedId)) {
+                // Skip if this alignedId is the same as the primary semanticId (avoid duplicates)
+                if (alignedId !== originalLanguageToken.semanticId && token.align.includes(alignedId)) {
+                  
                   tokenIds.push(token.id);
+                  debugInfo.matchedTokens.push({
+                    tokenId: token.id,
+                    tokenText: token.text,
+                    matchType: 'align_to_group',
+                    matchedAlignedId: alignedId
+                  });
                 }
               }
             }
@@ -65,9 +104,60 @@ function findTokensAlignedToOriginalLanguageTokenOptimized(
         }
       }
     }
+    
   }
   
+  
   return [...new Set(tokenIds)]; // Remove duplicates
+}
+
+/**
+ * Check if a token should be highlighted based on the highlight target
+ */
+function shouldHighlightToken(
+  token: OptimizedToken,
+  highlightTarget: OriginalLanguageToken | null,
+  language: 'en' | 'el-x-koine' | 'hbo'
+): boolean {
+  if (!highlightTarget) {
+    return false;
+  }
+
+  // For original language panels
+  if (language === 'el-x-koine' || language === 'hbo') {
+    // Direct semantic ID match
+    if (token.id === highlightTarget.semanticId) {
+      return true;
+    }
+    
+    // Check aligned semantic IDs for group matches (but skip if it's the same as primary)
+    if (highlightTarget.alignedSemanticIds) {
+      for (const alignedId of highlightTarget.alignedSemanticIds) {
+        if (alignedId !== highlightTarget.semanticId && token.id === alignedId) {
+          return true;
+        }
+      }
+    }
+  } else {
+    // For target language panels, check if this token aligns to the highlight target
+    if (token.align) {
+      // Check if this token aligns to the original language token
+      if (token.align.includes(highlightTarget.semanticId)) {
+        return true;
+      }
+      
+      // Check aligned semantic IDs for group matches (but skip if it's the same as primary)
+      if (highlightTarget.alignedSemanticIds) {
+        for (const alignedId of highlightTarget.alignedSemanticIds) {
+          if (alignedId !== highlightTarget.semanticId && token.align.includes(alignedId)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  
+  return false;
 }
 
 /**
@@ -107,20 +197,16 @@ function getVersesToRenderOptimized(
     }
   }
 
-  console.log(`🔍 getVersesToRenderOptimized: Found ${versesWithChapter.length} total verses`);
-  console.log(`📋 Options:`, { chapter, verseRange, startRef, endRef });
 
   // Apply filters
   if (chapter) {
     versesWithChapter = versesWithChapter.filter(v => v.chapterNumber === chapter);
-    console.log(`📋 After chapter filter (${chapter}): ${versesWithChapter.length} verses`);
   }
 
   if (verseRange) {
     versesWithChapter = versesWithChapter.filter(v => {
       return v.number >= verseRange.start && v.number <= verseRange.end;
     });
-    console.log(`📋 After verse range filter (${verseRange.start}-${verseRange.end}): ${versesWithChapter.length} verses`);
   }
 
   if (startRef && endRef) {
@@ -135,7 +221,6 @@ function getVersesToRenderOptimized(
       
       return isAfterStart && isBeforeEnd;
     });
-    console.log(`📋 After startRef/endRef filter (${startRef.chapter}:${startRef.verse}-${endRef.chapter}:${endRef.verse}): ${versesWithChapter.length} verses`);
   }
 
   // Sort by chapter and verse
@@ -146,7 +231,6 @@ function getVersesToRenderOptimized(
     return a.number - b.number;
   });
 
-  console.log(`📋 Final verses to render:`, sortedVerses.map(v => `${v.chapterNumber}:${v.number}`));
 
   // Return verses without the added chapterNumber property
   return sortedVerses.map(({ chapterNumber, ...verse }) => verse);
@@ -205,47 +289,25 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
   onTokenClick,
   className = ''
 }) => {
-  // Cross-panel communication state - optimized format uses number IDs
-  const [highlightedTokens, setHighlightedTokens] = useState<Set<number>>(new Set());
+  // Cross-panel communication state - store the original language token to highlight
+  const [highlightTarget, setHighlightTarget] = useState<OriginalLanguageToken | null>(null);
   const crossPanelService = getCrossPanelCommunicationService();
 
   // Handle highlight messages from all panels (including self-highlighting)
   const handleHighlightMessage = useCallback((message: TokenHighlightMessage) => {
-    console.log(`🎯 HIGHLIGHT_SIGNAL_RECEIVED in ${resourceId}:`, {
-      sourceResourceId: message.sourceResourceId,
-      sourceContent: message.sourceContent,
-      sourceVerseRef: message.sourceVerseRef,
-      originalLanguageToken: message.originalLanguageToken,
-      fullMessage: message
-    });
 
-    // Find tokens in this panel that align to the original language token
-    const tokenIdsToHighlight = findTokensAlignedToOriginalLanguageToken(
-      message.originalLanguageToken,
-      scripture,
-      resourceType,
-      language
-    );
 
-    console.log(`🎯 HIGHLIGHT_TOKENS_FOR_${resourceId}:`, {
-      originalLanguageToken: message.originalLanguageToken,
-      tokensForThisPanel: tokenIdsToHighlight,
-      willHighlight: tokenIdsToHighlight.length > 0
-    });
-
-    // Update highlighted tokens
-    setHighlightedTokens(new Set(tokenIdsToHighlight));
+    // Store the original language token - renderer will check alignment during rendering
+    setHighlightTarget(message.originalLanguageToken);
   }, [scripture, resourceType, language, resourceId]);
 
   // Handle clear highlights messages
   const handleClearHighlights = useCallback((message: any) => {
-    console.log(`🎯 CLEAR_HIGHLIGHTS_RECEIVED in ${resourceId}:`, message);
-      setHighlightedTokens(new Set());
+    setHighlightTarget(null);
   }, [resourceId]);
 
   // Handle token clicks
   const handleTokenClick = useCallback((token: OptimizedToken, verse: OptimizedVerse) => {
-    console.log(`🖱️ USFMRenderer: Triggering cross-panel communication for token:`, token, `from resource:`, resourceId);
     
     // Trigger cross-panel communication
     crossPanelService.handleTokenClick(token, resourceId);
@@ -254,11 +316,10 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
     if (onTokenClick) {
       onTokenClick(token, verse);
     }
-  }, [crossPanelService, resourceId, onTokenClick]);
+  }, [crossPanelService, resourceId, onTokenClick, language]);
 
   // Register panel and set up cross-panel communication
   useEffect(() => {
-    console.log('🔗 USFMRenderer: Setting up cross-panel communication for', resourceId);
     
     // Register this panel with the cross-panel service
     const panelResource = {
@@ -271,15 +332,10 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
       isOptimized: true
     };
 
-    console.log('✅ USFMRenderer: Registering panel with cross-panel service:', panelResource);
     crossPanelService.registerPanel(panelResource);
 
     // Add message handler for cross-panel highlights
     const unsubscribe = crossPanelService.addMessageHandler((message: CrossPanelMessage) => {
-      console.log(`🎯 MESSAGE_HANDLER_${resourceId}:`, {
-        messageType: message.type,
-        message: message
-      });
 
       if (message.type === 'HIGHLIGHT_TOKENS') {
         handleHighlightMessage(message);
@@ -298,14 +354,11 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
   // Separate effect for component unmount - unregister panel only then
   useEffect(() => {
     return () => {
-      console.log('🔗 USFMRenderer: Unregistering panel on unmount:', resourceId);
       crossPanelService.unregisterPanel(resourceId);
     };
   }, [resourceId, crossPanelService]);
 
-  console.log('USFMRenderer: scripture', scripture);
   const versesToRender = getVersesToRender(scripture, { chapter, verseRange, startRef, endRef });
-  console.log('USFMRenderer: versesToRender', versesToRender);
 
   if (versesToRender.length === 0) {
     return (
@@ -325,7 +378,7 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
           showChapterNumbers,
           showAlignments,
           highlightWords,
-          highlightedTokens,
+          highlightTarget,
           onWordClick,
           onTokenClick: handleTokenClick,
           resourceType,
@@ -348,7 +401,7 @@ export const USFMRenderer: React.FC<USFMRendererProps> = ({
           showVerseNumbers={showVerseNumbers}
           showAlignments={showAlignments}
           highlightWords={highlightWords}
-          highlightedTokens={highlightedTokens}
+          highlightTarget={highlightTarget}
           onWordClick={onWordClick}
           onTokenClick={handleTokenClick}
             resourceType={resourceType}
@@ -371,7 +424,7 @@ function renderByParagraphs(
     showChapterNumbers: boolean;
     showAlignments: boolean;
     highlightWords: string[];
-    highlightedTokens: Set<number>;
+    highlightTarget: OriginalLanguageToken | null;
     onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
     onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
     resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
@@ -424,7 +477,7 @@ function renderParagraphsForChapter(
   showVerseNumbers: boolean;
   showAlignments: boolean;
   highlightWords: string[];
-    highlightedTokens: Set<number>;
+    highlightTarget: OriginalLanguageToken | null;
     onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
     onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
     resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
@@ -530,13 +583,26 @@ function renderParagraphsForChapter(
           
           {/* Render tokens */}
           {contentItem.tokens.map((token, tokenIndex) => {
-            const nextToken = contentItem.tokens[tokenIndex + 1];
+            // Get next token, considering tokens across content items within the same paragraph
+            let nextToken = contentItem.tokens[tokenIndex + 1];
+            
+            // If this is the last token in this content item, check the first token of the next content item
+            if (!nextToken && contentIndex < segment.content.length - 1) {
+              const nextContentItem = segment.content[contentIndex + 1];
+              if (nextContentItem && nextContentItem.tokens.length > 0) {
+                nextToken = nextContentItem.tokens[0];
+              }
+            }
+            
+            // Check if this token should be highlighted
+            const isHighlighted = shouldHighlightToken(token, options.highlightTarget, options.language);
+            
             return (
               <React.Fragment key={`token-${token.id}`}>
                 <WordTokenRenderer
                   token={token}
                   verse={contentItem.verse}
-                  isHighlighted={options.highlightedTokens.has(token.id)}
+                  isHighlighted={isHighlighted}
                   showAlignments={options.showAlignments}
                   onWordClick={options.onWordClick}
                   onTokenClick={options.onTokenClick}
@@ -549,8 +615,6 @@ function renderParagraphsForChapter(
             );
           })}
           
-          {/* Add space between content items within the same paragraph */}
-          {contentIndex < segment.content.length - 1 && <span> </span>}
         </React.Fragment>
       ))}
     </p>
@@ -566,7 +630,7 @@ const VerseRenderer: React.FC<{
   showVerseNumbers: boolean;
   showAlignments: boolean;
   highlightWords: string[];
-  highlightedTokens: Set<number>;
+  highlightTarget: OriginalLanguageToken | null;
   onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
   onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
   resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
@@ -577,7 +641,7 @@ const VerseRenderer: React.FC<{
   showVerseNumbers,
   showAlignments,
   highlightWords,
-  highlightedTokens,
+  highlightTarget,
   onWordClick,
   onTokenClick,
   resourceType,
@@ -598,12 +662,14 @@ const VerseRenderer: React.FC<{
           .filter(token => token.type !== 'whitespace') // Skip whitespace tokens
           .map((token, index, filteredTokens) => {
             const nextToken = filteredTokens[index + 1];
+            const isHighlighted = shouldHighlightToken(token, highlightTarget, language);
+            
             return (
               <React.Fragment key={`token-${token.id}`}>
                 <WordTokenRenderer
                   token={token}
           verse={verse}
-                  isHighlighted={highlightedTokens.has(token.id)}
+                  isHighlighted={isHighlighted}
           showAlignments={showAlignments}
           onWordClick={onWordClick}
           onTokenClick={onTokenClick}
@@ -666,6 +732,11 @@ function shouldAddSpaceAfterToken(
 
   // LTR spacing rules (English, Greek, Spanish)
   if (isLTR) {
+    // Special case: Hebrew maqaf (־) should never have spaces around it
+    if (currentToken.text === '־' || nextToken.text === '־') {
+      return false;
+    }
+    
     // Add space after words (except when followed by punctuation)
     if (currentType === 'word' && nextType !== 'punctuation') {
       return true;
@@ -715,6 +786,11 @@ function shouldAddSpaceAfterToken(
 
   // RTL spacing rules (Hebrew)
   if (isRTL) {
+    // Special case: Hebrew maqaf (־) should never have spaces around it
+    if (currentToken.text === '־' || nextToken.text === '־') {
+      return false;
+    }
+    
     // Add space after words (except when followed by punctuation)
     if (currentType === 'word' && nextType !== 'punctuation') {
       return true;
@@ -803,7 +879,9 @@ const WordTokenRenderer: React.FC<{
   };
 
   // Determine if token is clickable
-  const isClickable = isOriginalLanguage || (token.align && token.align.length > 0);
+  // Hebrew maqaf (־) should never be clickable
+  const isHebrewMaqaf = token.text === '־';
+  const isClickable = !isHebrewMaqaf && (isOriginalLanguage || (token.align && token.align.length > 0));
   
   // Use token type from the processor
   const isPunctuation = token.type === 'punctuation';
@@ -821,8 +899,8 @@ const WordTokenRenderer: React.FC<{
       onClick={isClickable ? handleClick : undefined}
       title={
         isClickable 
-          ? `Click to highlight ${isOriginalLanguage ? 'aligned words' : 'original language words'}${showAlignments && token.strong ? ` (${token.strong})` : ''}` 
-          : undefined
+          ? `${showAlignments && token.strong ? ` (${token.strong})` : ''}Token ID: ${token.id}${token.align ? `\nAligned to IDs: [${token.align.join(', ')}]` : ''}${token.strong ? `\nStrong's: ${token.strong}` : ''}${token.lemma ? `\nLemma: ${token.lemma}` : ''}${token.morph ? `\nMorph: ${token.morph}` : ''}` 
+          : `\nToken ID: ${token.id}${token.align ? `\nAligned to IDs: [${token.align.join(', ')}]` : ''}${token.strong ? `\nStrong's: ${token.strong}` : ''}${token.lemma ? `\nLemma: ${token.lemma}` : ''}${token.morph ? `\nMorph: ${token.morph}` : ''}`
       }
     >
       {token.text}

@@ -69,16 +69,9 @@ export class CrossPanelCommunicationService {
    * Register a panel resource for cross-panel communication
    */
   registerPanel(panelResource: PanelResource): void {
-    const wasAlreadyRegistered = this.registeredPanels.has(panelResource.resourceId);
     this.registeredPanels.set(panelResource.resourceId, panelResource);
     this.activePanels.add(panelResource.resourceId);
-    console.log(`📡 ${wasAlreadyRegistered ? 'Re-registered' : 'Registered'} panel: ${panelResource.resourceId} (${panelResource.resourceType})`);
     
-    // Log current registered panels for debugging
-    const panelIds = Array.from(this.registeredPanels.keys());
-    const activeIds = Array.from(this.activePanels);
-    console.log(`📋 Currently registered panels: [${panelIds.join(', ')}]`);
-    console.log(`🟢 Currently active panels: [${activeIds.join(', ')}]`);
   }
 
   /**
@@ -87,12 +80,7 @@ export class CrossPanelCommunicationService {
   unregisterPanel(resourceId: string): void {
     // Only mark as inactive, don't remove from registry
     this.activePanels.delete(resourceId);
-    console.log(`📡 Marked panel as inactive: ${resourceId}`);
     
-    const panelIds = Array.from(this.registeredPanels.keys());
-    const activeIds = Array.from(this.activePanels);
-    console.log(`📋 Still registered panels: [${panelIds.join(', ')}]`);
-    console.log(`🟢 Still active panels: [${activeIds.join(', ')}]`);
   }
 
   /**
@@ -325,8 +313,8 @@ export class CrossPanelCommunicationService {
       // Convert legacy token to optimized format using semantic ID
       const semanticId = generateSemanticId(
         clickedToken.content,
-        strong || '',
-        clickedToken.verseRef
+        clickedToken.verseRef,
+        clickedToken.occurrence
       );
 
       return {
@@ -354,10 +342,12 @@ export class CrossPanelCommunicationService {
           const content = parts[2];
           
           // Convert legacy aligned token to optimized format
+          // Parse occurrence from the original word ID (format: "verseRef:content:occurrence")
+          const occurrence = parts.length >= 4 ? parseInt(parts[3]) || 1 : 1;
           const semanticId = generateSemanticId(
             content,
-            clickedToken.alignment?.strong || '',
-            verseRef
+            verseRef,
+            occurrence
           );
 
           // Generate semantic IDs for all aligned words
@@ -365,8 +355,9 @@ export class CrossPanelCommunicationService {
             const idParts = id.split(':');
             if (idParts.length >= 3) {
               const wordContent = idParts[2];
-              const wordStrong = clickedToken.alignment?.strong || '';
-              return generateSemanticId(wordContent, wordStrong, verseRef);
+              const wordOccurrence = idParts.length >= 4 ? parseInt(idParts[3]) || 1 : 1;
+              const wordVerseRef = `${idParts[0]} ${idParts[1]}`;
+              return generateSemanticId(wordContent, wordVerseRef, wordOccurrence);
             }
             return semanticId; // Fallback
           });
@@ -431,10 +422,11 @@ export class CrossPanelCommunicationService {
         const firstSourceWord = alignmentGroup.sourceWords[0];
           
           // Convert to optimized format
+          // For alignment groups, use the first source word with occurrence 1
           const semanticId = generateSemanticId(
             firstSourceWord || combinedContent,
-            primaryAlignment.strong,
-            clickedToken.verseRef
+            clickedToken.verseRef,
+            1
           );
 
           return {
@@ -473,8 +465,8 @@ export class CrossPanelCommunicationService {
             token => {
               const tokenSemanticId = generateSemanticId(
                 token.content,
-                token.alignment?.strong || '',
-                token.verseRef
+                token.verseRef,
+                token.occurrence
               );
               return tokenSemanticId === originalToken.semanticId;
             }
@@ -521,8 +513,8 @@ export class CrossPanelCommunicationService {
     // Convert to optimized format
     const semanticId = generateSemanticId(
       originalContent || sourceContent,
-      alignment.strong,
-      verseRef
+      verseRef,
+      occurrence
     );
 
     return {

@@ -25,6 +25,7 @@ export enum ResourceType {
   SCRIPTURE = 'scripture',
   NOTES = 'notes', 
   WORDS = 'words',
+  WORDS_LINKS = 'words-links',
   QUESTIONS = 'questions',
   ACADEMY = 'academy',
   AUDIO = 'audio',
@@ -184,8 +185,8 @@ export interface BaseResourceAdapter {
 export interface BookOrganizedAdapter extends BaseResourceAdapter {
   organizationType: 'book';
   
-  getResourceMetadata(server: string, owner: string, language: string): Promise<ScriptureMetadata>;
-  getBookContent(server: string, owner: string, language: string, bookCode: string): Promise<ProcessedScripture>;
+  getResourceMetadata(server: string, owner: string, language: string): Promise<ResourceMetadata>;
+  getBookContent(server: string, owner: string, language: string, bookCode: string): Promise<any>;
   getAvailableBooks(server: string, owner: string, language: string): BookInfo[];
   isBookAvailable(server: string, owner: string, language: string, bookCode: string): Promise<boolean>;
 }
@@ -267,38 +268,6 @@ export interface QuestionsMetadata extends ResourceMetadata {
   availableBooks: BookInfo[];  // Available books with questions
   format: string;              // Content format ('tsv')
   markdownSupport: boolean;    // Whether markdown processing is enabled (false for questions)
-}
-
-export interface ProcessedScripture {
-  book: string;
-  bookCode: string;
-  metadata: {
-    bookCode: string;
-    bookName: string;
-    processingDate: string;
-    processingDuration: number;
-    version: string;
-    hasAlignments: boolean;
-    hasSections: boolean;
-    totalChapters: number;
-    totalVerses: number;
-    totalParagraphs: number;
-    statistics: {
-      totalChapters: number;
-      totalVerses: number;
-      totalParagraphs: number;
-      totalSections: number;
-      totalAlignments: number;
-    };
-    // SHA-based change detection
-    sourceSha?: string;
-    sourceCommit?: string;
-    sourceLastModified?: string;
-    sourceSize?: number;
-  };
-  chapters: ProcessedChapter[];
-  translatorSections?: TranslatorSection[];
-  alignments?: WordAlignment[];
 }
 
 export interface ResourceAdapterInfo {
