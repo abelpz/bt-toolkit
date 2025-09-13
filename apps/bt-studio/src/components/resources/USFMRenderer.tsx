@@ -4,7 +4,7 @@
  * Supports verse ranges, cross-chapter rendering, and alignment display
  */
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useCurrentState, useResourceAPI, useMessaging } from 'linked-panels';
 import type { WordAlignment } from '../../types/context';
 import type { OptimizedToken, OptimizedScripture, OptimizedVerse } from '../../services/usfm-processor';
@@ -295,10 +295,14 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
   className = ''
 }) => {
   const { currentReference } = useNavigation();
-  const { addTokenGroup, clearTokenGroups, setActiveGroup } = useTokenUnderlining();
+  const { addTokenGroup, clearTokenGroups, setActiveGroup, activeGroupId } = useTokenUnderlining();
   
   // Linked-panels API for broadcasting token clicks
   const linkedPanelsAPI = useResourceAPI(resourceId || 'default');
+  
+  // Refs for scroll-into-view functionality
+  const highlightedTokenRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const activeTokenRefs = useRef<Map<string, HTMLElement>>(new Map());
 
   // Listen for notes token groups broadcasts
   const notesTokenGroupsBroadcast = useCurrentState<NotesTokenGroupsBroadcast>(
@@ -388,6 +392,50 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
   // Cross-panel communication state - store the original language token to highlight
   const [highlightTarget, setHighlightTarget] = useState<OriginalLanguageToken | null>(null);
   const crossPanelService = getCrossPanelCommunicationService();
+
+  // Scroll highlighted tokens into view when highlight target changes
+  useEffect(() => {
+    if (highlightTarget) {
+      // Small delay to ensure DOM is updated
+      const timeoutId = setTimeout(() => {
+        const highlightedElements = Array.from(highlightedTokenRefs.current.values());
+        if (highlightedElements.length > 0) {
+          // Scroll to the first highlighted token
+          const firstElement = highlightedElements[0];
+          firstElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+          console.log('📍 Scrolled to highlighted token:', firstElement);
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [highlightTarget]);
+
+  // Scroll active token group into view when active group changes
+  useEffect(() => {
+    if (activeGroupId) {
+      // Small delay to ensure DOM is updated
+      const timeoutId = setTimeout(() => {
+        const activeElements = Array.from(activeTokenRefs.current.values());
+        if (activeElements.length > 0) {
+          // Scroll to the first active token
+          const firstElement = activeElements[0];
+          firstElement.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center',
+            inline: 'nearest'
+          });
+          console.log('📍 Scrolled to active token group:', firstElement);
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [activeGroupId]);
 
   // Handle highlight messages from all panels (including self-highlighting)
   const handleHighlightMessage = useCallback((message: TokenHighlightMessage) => {
@@ -508,7 +556,9 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
           onWordClick,
           onTokenClick: handleTokenClick,
           resourceType,
-          language
+          language,
+          highlightedTokenRefs,
+          activeTokenRefs
         })}
       </div>
     );
@@ -532,6 +582,8 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
           onTokenClick={handleTokenClick}
             resourceType={resourceType}
             language={language}
+            highlightedTokenRefs={highlightedTokenRefs}
+            activeTokenRefs={activeTokenRefs}
         />
         );
       })}
@@ -540,22 +592,30 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
 };
 
 /**
+ * Options interface for rendering functions
+ */
+interface RenderingOptions {
+  showVerseNumbers: boolean;
+  showChapterNumbers: boolean;
+  showAlignments: boolean;
+  highlightWords: string[];
+  highlightTarget: OriginalLanguageToken | null;
+  onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
+  onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
+  resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
+  language: 'en' | 'el-x-koine' | 'hbo';
+  highlightedTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
+  activeTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
+}
+
+/**
  * Render verses grouped by paragraphs with chapter headers
+ * Updated to include scroll-into-view refs for highlighted and active tokens
  */
 function renderByParagraphs(
   verses: OptimizedVerse[],
   scripture: OptimizedScripture,
-  options: {
-    showVerseNumbers: boolean;
-    showChapterNumbers: boolean;
-    showAlignments: boolean;
-    highlightWords: string[];
-    highlightTarget: OriginalLanguageToken | null;
-    onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
-    onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
-    resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
-    language: 'en' | 'el-x-koine' | 'hbo';
-  }
+  options: RenderingOptions
 ): React.ReactNode {
   // Group verses by chapter first
   const chapterGroups: { [chapterNum: number]: OptimizedVerse[] } = {};
@@ -735,6 +795,8 @@ function renderParagraphsForChapter(
                   isOriginalLanguage={options.language === 'el-x-koine' || options.language === 'hbo'}
                   resourceType={options.resourceType}
                   language={options.language}
+                  highlightedTokenRefs={(options as any).highlightedTokenRefs}
+                  activeTokenRefs={(options as any).activeTokenRefs}
                 />
                 {shouldAddSpaceAfterToken(token, nextToken, options.language) && <span> </span>}
               </React.Fragment>
@@ -761,6 +823,8 @@ const VerseRenderer: React.FC<{
   onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
   resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
   language: 'en' | 'el-x-koine' | 'hbo';
+  highlightedTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
+  activeTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }> = ({
   verse,
   chapterNumber,
@@ -771,7 +835,9 @@ const VerseRenderer: React.FC<{
   onWordClick,
   onTokenClick,
   resourceType,
-  language
+  language,
+  highlightedTokenRefs,
+  activeTokenRefs
 }) => {
   const isOriginalLanguage = language === 'el-x-koine' || language === 'hbo';
   
@@ -802,6 +868,8 @@ const VerseRenderer: React.FC<{
                   isOriginalLanguage={isOriginalLanguage}
                   resourceType={resourceType}
                   language={language}
+                  highlightedTokenRefs={highlightedTokenRefs}
+                  activeTokenRefs={activeTokenRefs}
                 />
                 {shouldAddSpaceAfterToken(token, nextToken, language) && <span> </span>}
               </React.Fragment>
@@ -980,6 +1048,8 @@ const WordTokenRenderer: React.FC<{
   isOriginalLanguage: boolean;
   resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
   language: 'en' | 'el-x-koine' | 'hbo';
+  highlightedTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
+  activeTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
 }> = ({
   token,
   verse,
@@ -989,7 +1059,9 @@ const WordTokenRenderer: React.FC<{
   onTokenClick,
   isOriginalLanguage,
   resourceType,
-  language
+  language,
+  highlightedTokenRefs,
+  activeTokenRefs
 }) => {
   const { 
     getAllTokenGroupsForAlignedId, 
@@ -1072,6 +1144,28 @@ const WordTokenRenderer: React.FC<{
 
         return (
           <span
+            ref={(element) => {
+              const tokenKey = `${token.id}-${verse.number}`;
+              
+              if (element) {
+                // Register element if it should be highlighted or is active
+                if (shouldShowHighlight) {
+                  highlightedTokenRefs.current.set(tokenKey, element);
+                } else {
+                  highlightedTokenRefs.current.delete(tokenKey);
+                }
+                
+                if (hasActiveUnderline) {
+                  activeTokenRefs.current.set(tokenKey, element);
+                } else {
+                  activeTokenRefs.current.delete(tokenKey);
+                }
+              } else {
+                // Cleanup when element is unmounted
+                highlightedTokenRefs.current.delete(tokenKey);
+                activeTokenRefs.current.delete(tokenKey);
+              }
+            }}
             className={`
         ${shouldShowHighlight ? 'bg-yellow-200 font-semibold shadow-sm' : ''}
         ${isClickable ? 'cursor-pointer hover:bg-blue-100 hover:shadow-sm transition-colors duration-150' : ''}

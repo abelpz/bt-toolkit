@@ -5,15 +5,22 @@
  * Shows cross-reference links between Bible words and Translation Words definitions.
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { useCurrentState } from 'linked-panels';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useCurrentState, useResourceAPI, useMessaging } from 'linked-panels';
 import { ProcessedWordsLinks, TranslationWordsLink } from '../../services/adapters/Door43TranslationWordsLinksAdapter';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
-import { ScriptureTokensBroadcast } from '../../types/scripture-messages';
-import type { OptimizedToken } from '../../services/usfm-processor';
+import { ScriptureTokensBroadcast, NoteSelectionBroadcast, TokenClickBroadcast } from '../../types/scripture-messages';
+import type { OptimizedToken, OptimizedScripture } from '../../services/usfm-processor';
+import { QuoteMatcher, QuoteMatchResult } from '../../services/quote-matcher';
+import { 
+  NotesTokenGroupsBroadcast, 
+  NoteTokenGroup, 
+  createNotesTokenGroupsBroadcast 
+} from '../../plugins/notes-scripture-plugin';
+import { COLOR_CLASSES } from '../../contexts/TokenUnderliningContext';
 
 export interface TranslationWordsLinksViewerProps {
   resourceId: string;
@@ -50,6 +57,11 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
   const { resourceManager, processedResourceConfig } = useWorkspace();
   const { currentReference } = useNavigation();
   
+  // Get linked-panels API for broadcasting TWL token groups
+  const linkedPanelsAPI = useResourceAPI<NotesTokenGroupsBroadcast>(resourceId);
+  
+  // Track the last broadcast state to prevent infinite loops
+  const lastBroadcastRef = useRef<string>('');
   
   const [actualLinks, setActualLinks] = useState<ProcessedWordsLinks | null>(propLinks || null);
   const [scriptureTokens, setScriptureTokens] = useState<OptimizedToken[]>([]);
@@ -64,9 +76,21 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
     };
     timestamp: number;
   } | null>(null);
+  
+  // Original language content for quote matching
+  const [originalScripture, setOriginalScripture] = useState<OptimizedScripture | null>(null);
+  const [quoteMatches, setQuoteMatches] = useState<Map<string, QuoteMatchResult>>(new Map());
+  const [quoteMatcher] = useState(() => new QuoteMatcher());
+  
+  // Target language quotes built from received tokens
+  const [targetLanguageQuotes, setTargetLanguageQuotes] = useState<Map<string, {
+    quote: string;
+    tokens: OptimizedToken[];
+    sourceLanguage: string;
+  }>>(new Map());
   const [contentLoading, setContentLoading] = useState(false);
   const [displayError, setDisplayError] = useState<string | null>(error || null);
-  const [, setResourceMetadata] = useState<ResourceMetadata | null>(null);
+  const [resourceMetadata, setResourceMetadata] = useState<ResourceMetadata | null>(null);
   const [twTitles, setTwTitles] = useState<Map<string, string>>(new Map());
   const [selectedLink, setSelectedLink] = useState<TranslationWordsLink | null>(null);
   const [showLinkDetail, setShowLinkDetail] = useState(false);
@@ -76,6 +100,86 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
     twLink: string;
   } | null>(null);
   const [showArticleView, setShowArticleView] = useState(false);
+
+  // Token filter state (for filtering links by clicked tokens)
+  const [tokenFilter, setTokenFilter] = useState<{
+    originalLanguageToken: {
+      semanticId: string;
+      content: string;
+      alignedSemanticIds?: string[];
+      verseRef: string;
+    };
+    sourceResourceId: string;
+    timestamp: number;
+  } | null>(null);
+
+  // Function to handle link selection and broadcast the event (similar to NotesViewer)
+  const handleLinkClick = useCallback((link: TranslationWordsLink) => {
+    const linkKey = link.id || `${link.reference}-${link.origWords?.trim()}`;
+    const tokenGroupId = `notes-${linkKey}`; // Use same format as USFMRenderer creates token groups
+    
+    console.log('📝 TWL Link clicked, broadcasting selection:', {
+      linkId: linkKey,
+      tokenGroupId,
+      origWords: link.origWords,
+      reference: link.reference,
+      expectedFormat: `notes-${linkKey}`
+    });
+
+    // Broadcast link selection event
+    const linkSelectionBroadcast: NoteSelectionBroadcast = {
+      type: 'note-selection-broadcast',
+      lifecycle: 'event',
+      selectedNote: {
+        noteId: linkKey,
+        tokenGroupId: tokenGroupId,
+        quote: link.origWords || '',
+        reference: link.reference
+      },
+      sourceResourceId: resourceId,
+      timestamp: Date.now()
+    };
+
+    // Use the general messaging API
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (linkedPanelsAPI.messaging as any).sendToAll(linkSelectionBroadcast);
+      console.log('✅ TWL Link selection broadcast sent successfully:', linkSelectionBroadcast);
+    } catch (error) {
+      console.error('❌ Failed to send TWL link selection broadcast:', error);
+    }
+  }, [resourceId, linkedPanelsAPI]);
+
+  // Function to check if a link should have color indicator and be clickable
+  const shouldLinkHaveColorIndicator = useCallback((link: TranslationWordsLink): boolean => {
+    return !!(link.origWords && link.origWords.trim() && link.occurrence);
+  }, []);
+
+
+  // Testament-specific original language configuration (same as NotesViewer)
+  const ORIGINAL_LANGUAGE_CONFIG = useMemo(() => ({
+    OT: {
+      owner: 'unfoldingWord',
+      language: 'hbo',
+      resourceId: 'uhb',
+      title: 'Hebrew Bible'
+    },
+    NT: {
+      owner: 'unfoldingWord', 
+      language: 'el-x-koine',
+      resourceId: 'ugnt',
+      title: 'Greek New Testament'
+    }
+  } as const), []);
+
+  // Helper function to determine testament from book code
+  const getTestamentFromBook = (bookCode: string): 'OT' | 'NT' | null => {
+    if (!bookCode) return null;
+    
+    const ntBooks = ['mat', 'mrk', 'luk', 'jhn', 'act', 'rom', '1co', '2co', 'gal', 'eph', 'php', 'col', '1th', '2th', '1ti', '2ti', 'tit', 'phm', 'heb', 'jas', '1pe', '2pe', '1jn', '2jn', '3jn', 'jud', 'rev'];
+    
+    return ntBooks.includes(bookCode.toLowerCase()) ? 'NT' : 'OT';
+  };
 
   // Fetch content when navigation changes
   useEffect(() => {
@@ -133,11 +237,85 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
     fetchContent();
   }, [resourceManager, resourceId, currentReference.book, propLinks, processedResourceConfig]);
 
+  // Load original language content for quote matching
+  useEffect(() => {
+    if (!resourceManager || !currentReference.book) {
+      console.log('⏳ TWL - Missing dependencies for original language loading');
+      return;
+    }
+
+    const loadOriginalLanguageContent = async () => {
+      try {
+        console.log('🔄 TWL - Loading original language content for quote matching');
+        
+        // Determine testament from current book
+        const testament = getTestamentFromBook(currentReference.book);
+        if (!testament) {
+          console.warn(`⚠️ TWL - Cannot determine testament for book: ${currentReference.book}`);
+          return;
+        }
+
+        // Get configuration for the testament
+        const config = ORIGINAL_LANGUAGE_CONFIG[testament];
+        
+        console.log(`🔄 TWL - Loading ${testament} content for quote matching:`, config);
+        
+        // Construct content key for the original language resource
+        const contentKey = `git.door43.org/${config.owner}/${config.language}/${config.resourceId}/${currentReference.book}`;
+        console.log(`📋 TWL - Original language content key: ${contentKey}`);
+        
+        // Try to get content using the resource manager
+        const content = await resourceManager.getOrFetchContent(
+          contentKey,
+          'scripture' as ResourceType
+        );
+        
+        console.log(`✅ TWL - Original language content loaded for ${testament}:`, content);
+        setOriginalScripture(content as OptimizedScripture);
+        
+      } catch (err) {
+        console.error(`❌ TWL - Failed to load original language content:`, err);
+        setOriginalScripture(null);
+      }
+    };
+
+    loadOriginalLanguageContent();
+  }, [resourceManager, currentReference.book, ORIGINAL_LANGUAGE_CONFIG]);
+
   // Listen for scripture token broadcasts using useCurrentState hook
   const scriptureTokensBroadcast = useCurrentState<ScriptureTokensBroadcast>(
     resourceId, 
     'current-scripture-tokens'
   );
+  
+  // Listen for token clicks via linked-panels events (transient messages)
+  useMessaging({ 
+    resourceId,
+    eventTypes: ['token-click-broadcast'],
+    onEvent: (event) => {
+      if (event.type === 'token-click-broadcast') {
+        const tokenClickEvent = event as TokenClickBroadcast;
+        console.log('📨 TWL Viewer received token click event:', tokenClickEvent);
+        
+        // Set token filter based on clicked token
+        setTokenFilter({
+          originalLanguageToken: {
+            semanticId: tokenClickEvent.clickedToken.semanticId,
+            content: tokenClickEvent.clickedToken.content,
+            alignedSemanticIds: tokenClickEvent.clickedToken.alignedSemanticIds,
+            verseRef: tokenClickEvent.clickedToken.verseRef
+          },
+          sourceResourceId: tokenClickEvent.sourceResourceId,
+          timestamp: tokenClickEvent.timestamp
+        });
+      }
+    }
+  });
+
+  // Clear token filter when navigation changes (since messages are immediate/transient)
+  useEffect(() => {
+    setTokenFilter(null);
+  }, [currentReference.book, currentReference.chapter, currentReference.verse]);
 
   // Update local state when broadcast changes
   useEffect(() => {
@@ -174,8 +352,371 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
   const displayLinks = actualLinks || propLinks;
   const isLoading = loading || contentLoading;
 
+  // Process quote matches when we have both links and original scripture
+  useEffect(() => {
+    if (!originalScripture || !displayLinks?.links || !currentReference.book) {
+      console.log('⏳ TWL - Missing dependencies for quote matching');
+      setQuoteMatches(new Map());
+      return;
+    }
+
+    const processQuoteMatches = async () => {
+      try {
+        console.log('🔄 TWL - Processing quote matches for links');
+        const newQuoteMatches = new Map<string, QuoteMatchResult>();
+
+        // Process each link that has origWords
+        for (const link of displayLinks.links) {
+          if (!link.origWords || !link.reference) {
+            continue;
+          }
+
+          try {
+            // Parse the link reference to get chapter and verse info (e.g., "1:1" -> chapter: 1, verse: 1)
+            const refParts = link.reference.split(':');
+            const linkChapter = parseInt(refParts[0] || '1');
+            const linkVerse = parseInt(refParts[1] || '1');
+            
+            // Validate parsed values
+            if (isNaN(linkChapter) || isNaN(linkVerse) || linkChapter < 1 || linkVerse < 1) {
+              console.warn(`⚠️ TWL - Invalid reference format for link ${link.id}: ${link.reference}`);
+              continue;
+            }
+            
+            // Create quote reference for the matcher
+            const quoteReference = {
+              book: currentReference.book,
+              startChapter: linkChapter,
+              startVerse: linkVerse,
+              endChapter: linkChapter,
+              endVerse: linkVerse
+            };
+
+            // Validate quote text (trim whitespace and check for meaningful content)
+            const cleanQuote = link.origWords.trim();
+            if (cleanQuote.length < 2) {
+              console.warn(`⚠️ TWL - Quote too short for link ${link.id}: "${cleanQuote}"`);
+              continue;
+            }
+
+            // Parse occurrence with validation
+            const occurrence = Math.max(1, parseInt(link.occurrence || '1'));
+            if (isNaN(occurrence)) {
+              console.warn(`⚠️ TWL - Invalid occurrence for link ${link.id}: ${link.occurrence}`);
+              continue;
+            }
+
+            // Use quote matcher to find original tokens
+            const matchResult = quoteMatcher.findOriginalTokens(
+              originalScripture.chapters,
+              cleanQuote,
+              occurrence,
+              quoteReference
+            );
+
+            const linkKey = link.id || `${link.reference}-${cleanQuote}`;
+            
+            if (matchResult.success) {
+              console.log(`✅ TWL - Found quote match for link ${link.id}:`, {
+                quote: cleanQuote,
+                occurrence,
+                tokensFound: matchResult.totalTokens.length,
+                matches: matchResult.matches.length
+              });
+              newQuoteMatches.set(linkKey, matchResult);
+            } else {
+              console.warn(`⚠️ TWL - No quote match found for link ${link.id}:`, {
+                quote: cleanQuote,
+                occurrence,
+                reference: link.reference,
+                error: matchResult.error
+              });
+              // Store failed match result for UI feedback
+              newQuoteMatches.set(linkKey, matchResult);
+            }
+          } catch (linkError) {
+            console.error(`❌ TWL - Error processing link ${link.id}:`, linkError);
+            // Continue processing other links
+            continue;
+          }
+        }
+
+        setQuoteMatches(newQuoteMatches);
+        console.log(`✅ TWL - Processed ${newQuoteMatches.size} quote matches`);
+
+      } catch (err) {
+        console.error('❌ TWL - Failed to process quote matches:', err);
+        setQuoteMatches(new Map());
+      }
+    };
+
+    processQuoteMatches();
+  }, [originalScripture, displayLinks?.links, currentReference.book, quoteMatcher]);
+
+  // Helper function to get tokens between two IDs from the received tokens
+  const getMissingTokensBetween = useCallback((startId: number, endId: number, allTokens: OptimizedToken[]): OptimizedToken[] => {
+    return allTokens.filter(token => token.id > startId && token.id < endId);
+  }, []);
+
+  // Helper function to check if all tokens are punctuation
+  const areAllPunctuation = useCallback((tokens: OptimizedToken[]): boolean => {
+    return tokens.every(token => 
+      token.type === 'punctuation' || 
+      /^[.,;:!?'"()[\]{}\-–—…]+$/.test(token.text.trim())
+    );
+  }, []);
+
+  // Helper function to build quote with ellipsis for non-contiguous tokens
+  const buildQuoteWithEllipsis = useCallback((alignedTokens: OptimizedToken[]): string => {
+    if (alignedTokens.length === 0) return '';
+    
+    // Sort tokens by ID to maintain natural order
+    const sortedTokens = alignedTokens.sort((a, b) => a.id - b.id);
+    
+    if (sortedTokens.length === 1) {
+      return sortedTokens[0].text.trim();
+    }
+    
+    const result: string[] = [];
+    
+    for (let i = 0; i < sortedTokens.length; i++) {
+      const currentToken = sortedTokens[i];
+      const nextToken = sortedTokens[i + 1];
+      
+      // Add current token text
+      result.push(currentToken.text.trim());
+      
+      // Check if there's a gap between current and next token
+      if (nextToken) {
+        const gap = nextToken.id - currentToken.id;
+        
+        // If gap is more than 1, there are missing tokens in between
+        if (gap > 1) {
+          // Check if the missing tokens are only punctuation
+          const missingTokens = getMissingTokensBetween(currentToken.id, nextToken.id, scriptureTokens);
+          
+          if (missingTokens.length > 0 && areAllPunctuation(missingTokens)) {
+            // Include the punctuation tokens
+            missingTokens.forEach((token: OptimizedToken) => {
+              result.push(token.text.trim());
+            });
+          } else {
+            // Use ellipsis for non-punctuation gaps
+            result.push('...');
+          }
+        }
+      }
+    }
+    
+    return result.join(' ').trim();
+  }, [scriptureTokens, getMissingTokensBetween, areAllPunctuation]);
+
+  // Helper function to find received tokens aligned to original language tokens
+  const findAlignedTokens = (originalTokens: OptimizedToken[], receivedTokens: OptimizedToken[]): OptimizedToken[] => {
+    const alignedTokens: OptimizedToken[] = [];
+
+    for (const originalToken of originalTokens) {
+      // Look for received tokens that have alignment to this original token
+      const matchingTokens = receivedTokens.filter(receivedToken => {
+        // Check if the received token has alignment data pointing to the original token
+        if (receivedToken.align && originalToken.id) {
+          // The align field contains references to original language token IDs
+          return receivedToken.align.includes(originalToken.id);
+        }
+        return false;
+      });
+
+      alignedTokens.push(...matchingTokens);
+    }
+
+    // Remove duplicates based on token ID
+    const uniqueTokens = alignedTokens.filter((token, index, array) => 
+      array.findIndex(t => t.id === token.id) === index
+    );
+
+    return uniqueTokens;
+  };
+
+  // Process target language quotes when we have both quote matches and received tokens
+  useEffect(() => {
+    if (!scriptureTokens.length || !quoteMatches.size || !tokenBroadcastInfo) {
+      console.log('⏳ TWL - Missing dependencies for target quote building');
+      setTargetLanguageQuotes(new Map());
+      return;
+    }
+
+    const buildTargetLanguageQuotes = () => {
+      try {
+        console.log('🔄 TWL - Building target language quotes from received tokens');
+        const newTargetQuotes = new Map<string, {
+          quote: string;
+          tokens: OptimizedToken[];
+          sourceLanguage: string;
+        }>();
+
+        // Process each quote match
+        for (const [linkKey, quoteMatch] of quoteMatches.entries()) {
+          if (!quoteMatch.success || !quoteMatch.totalTokens.length) {
+            continue;
+          }
+
+          try {
+            // Find received tokens that are aligned to the original language tokens
+            const alignedTokens = findAlignedTokens(quoteMatch.totalTokens, scriptureTokens);
+            
+            if (alignedTokens.length > 0) {
+              // Build the target language quote from aligned tokens with ellipsis for gaps
+              const targetQuote = buildQuoteWithEllipsis(alignedTokens);
+
+              if (targetQuote) {
+                newTargetQuotes.set(linkKey, {
+                  quote: targetQuote,
+                  tokens: alignedTokens,
+                  sourceLanguage: tokenBroadcastInfo.reference.book // Use book as language identifier for now
+                });
+
+                console.log(`✅ TWL - Built target quote for ${linkKey}:`, {
+                  originalTokens: quoteMatch.totalTokens.length,
+                  alignedTokens: alignedTokens.length,
+                  targetQuote: targetQuote.substring(0, 50) + (targetQuote.length > 50 ? '...' : '')
+                });
+              }
+            }
+          } catch (err) {
+            console.error(`❌ TWL - Error building target quote for ${linkKey}:`, err);
+          }
+        }
+
+        setTargetLanguageQuotes(newTargetQuotes);
+        console.log(`✅ TWL - Built ${newTargetQuotes.size} target language quotes`);
+
+      } catch (err) {
+        console.error('❌ TWL - Failed to build target language quotes:', err);
+        setTargetLanguageQuotes(new Map());
+      }
+    };
+
+    buildTargetLanguageQuotes();
+  }, [scriptureTokens, quoteMatches, tokenBroadcastInfo, buildQuoteWithEllipsis]);
+
+  // Send TWL token groups when quote matches are updated (with debouncing)
+  useEffect(() => {
+    // Guard against invalid states that could cause infinite loops
+    if (!currentReference.book || !resourceMetadata?.id || isLoading || !processedResourceConfig || !linkedPanelsAPI?.messaging) {
+      return; // Early return if invalid state
+    }
+
+    // Additional guard: Don't broadcast if we're in a cleanup phase (no links or no original scripture)
+    if (!displayLinks?.links?.length || !originalScripture) {
+      console.log('🛡️ TWL: Skipping broadcast during cleanup phase (no links or original scripture)');
+      return;
+    }
+    
+    // Create a stable hash of the current state to prevent duplicate broadcasts
+    const contentHash = `${quoteMatches.size}-${resourceMetadata.id}`;
+    const navigationHash = `${currentReference.book}-${currentReference.chapter}-${currentReference.verse}`;
+    const stateHash = `${navigationHash}-${contentHash}`;
+    
+    // Always broadcast when navigation changes, or when content changes
+    const navigationChanged = lastBroadcastRef.current && !lastBroadcastRef.current.startsWith(navigationHash);
+    const shouldBroadcast = lastBroadcastRef.current !== stateHash || navigationChanged;
+    
+    if (shouldBroadcast) {
+      // Add a small delay to avoid broadcasting during rapid state changes
+      const timeoutId = setTimeout(() => {
+        try {
+          const tokenGroups: NoteTokenGroup[] = [];
+          
+          // Create a stable snapshot of quoteMatches to avoid reference issues
+          const quoteMatchesSnapshot = Array.from(quoteMatches.entries());
+          
+          for (const [linkKey, quoteMatch] of quoteMatchesSnapshot) {
+            // Find link using the same key construction logic as quote matching
+            const link = displayLinks?.links?.find(l => {
+              const key = l.id || `${l.reference}-${l.origWords?.trim()}`;
+              return key === linkKey;
+            });
+            if (link && quoteMatch.totalTokens.length > 0) {
+              tokenGroups.push({
+                noteId: link.id || linkKey,
+                noteReference: link.reference,
+                quote: link.origWords || '',
+                occurrence: parseInt(link.occurrence) || 1,
+                tokens: quoteMatch.totalTokens
+              });
+            }
+          }
+
+          // Always send a broadcast (either with tokens or empty for cleanup)
+          const broadcastContent = createNotesTokenGroupsBroadcast(
+            resourceId,
+            {
+              book: currentReference.book,
+              chapter: currentReference.chapter || 1,
+              verse: currentReference.verse || 1,
+              endChapter: currentReference.endChapter,
+              endVerse: currentReference.endVerse
+            },
+            tokenGroups,
+            resourceMetadata
+          );
+
+          // Send state message - linked-panels will handle deduplication automatically
+          linkedPanelsAPI.messaging.sendToAll(broadcastContent);
+          
+          if (tokenGroups.length > 0) {
+            console.log(`📤 TWL (${resourceId}) - Broadcasted ${tokenGroups.length} link token groups for ${currentReference.book} ${currentReference.chapter}:${currentReference.verse}:`, 
+              tokenGroups.map(g => `${g.noteId}(${g.tokens.length} tokens)`).join(', '));
+          } else {
+            console.log(`📤 TWL (${resourceId}) - Sent empty token groups for ${currentReference.book} ${currentReference.chapter}:${currentReference.verse}`);
+          }
+        } catch (error) {
+          console.error('❌ Error broadcasting TWL token groups:', error);
+        }
+        
+        lastBroadcastRef.current = stateHash;
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+    
+    // Return empty cleanup function if no broadcast was scheduled
+    return undefined;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentReference, resourceMetadata, quoteMatches.size, isLoading, processedResourceConfig, linkedPanelsAPI, resourceId, displayLinks?.links?.length]);
+
+  // Cleanup: Silent cleanup without broadcasts to prevent infinite loops
+  // Unmount cleanup pattern from team-review: Send superseding clear state message
+  useEffect(() => {
+    // Cleanup function to clear all TWL token groups when component unmounts
+    return () => {
+      // Send superseding empty state message (following team-review pattern)
+      // This works even if component state is stale because we create a minimal clear message
+      if (linkedPanelsAPI?.messaging) {
+        try {
+          const clearBroadcast: NotesTokenGroupsBroadcast = {
+            type: 'notes-token-groups-broadcast',
+            lifecycle: 'state',
+            stateKey: 'current-notes-token-groups',
+            sourceResourceId: resourceId,
+            reference: { book: '', chapter: 1, verse: 1 }, // Minimal reference for clear message
+            tokenGroups: [], // Empty array clears all token groups
+            resourceMetadata: { id: 'cleared', language: '', type: 'twl' }, // Special marker
+            timestamp: Date.now()
+          };
+
+          linkedPanelsAPI.messaging.sendToAll(clearBroadcast);
+          console.log(`🧹 TWL (${resourceId}) - Unmount cleanup: Sent superseding clear state`);
+        } catch (error) {
+          console.error('❌ Error during TWL unmount cleanup:', error);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty dependency array is INTENTIONAL - ensures cleanup only on unmount (team-review pattern)
+
   // Filter links by current navigation range (matching NotesViewer and QuestionsViewer logic)
-  const filteredLinks = useMemo(() => {
+  const filteredLinksByNavigation = useMemo(() => {
     if (!displayLinks?.links || !currentReference) {
       return displayLinks?.links || [];
     }
@@ -218,6 +759,62 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
       return true;
     });
   }, [displayLinks?.links, currentReference]);
+
+  // Apply token filter on top of navigation-filtered links
+  const filteredLinks = useMemo(() => {
+    if (!tokenFilter || !quoteMatches.size) {
+      return filteredLinksByNavigation;
+    }
+
+    console.log('🔍 Applying token filter to TWL links:', {
+      tokenFilter: tokenFilter.originalLanguageToken,
+      totalLinks: filteredLinksByNavigation.length,
+      quoteMatchesCount: quoteMatches.size
+    });
+
+    // Filter links that have quote matches containing the clicked token
+    return filteredLinksByNavigation.filter(link => {
+      const linkKey = link.id || `${link.reference}-${link.origWords?.trim()}`;
+      const quoteMatch = quoteMatches.get(linkKey);
+      
+      if (!quoteMatch || !quoteMatch.totalTokens.length) {
+        return false;
+      }
+
+      // Check if any of the link's matched tokens have the same ID as the clicked token
+      const hasMatchingToken = quoteMatch.totalTokens.some(token => 
+        token.id.toString() === tokenFilter.originalLanguageToken.semanticId ||
+        (tokenFilter.originalLanguageToken.alignedSemanticIds && 
+         tokenFilter.originalLanguageToken.alignedSemanticIds.includes(token.id.toString()))
+      );
+
+      if (hasMatchingToken) {
+        console.log('✅ TWL Link matches token filter:', {
+          linkId: linkKey,
+          origWords: link.origWords,
+          matchedTokenIds: quoteMatch.totalTokens.map(t => t.id),
+          filterTokenId: tokenFilter.originalLanguageToken.semanticId
+        });
+      }
+
+      return hasMatchingToken;
+    });
+  }, [filteredLinksByNavigation, tokenFilter, quoteMatches]);
+
+  // Function to get the color for a link using the same cycling logic as token groups
+  // Always use the original navigation-filtered links (before token filter) to maintain consistent colors
+  const getLinkColor = useCallback((link: TranslationWordsLink): string => {
+    // Use filteredLinksByNavigation (first filter only) to maintain consistent color indices
+    // This ensures colors don't change when the second filter (token filter) is applied
+    const originalLinksWithColorIndicators = filteredLinksByNavigation.filter(shouldLinkHaveColorIndicator);
+    const colorIndicatorIndex = originalLinksWithColorIndicators.findIndex(l => 
+      (l.id || `${l.reference}-${l.origWords?.trim()}`) === (link.id || `${link.reference}-${link.origWords?.trim()}`)
+    );
+    
+    // Use the same cycling logic as the token underlining context
+    const colorIndex = colorIndicatorIndex % COLOR_CLASSES.length;
+    return COLOR_CLASSES[colorIndex].bgColor;
+  }, [filteredLinksByNavigation, shouldLinkHaveColorIndicator]);
 
   // Debug logging
   console.log(`🔍 TranslationWordsLinksViewer - Filtering:`, {
@@ -431,13 +1028,35 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
     return (
       <div
         key={link.id}
-        className="bg-gray-50 rounded-md p-2 mb-2 border border-gray-200 hover:bg-gray-100 cursor-pointer transition-colors"
-        onClick={() => handleLinkPress(link)}
+        className={`bg-gray-50 rounded-md p-2 mb-2 border border-gray-200 transition-colors ${
+          shouldLinkHaveColorIndicator(link)
+            ? 'hover:bg-blue-50 cursor-pointer'
+            : 'hover:bg-gray-100 cursor-pointer'
+        }`}
+        onClick={() => {
+          if (shouldLinkHaveColorIndicator(link)) {
+            // For links with quotes and occurrences, only broadcast selection (like NotesViewer)
+            handleLinkClick(link);
+          } else {
+            // For links without quotes/occurrences, open the detail modal
+            handleLinkPress(link);
+          }
+        }}
+        title={shouldLinkHaveColorIndicator(link) ? "Click to highlight this link's tokens in scripture" : undefined}
       >
-        {/* Header row with reference and occurrence */}
+        {/* Header row with reference, occurrence, and color indicator */}
         <div className="flex justify-between items-center mb-1">
-          <div className="text-xs font-semibold text-blue-600">
-            {link.reference}
+          <div className="flex items-center space-x-2">
+            {/* Color indicator that matches the underlining color - only for links with origWords and occurrences */}
+            {shouldLinkHaveColorIndicator(link) && (
+              <div 
+                className={`w-3 h-3 rounded-full ${getLinkColor(link)} border border-gray-300`}
+                title="This color matches the token underlining in scripture"
+              ></div>
+            )}
+            <div className="text-xs font-semibold text-blue-600">
+              {link.reference}
+            </div>
           </div>
           {parseInt(link.occurrence) > 1 && (
             <div className="bg-amber-500 text-white text-xs font-semibold rounded-full w-4 h-4 flex items-center justify-center">
@@ -446,18 +1065,43 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
           )}
         </div>
 
-        {/* Original words and tags in one row */}
+        {/* Original words and tags - show target language quote if available, otherwise original */}
         <div className="flex items-center gap-2 mb-2">
           {link.origWords && (
-            <button
-              className="bg-blue-50 text-blue-800 px-2 py-1 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleWordPress(link);
-              }}
-            >
-              {renderOriginalWords(link.origWords)}
-            </button>
+            <div className="flex flex-col gap-1">
+              {(() => {
+                const linkKey = link.id || `${link.reference}-${link.origWords.trim()}`;
+                const targetQuote = targetLanguageQuotes.get(linkKey);
+                
+                if (targetQuote) {
+                  // Show target language quote when available
+                  return (
+                    <button
+                      className="bg-purple-50 text-purple-800 px-2 py-1 rounded text-xs font-medium hover:bg-purple-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleWordPress(link);
+                      }}
+                    >
+                      {targetQuote.quote}
+                    </button>
+                  );
+                } else {
+                  // Show original language words when no target quote is built
+                  return (
+                    <button
+                      className="bg-blue-50 text-blue-800 px-2 py-1 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleWordPress(link);
+                      }}
+                    >
+                      {renderOriginalWords(link.origWords)}
+                    </button>
+                  );
+                }
+              })()}
+            </div>
           )}
           {link.tags && (
             <span className="text-xs text-gray-500">
@@ -548,12 +1192,32 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
                 {selectedLink.reference}
               </div>
               {selectedLink.origWords && (
-                <button
-                  className="bg-blue-50 text-blue-800 px-4 py-3 rounded-lg text-base font-medium hover:bg-blue-100 transition-colors"
-                  onClick={() => handleWordPress(selectedLink)}
-                >
-                  {renderOriginalWords(selectedLink.origWords)}
-                </button>
+                (() => {
+                  const linkKey = selectedLink.id || `${selectedLink.reference}-${selectedLink.origWords.trim()}`;
+                  const targetQuote = targetLanguageQuotes.get(linkKey);
+                  
+                  if (targetQuote) {
+                    // Show target language quote when available
+                    return (
+                      <button
+                        className="bg-purple-50 text-purple-800 px-4 py-3 rounded-lg text-base font-medium hover:bg-purple-100 transition-colors"
+                        onClick={() => handleWordPress(selectedLink)}
+                      >
+                        {targetQuote.quote}
+                      </button>
+                    );
+                  } else {
+                    // Show original language words when no target quote is built
+                    return (
+                      <button
+                        className="bg-blue-50 text-blue-800 px-4 py-3 rounded-lg text-base font-medium hover:bg-blue-100 transition-colors"
+                        onClick={() => handleWordPress(selectedLink)}
+                      >
+                        {renderOriginalWords(selectedLink.origWords)}
+                      </button>
+                    );
+                  }
+                })()
               )}
             </div>
 
@@ -642,6 +1306,34 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
+      {/* Token Filter Banner */}
+      {tokenFilter && (
+        <div className="bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-600 text-sm font-medium">
+              <span role="img" aria-label="Target">🎯</span> 
+            </span>
+            <span className="text-blue-800 font-mono text-sm bg-blue-100 px-2 py-1 rounded">
+              {tokenFilter.originalLanguageToken.content}
+            </span>
+            <span className="text-blue-600 text-xs">
+              ({filteredLinks.length})
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setTokenFilter(null);
+            }}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-1 transition-colors"
+            title="Clear token filter"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      )}
+      
       <div className="flex-1 overflow-y-auto">
         <div className="p-4">
           {/* Debug section for scripture tokens */}
