@@ -742,10 +742,15 @@ export function NotesViewer({
     }
     
     // Create a stable hash of the current state to prevent duplicate broadcasts
-    const stateHash = `${currentReference.book}-${currentReference.chapter}-${currentReference.verse}-${quoteMatches.size}-${resourceMetadata.id}`;
+    const contentHash = `${quoteMatches.size}-${resourceMetadata.id}`;
+    const navigationHash = `${currentReference.book}-${currentReference.chapter}-${currentReference.verse}`;
+    const stateHash = `${navigationHash}-${contentHash}`;
     
-    // Only broadcast if the state has actually changed
-    if (lastBroadcastRef.current !== stateHash) {
+    // Always broadcast when navigation changes, or when content changes
+    const navigationChanged = lastBroadcastRef.current && !lastBroadcastRef.current.startsWith(navigationHash);
+    const shouldBroadcast = lastBroadcastRef.current !== stateHash || navigationChanged;
+    
+    if (shouldBroadcast) {
       // Add a small delay to avoid broadcasting during rapid state changes
       const timeoutId = setTimeout(() => {
         try {

@@ -23,14 +23,7 @@ export function WorkspaceStatus() {
         <div className="flex items-center justify-between">
           {/* Status Information */}
           <div className="flex items-center space-x-4">
-            {initializing && (
-              <div className="flex items-center space-x-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                <span className="text-sm text-blue-800">
-                  Initializing workspace: {owner}/{language}
-                </span>
-              </div>
-            )}
+            {initializing && null}
 
             {/* Loading States */}
             {Object.entries(loadingStates).map(([key, state]) => 
