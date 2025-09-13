@@ -235,6 +235,7 @@ export function ScriptureViewer({
       !resourceId ||
       !displayScripture?.meta?.hasAlignments
     ) {
+      console.log('⏭️ Skipping state lifecycle cleanup - no alignments available');
       return;
     }
 

@@ -25,6 +25,7 @@ interface TokenUnderliningContextType {
   clearTokenGroups: (sourceType?: TokenGroup['sourceType']) => void;
   setActiveGroup: (groupId: string | null) => void;
   getTokenGroupForAlignedId: (alignedId: number) => TokenGroup | null;
+  getAllTokenGroupsForAlignedId: (alignedId: number) => TokenGroup[];
   getColorClassForGroup: (groupId: string, isActive?: boolean) => string;
   getBackgroundColorForGroup: (groupId: string) => string;
   getColorIndexForGroup: (groupId: string) => number;
@@ -118,6 +119,20 @@ export const TokenUnderliningProvider: React.FC<{ children: ReactNode }> = ({ ch
     return null;
   }, [tokenGroups]);
 
+  // New function to get ALL matching groups for a token ID (for handling overlaps)
+  const getAllTokenGroupsForAlignedId = useCallback((alignedId: number): TokenGroup[] => {
+    const matchingGroups: TokenGroup[] = [];
+    for (const group of tokenGroups) {
+      for (const token of group.tokens) {
+        if (token.id === alignedId) {
+          matchingGroups.push(group);
+          break; // Don't add the same group multiple times if it has duplicate token IDs
+        }
+      }
+    }
+    return matchingGroups;
+  }, [tokenGroups]);
+
   const getColorClassForGroup = useCallback((groupId: string, isActive?: boolean): string => {
     const colorIndex = groupColorMap.get(groupId) ?? 0;
     const colorSet = COLOR_CLASSES[colorIndex];
@@ -146,6 +161,7 @@ export const TokenUnderliningProvider: React.FC<{ children: ReactNode }> = ({ ch
     clearTokenGroups,
     setActiveGroup,
     getTokenGroupForAlignedId,
+    getAllTokenGroupsForAlignedId,
     getColorClassForGroup,
     getBackgroundColorForGroup,
     getColorIndexForGroup,

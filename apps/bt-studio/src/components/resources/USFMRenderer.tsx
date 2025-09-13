@@ -411,6 +411,9 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
       sourceResourceId: resourceId
     });
     
+    // Clear active note highlighting when a word is clicked
+    setActiveGroup(null);
+    
     // Create original language token for the clicked token
     const verseRef = `${resourceType?.toLowerCase() || 'unknown'} ${currentReference?.chapter || 1}:${verse.number}`;
     
@@ -439,7 +442,7 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
     if (onTokenClick) {
       onTokenClick(token, verse);
     }
-  }, [crossPanelService, resourceId, onTokenClick, linkedPanelsAPI, resourceType, currentReference]);
+  }, [crossPanelService, resourceId, onTokenClick, linkedPanelsAPI, resourceType, currentReference, setActiveGroup]);
 
   // Register panel and set up cross-panel communication
   useEffect(() => {
@@ -988,7 +991,11 @@ const WordTokenRenderer: React.FC<{
   resourceType,
   language
 }) => {
-  const { getTokenGroupForAlignedId, getColorClassForGroup } = useTokenUnderlining();
+  const { 
+    getAllTokenGroupsForAlignedId, 
+    getColorClassForGroup,
+    activeGroupId 
+  } = useTokenUnderlining();
   // Don't render paragraph marker tokens - they're handled by the parent component
   if (token.type === 'paragraph-marker') {
     return null;
@@ -1011,29 +1018,62 @@ const WordTokenRenderer: React.FC<{
   const isPunctuation = token.type === 'punctuation';
   const isNumber = token.type === 'number';
 
+  // Helper function to combine multiple underline classes for overlapping groups
+  const combineUnderlineClasses = (groups: TokenGroup[]): string => {
+    if (groups.length === 0) return '';
+    
+    if (groups.length === 1) {
+      // Single group - use normal styling
+      return getColorClassForGroup(groups[0].id);
+    }
+    
+    // Multiple overlapping groups - use priority system for clean underlines
+    // Priority: active group gets primary styling, fallback to first group
+    const activeGroup = groups.find(g => g.id === activeGroupId);
+    const primaryGroup = activeGroup || groups[0];
+    
+    // Return just the primary underline class (no overlap indicators)
+    return getColorClassForGroup(primaryGroup.id);
+  };
+
   // Check if this token should be underlined based on token groups
   let underlineClass = '';
   if (isOriginalLanguage) {
-    // For original language tokens, check if this token ID matches any group
-    const matchingGroup = getTokenGroupForAlignedId(token.id);
-    if (matchingGroup) {
-      underlineClass = getColorClassForGroup(matchingGroup.id);
+    // For original language tokens, get ALL matching groups for overlap handling
+    const matchingGroups = getAllTokenGroupsForAlignedId(token.id);
+    if (matchingGroups.length > 0) {
+      underlineClass = combineUnderlineClasses(matchingGroups);
     }
   } else if (token.align && token.align.length > 0) {
-    // For target language tokens, check if any of their aligned IDs match any group
+    // For target language tokens, collect all groups from all aligned IDs
+    const allMatchingGroups: TokenGroup[] = [];
+    const seenGroupIds = new Set<string>();
+    
     for (const alignedId of token.align) {
-      const matchingGroup = getTokenGroupForAlignedId(alignedId);
-      if (matchingGroup) {
-        underlineClass = getColorClassForGroup(matchingGroup.id);
-        break; // Use the first match
+      const groupsForId = getAllTokenGroupsForAlignedId(alignedId);
+      for (const group of groupsForId) {
+        if (!seenGroupIds.has(group.id)) {
+          allMatchingGroups.push(group);
+          seenGroupIds.add(group.id);
+        }
       }
     }
+    
+    if (allMatchingGroups.length > 0) {
+      underlineClass = combineUnderlineClasses(allMatchingGroups);
+    }
   }
+
+  // Check if this token has an active underline (note was clicked)
+  const hasActiveUnderline = underlineClass.includes('bg-') && activeGroupId;
+  
+  // Prioritize note underlining over word highlighting
+  const shouldShowHighlight = isHighlighted && !hasActiveUnderline;
 
         return (
           <span
             className={`
-        ${isHighlighted ? 'bg-yellow-200 font-semibold shadow-sm' : ''}
+        ${shouldShowHighlight ? 'bg-yellow-200 font-semibold shadow-sm' : ''}
         ${isClickable ? 'cursor-pointer hover:bg-blue-100 hover:shadow-sm transition-colors duration-150' : ''}
         ${isOriginalLanguage ? 'font-medium' : ''}
         ${isNumber ? 'text-gray-600' : ''}

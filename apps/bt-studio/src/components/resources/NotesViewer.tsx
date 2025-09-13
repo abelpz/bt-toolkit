@@ -880,8 +880,8 @@ export function NotesViewer({
     );
   }
 
-    return (
-      <div className="h-full flex flex-col">
+  return (
+    <div className="h-full flex flex-col">
         {/* Token Filter Banner */}
         {tokenFilter && (
           <div className="bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between">
@@ -910,7 +910,7 @@ export function NotesViewer({
           </div>
         )}
         
-        {/* Notes content */}
+      {/* Notes content */}
       <div 
         className={`flex-1 overflow-y-auto p-3 ${
           // Apply RTL styling based on metadata
@@ -950,30 +950,29 @@ export function NotesViewer({
                     ></div>
                   )}
                   <span className="text-xs font-medium text-blue-600">
-                    {note.reference}
-                  </span>
-                  {note.occurrence && note.occurrence !== '1' && (
-                    <span className="text-xs text-gray-500">
-                      #{note.occurrence}
+                      {note.reference}
                     </span>
-                  )}
+                    
                 </div>
 
-                {/* Quoted text */}
+                {/* Quoted text - show target language quote if available, otherwise original */}
                 {note.quote && (
                   <div className="mb-1 p-2 bg-gray-50 rounded">
-                    <p className="text-gray-900 italic text-sm">"{note.quote}"</p>
-                    
-                    {/* Target language quote if available */}
                     {(() => {
                       const noteKey = note.id || `${note.reference}-${note.quote}`;
                       const targetQuote = targetLanguageQuotes.get(noteKey);
+                      
                       if (targetQuote) {
+                        // Show target language quote when available
                         return (
-                          <p className="text-purple-700 italic text-sm mt-1">"{targetQuote.quote}"</p>
+                          <p className="text-purple-700 italic text-sm">"{targetQuote.quote}"</p>
+                        );
+                      } else {
+                        // Show original language quote when no target quote is built
+                        return (
+                          <p className="text-gray-900 italic text-sm">"{note.quote}"</p>
                         );
                       }
-                      return null;
                     })()}
                   </div>
                 )}
