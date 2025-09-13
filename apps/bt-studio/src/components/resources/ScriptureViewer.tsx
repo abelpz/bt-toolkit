@@ -230,7 +230,11 @@ export function ScriptureViewer({
   // Proper cleanup using state lifecycle pattern (inspired by team-review)
   useEffect(() => {
     // Only register cleanup when we have valid alignment data to clean
-    if (!linkedPanelsAPI?.messaging || !resourceId || !displayScripture?.meta?.hasAlignments) {
+    if (
+      !linkedPanelsAPI?.messaging ||
+      !resourceId ||
+      !displayScripture?.meta?.hasAlignments
+    ) {
       return;
     }
 
@@ -246,16 +250,18 @@ export function ScriptureViewer({
           reference: { book: '', chapter: 0, verse: 0 }, // Empty reference indicates clear
           tokens: [],
           resourceMetadata: { id: '', language: '', type: 'scripture' },
-          timestamp: Date.now()
+          timestamp: Date.now(),
         };
 
         linkedPanelsAPI.messaging.sendToAll(clearBroadcast);
-        console.log(`🧹 ScriptureViewer (${resourceId}) - State lifecycle cleanup: sent superseding empty state`);
+        console.log(
+          `🧹 ScriptureViewer (${resourceId}) - State lifecycle cleanup: sent superseding empty state`
+        );
       } catch (error) {
         console.error('❌ Error during ScriptureViewer state cleanup:', error);
       }
     };
-  }, [linkedPanelsAPI?.messaging, resourceId, displayScripture?.meta?.hasAlignments]); // Stable dependencies only
+  }, [resourceId]); // Stable dependencies only
   
   // Helper function to format the navigation reference range
   const formatNavigationRange = () => {
