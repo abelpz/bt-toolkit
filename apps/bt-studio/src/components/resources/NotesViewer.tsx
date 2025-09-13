@@ -759,6 +759,9 @@ export function NotesViewer({
           // Create a stable snapshot of quoteMatches to avoid reference issues
           const quoteMatchesSnapshot = Array.from(quoteMatches.entries());
           
+          // Get the list of notes with color indicators (before token filter) for consistent color indexing
+          const notesWithColorIndicators = filteredNotesByNavigation.filter(shouldNoteHaveColorIndicator);
+          
           for (const [noteKey, quoteMatch] of quoteMatchesSnapshot) {
             // Find note using the same key construction logic as quote matching
             const note = filteredNotes.find(n => {
@@ -766,12 +769,19 @@ export function NotesViewer({
               return key === noteKey;
             });
             if (note && quoteMatch.totalTokens.length > 0) {
+              // Calculate color index based on position in the original navigation-filtered list
+              const colorIndicatorIndex = notesWithColorIndicators.findIndex(n => 
+                (n.id || `${n.reference}-${n.quote}`) === (note.id || `${note.reference}-${note.quote}`)
+              );
+              const colorIndex = colorIndicatorIndex >= 0 ? colorIndicatorIndex % COLOR_CLASSES.length : 0;
+              
               tokenGroups.push({
                 noteId: note.id || noteKey,
                 noteReference: note.reference,
                 quote: note.quote,
                 occurrence: parseInt(note.occurrence) || 1,
-                tokens: quoteMatch.totalTokens
+                tokens: quoteMatch.totalTokens,
+                colorIndex: colorIndex
               });
             }
           }

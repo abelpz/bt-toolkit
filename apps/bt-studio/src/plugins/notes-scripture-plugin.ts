@@ -8,18 +8,7 @@
 
 import { BaseMessageContent, ResourceMessage } from 'linked-panels';
 import { OptimizedToken } from '../services/usfm-processor';
-import { TokenClickBroadcast, NoteSelectionBroadcast } from '../types/scripture-messages';
-
-/**
- * Note token group for highlighting specific notes in scripture
- */
-export interface NoteTokenGroup {
-  noteId: string;
-  noteReference: string;
-  quote: string;
-  occurrence: number;
-  tokens: OptimizedToken[];
-}
+import { TokenClickBroadcast, NoteSelectionBroadcast, NoteTokenGroup } from '../types/scripture-messages';
 
 /**
  * Notes token groups broadcast message

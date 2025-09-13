@@ -52,6 +52,7 @@ export interface NoteTokenGroup {
   quote: string;
   occurrence: number;
   tokens: OptimizedToken[];
+  colorIndex: number; // Index for color cycling to ensure consistent colors between source and target
 }
 
 /**

@@ -360,7 +360,8 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
           sourceType: 'notes',
           sourceId: noteGroup.noteId,
           tokens: noteGroup.tokens,
-          label: `${noteGroup.quote} (#${noteGroup.occurrence})`
+          label: `${noteGroup.quote} (#${noteGroup.occurrence})`,
+          colorIndex: noteGroup.colorIndex // Use the color index from the broadcast
         };
         addTokenGroup(tokenGroup);
       });

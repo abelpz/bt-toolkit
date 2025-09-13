@@ -630,6 +630,9 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
           // Create a stable snapshot of quoteMatches to avoid reference issues
           const quoteMatchesSnapshot = Array.from(quoteMatches.entries());
           
+          // Get the list of links with color indicators (before token filter) for consistent color indexing
+          const linksWithColorIndicators = filteredLinksByNavigation.filter(shouldLinkHaveColorIndicator);
+          
           for (const [linkKey, quoteMatch] of quoteMatchesSnapshot) {
             // Find link using the same key construction logic as quote matching
             const link = displayLinks?.links?.find(l => {
@@ -637,12 +640,19 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
               return key === linkKey;
             });
             if (link && quoteMatch.totalTokens.length > 0) {
+              // Calculate color index based on position in the original navigation-filtered list
+              const colorIndicatorIndex = linksWithColorIndicators.findIndex(l => 
+                (l.id || `${l.reference}-${l.origWords?.trim()}`) === (link.id || `${link.reference}-${link.origWords?.trim()}`)
+              );
+              const colorIndex = colorIndicatorIndex >= 0 ? colorIndicatorIndex % COLOR_CLASSES.length : 0;
+              
               tokenGroups.push({
                 noteId: link.id || linkKey,
                 noteReference: link.reference,
                 quote: link.origWords || '',
                 occurrence: parseInt(link.occurrence) || 1,
-                tokens: quoteMatch.totalTokens
+                tokens: quoteMatch.totalTokens,
+                colorIndex: colorIndex
               });
             }
           }

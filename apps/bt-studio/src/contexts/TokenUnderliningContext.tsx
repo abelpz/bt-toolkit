@@ -15,6 +15,7 @@ export interface TokenGroup {
   sourceId: string; // e.g., note ID, TW link ID
   tokens: OptimizedToken[];
   label?: string; // Optional display label
+  colorIndex?: number; // Optional color index for consistent coloring
 }
 
 interface TokenUnderliningContextType {
@@ -61,12 +62,14 @@ export const TokenUnderliningProvider: React.FC<{ children: ReactNode }> = ({ ch
       return [...filtered, group];
     });
 
-    // Assign color using modulo operation for cycling through colors
+    // Assign color using provided colorIndex or fallback to automatic cycling
     setGroupColorMap(prev => {
       if (!prev.has(group.id)) {
         const newMap = new Map(prev);
-        // Use the current number of assigned colors to determine the next color index
-        const colorIndex = prev.size % COLOR_CLASSES.length;
+        // Use provided colorIndex if available, otherwise use automatic cycling
+        const colorIndex = group.colorIndex !== undefined 
+          ? group.colorIndex % COLOR_CLASSES.length 
+          : prev.size % COLOR_CLASSES.length;
         newMap.set(group.id, colorIndex);
         return newMap;
       }
