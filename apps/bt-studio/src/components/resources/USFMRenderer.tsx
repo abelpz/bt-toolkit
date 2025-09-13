@@ -5,12 +5,12 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { useCurrentState } from 'linked-panels';
+import { useCurrentState, useResourceAPI, useMessaging } from 'linked-panels';
 import type { WordAlignment } from '../../types/context';
 import type { OptimizedToken, OptimizedScripture, OptimizedVerse } from '../../services/usfm-processor';
 import { getCrossPanelCommunicationService, type CrossPanelMessage, type TokenHighlightMessage, type OriginalLanguageToken } from '../../services/cross-panel-communication';
 import { TokenUnderliningProvider, useTokenUnderlining, type TokenGroup } from '../../contexts/TokenUnderliningContext';
-import type { NotesTokenGroupsBroadcast } from '../../plugins/notes-scripture-plugin';
+import type { NotesTokenGroupsBroadcast, TokenClickBroadcast, NoteSelectionBroadcast } from '../../types/scripture-messages';
 import { useNavigation } from '../../contexts/NavigationContext';
 
 /**
@@ -295,13 +295,31 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
   className = ''
 }) => {
   const { currentReference } = useNavigation();
-  const { addTokenGroup, clearTokenGroups } = useTokenUnderlining();
+  const { addTokenGroup, clearTokenGroups, setActiveGroup } = useTokenUnderlining();
+  
+  // Linked-panels API for broadcasting token clicks
+  const linkedPanelsAPI = useResourceAPI(resourceId || 'default');
 
   // Listen for notes token groups broadcasts
   const notesTokenGroupsBroadcast = useCurrentState<NotesTokenGroupsBroadcast>(
     resourceId || 'default', 
     'current-notes-token-groups'
   );
+
+  // Listen for note selection events to update active group
+  const noteSelectionMessaging = useMessaging({ 
+    resourceId: resourceId || 'default',
+    eventTypes: ['note-selection-broadcast'],
+    onEvent: (event) => {
+      if (event.type === 'note-selection-broadcast') {
+        const noteSelectionEvent = event as NoteSelectionBroadcast;
+        console.log('📝 USFMRenderer received note selection:', noteSelectionEvent.selectedNote);
+        
+        // Set the active group based on the selected note's token group ID
+        setActiveGroup(noteSelectionEvent.selectedNote.tokenGroupId);
+      }
+    }
+  });
   
 
   // Update token groups when notes broadcast changes
@@ -386,15 +404,42 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
 
   // Handle token clicks
   const handleTokenClick = useCallback((token: OptimizedToken, verse: OptimizedVerse) => {
+    console.log('🖱️ Token clicked in USFMRenderer:', {
+      tokenId: token.id,
+      content: token.text,
+      semanticId: token.id,
+      sourceResourceId: resourceId
+    });
     
-    // Trigger cross-panel communication
+    // Create original language token for the clicked token
+    const verseRef = `${resourceType?.toLowerCase() || 'unknown'} ${currentReference?.chapter || 1}:${verse.number}`;
+    
+    // Broadcast token click via linked-panels as event message
+    const tokenClickBroadcast: TokenClickBroadcast = {
+      type: 'token-click-broadcast',
+      lifecycle: 'event',
+      clickedToken: {
+        id: token.id,
+        content: token.text,
+        semanticId: token.id.toString(),
+        alignedSemanticIds: token.align ? token.align.map(a => a.toString()) : undefined,
+        verseRef: verseRef
+      },
+      sourceResourceId: resourceId || 'unknown',
+      timestamp: Date.now()
+    };
+    
+    console.log('📡 Broadcasting token click via linked-panels:', tokenClickBroadcast);
+    linkedPanelsAPI.messaging.sendToAll(tokenClickBroadcast);
+    
+    // Also trigger cross-panel communication for highlighting (keep existing functionality)
     crossPanelService.handleTokenClick(token, resourceId);
     
     // Call user callback if provided
     if (onTokenClick) {
       onTokenClick(token, verse);
     }
-  }, [crossPanelService, resourceId, onTokenClick]);
+  }, [crossPanelService, resourceId, onTokenClick, linkedPanelsAPI, resourceType, currentReference]);
 
   // Register panel and set up cross-panel communication
   useEffect(() => {

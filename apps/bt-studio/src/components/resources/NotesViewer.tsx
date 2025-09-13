@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import { useCurrentState, useResourceAPI } from 'linked-panels';
+import { useCurrentState, useResourceAPI, useMessaging } from 'linked-panels';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { ProcessedNotes, TranslationNote } from '../../services/notes-processor';
@@ -15,12 +15,13 @@ import { AcademyModal } from '../modals/AcademyModal';
 import { parseRcLink, isTranslationAcademyLink, getArticleDisplayTitle } from '../../utils/rc-link-parser';
 import { QuoteMatcher, QuoteMatchResult } from '../../services/quote-matcher';
 import { OptimizedScripture, OptimizedToken } from '../../services/usfm-processor';
-import { ScriptureTokensBroadcast } from '../../types/scripture-messages';
+import { ScriptureTokensBroadcast, TokenClickBroadcast, NoteSelectionBroadcast } from '../../types/scripture-messages';
 import { 
   NotesTokenGroupsBroadcast, 
   NoteTokenGroup, 
   createNotesTokenGroupsBroadcast 
 } from '../../plugins/notes-scripture-plugin';
+import { COLOR_CLASSES } from '../../contexts/TokenUnderliningContext';
 
 export interface NotesViewerProps {
   resourceId: string;
@@ -81,6 +82,18 @@ export function NotesViewer({
     sourceLanguage: string;
   }>>(new Map());
   
+  // Token filter state (for filtering notes by clicked tokens)
+  const [tokenFilter, setTokenFilter] = useState<{
+    originalLanguageToken: {
+      semanticId: string;
+      content: string;
+      alignedSemanticIds?: string[];
+      verseRef: string;
+    };
+    sourceResourceId: string;
+    timestamp: number;
+  } | null>(null);
+  
   // Academy modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string>('');
@@ -91,6 +104,72 @@ export function NotesViewer({
     resourceId, 
     'current-scripture-tokens'
   );
+  
+  // Listen for token clicks via linked-panels events (transient messages)
+  useMessaging({ 
+    resourceId,
+    eventTypes: ['token-click-broadcast'],
+    onEvent: (event) => {
+      if (event.type === 'token-click-broadcast') {
+        const tokenClickEvent = event as TokenClickBroadcast;
+        console.log('📨 NotesViewer received token click event:', tokenClickEvent);
+        
+        // Set token filter based on clicked token
+        setTokenFilter({
+          originalLanguageToken: {
+            semanticId: tokenClickEvent.clickedToken.semanticId,
+            content: tokenClickEvent.clickedToken.content,
+            alignedSemanticIds: tokenClickEvent.clickedToken.alignedSemanticIds,
+            verseRef: tokenClickEvent.clickedToken.verseRef
+          },
+          sourceResourceId: tokenClickEvent.sourceResourceId,
+          timestamp: tokenClickEvent.timestamp
+        });
+      }
+    }
+  });
+
+  // Clear token filter when navigation changes (since messages are immediate/transient)
+  useEffect(() => {
+    setTokenFilter(null);
+  }, [currentReference.book, currentReference.chapter, currentReference.verse]);
+
+  // Function to handle note selection and broadcast the event
+  const handleNoteClick = useCallback((note: TranslationNote) => {
+    const noteKey = note.id || `${note.reference}-${note.quote}`;
+    const tokenGroupId = `notes-${noteKey}`;
+    
+    console.log('📝 Note clicked, broadcasting selection:', {
+      noteId: noteKey,
+      tokenGroupId,
+      quote: note.quote,
+      reference: note.reference
+    });
+
+    // Broadcast note selection event
+    const noteSelectionBroadcast: NoteSelectionBroadcast = {
+      type: 'note-selection-broadcast',
+      lifecycle: 'event',
+      selectedNote: {
+        noteId: noteKey,
+        tokenGroupId: tokenGroupId,
+        quote: note.quote,
+        reference: note.reference
+      },
+      sourceResourceId: resourceId,
+      timestamp: Date.now()
+    };
+
+    // Use the general messaging API instead of the typed one
+    (linkedPanelsAPI.messaging as any).sendToAll(noteSelectionBroadcast);
+  }, [resourceId, linkedPanelsAPI]);
+
+  // Function to check if a note should have color indicator and be clickable
+  const shouldNoteHaveColorIndicator = useCallback((note: TranslationNote): boolean => {
+    return !!(note.quote && note.quote.trim() && note.occurrence);
+  }, []);
+
+
 
   // Testament-specific original language configuration (same as OriginalScriptureViewer)
   const ORIGINAL_LANGUAGE_CONFIG = useMemo(() => ({
@@ -549,11 +628,11 @@ export function NotesViewer({
 
   // Filter notes by current navigation range (like NotesPanel.tsx)
   const filteredNotesByNavigation = useMemo(() => {
-    if (!displayNotes?.notes || !currentReference) {
-      return displayNotes?.notes || [];
+    if (!actualNotes?.notes || !currentReference) {
+      return actualNotes?.notes || [];
     }
     
-    return displayNotes.notes.filter((note: TranslationNote) => {
+    return actualNotes.notes.filter((note: TranslationNote) => {
       // Parse chapter and verse from reference (e.g., "1:1" -> chapter: 1, verse: 1)
       const refParts = note.reference.split(':');
       const noteChapter = parseInt(refParts[0] || '1');
@@ -590,11 +669,63 @@ export function NotesViewer({
       
       return true;
     });
-  }, [displayNotes?.notes, currentReference]);
+  }, [actualNotes?.notes, currentReference]);
 
+  // Function to get the color for a note using the same cycling logic as token groups
+  // Always use the original navigation-filtered notes (before token filter) to maintain consistent colors
+  const getNoteColor = useCallback((note: TranslationNote): string => {
+    // Use filteredNotesByNavigation (first filter only) to maintain consistent color indices
+    // This ensures colors don't change when the second filter (token filter) is applied
+    const originalNotesWithColorIndicators = filteredNotesByNavigation.filter(shouldNoteHaveColorIndicator);
+    const colorIndicatorIndex = originalNotesWithColorIndicators.findIndex(n => 
+      (n.id || `${n.reference}-${n.quote}`) === (note.id || `${note.reference}-${note.quote}`)
+    );
+    
+    // Use the same cycling logic as the token underlining context
+    const colorIndex = colorIndicatorIndex % COLOR_CLASSES.length;
+    return COLOR_CLASSES[colorIndex].bgColor;
+  }, [filteredNotesByNavigation, shouldNoteHaveColorIndicator]);
 
-  // Use navigation-filtered notes directly (they're already filtered by the current range)
-  const filteredNotes = filteredNotesByNavigation;
+  // Apply token filter on top of navigation-filtered notes
+  const filteredNotes = useMemo(() => {
+    if (!tokenFilter || !quoteMatches.size) {
+      return filteredNotesByNavigation;
+    }
+
+    console.log('🔍 Applying token filter to notes:', {
+      tokenFilter: tokenFilter.originalLanguageToken,
+      totalNotes: filteredNotesByNavigation.length,
+      quoteMatchesCount: quoteMatches.size
+    });
+
+    // Filter notes that have quote matches containing the clicked token
+    return filteredNotesByNavigation.filter(note => {
+      const noteKey = note.id || `${note.reference}-${note.quote}`;
+      const quoteMatch = quoteMatches.get(noteKey);
+      
+      if (!quoteMatch || !quoteMatch.totalTokens.length) {
+        return false;
+      }
+
+      // Check if any of the note's matched tokens have the same ID as the clicked token
+      const hasMatchingToken = quoteMatch.totalTokens.some(token => 
+        token.id.toString() === tokenFilter.originalLanguageToken.semanticId ||
+        (tokenFilter.originalLanguageToken.alignedSemanticIds && 
+         tokenFilter.originalLanguageToken.alignedSemanticIds.includes(token.id.toString()))
+      );
+
+      if (hasMatchingToken) {
+        console.log('✅ Note matches token filter:', {
+          noteId: noteKey,
+          quote: note.quote,
+          matchedTokenIds: quoteMatch.totalTokens.map(t => t.id),
+          filterTokenId: tokenFilter.originalLanguageToken.semanticId
+        });
+      }
+
+      return hasMatchingToken;
+    });
+  }, [filteredNotesByNavigation, tokenFilter, quoteMatches]);
 
 
   // Send note token groups when quote matches are updated (with debouncing)
@@ -677,6 +808,7 @@ export function NotesViewer({
     return undefined;
   }, [currentReference, resourceMetadata, quoteMatches.size, isLoading, processedResourceConfig, linkedPanelsAPI, resourceId, filteredNotes.length]);
 
+
   // Cleanup: Silent cleanup without broadcasts to prevent infinite loops
   // Unmount cleanup pattern from team-review: Send superseding clear state message
   useEffect(() => {
@@ -705,7 +837,6 @@ export function NotesViewer({
       }
     };
   }, []); // Empty dependency array is INTENTIONAL - ensures cleanup only on unmount (team-review pattern)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   if (isLoading) {
     return (
@@ -751,6 +882,34 @@ export function NotesViewer({
 
     return (
       <div className="h-full flex flex-col">
+        {/* Token Filter Banner */}
+        {tokenFilter && (
+          <div className="bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-blue-600 text-sm font-medium">
+                <span role="img" aria-label="Target">🎯</span> 
+              </span>
+              <span className="text-blue-800 font-mono text-sm bg-blue-100 px-2 py-1 rounded">
+                {tokenFilter.originalLanguageToken.content}
+              </span>
+              <span className="text-blue-600 text-xs">
+                ({filteredNotes.length})
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setTokenFilter(null);
+              }}
+              className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-1 transition-colors"
+              title="Clear token filter"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+        
         {/* Notes content */}
       <div 
         className={`flex-1 overflow-y-auto p-3 ${
@@ -771,9 +930,25 @@ export function NotesViewer({
         ) : (
           <div className="space-y-3">
             {filteredNotes.map((note, index) => (
-              <div key={note.id || index} className="border border-gray-200 rounded p-2 bg-white">
+              <div 
+                key={note.id || index} 
+                className={`border border-gray-200 rounded p-2 bg-white transition-colors ${
+                  shouldNoteHaveColorIndicator(note) 
+                    ? 'hover:bg-blue-50 cursor-pointer' 
+                    : ''
+                }`}
+                onClick={shouldNoteHaveColorIndicator(note) ? () => handleNoteClick(note) : undefined}
+                title={shouldNoteHaveColorIndicator(note) ? "Click to highlight this note's tokens in scripture" : undefined}
+              >
                 {/* Note header */}
                 <div className="flex items-center space-x-2 mb-1">
+                  {/* Color indicator that matches the underlining color - only for notes with quotes and occurrences */}
+                  {shouldNoteHaveColorIndicator(note) && (
+                    <div 
+                      className={`w-3 h-3 rounded-full ${getNoteColor(note)} border border-gray-300`}
+                      title="This color matches the token underlining in scripture"
+                    ></div>
+                  )}
                   <span className="text-xs font-medium text-blue-600">
                     {note.reference}
                   </span>

@@ -8,6 +8,7 @@
 
 import { BaseMessageContent, ResourceMessage } from 'linked-panels';
 import { OptimizedToken } from '../services/usfm-processor';
+import { TokenClickBroadcast, NoteSelectionBroadcast } from '../types/scripture-messages';
 
 /**
  * Note token group for highlighting specific notes in scripture
@@ -62,6 +63,8 @@ export interface NotesTokenGroupsBroadcast extends BaseMessageContent {
  */
 export interface NotesScriptureMessageTypes {
   'notes-token-groups-broadcast': NotesTokenGroupsBroadcast;
+  'token-click-broadcast': TokenClickBroadcast;
+  'note-selection-broadcast': NoteSelectionBroadcast;
 }
 
 /**
@@ -87,12 +90,76 @@ function isNotesTokenGroupsBroadcast(content: unknown): content is NotesTokenGro
 }
 
 /**
+ * Validation function for token click broadcast
+ */
+function isTokenClickBroadcast(content: unknown): content is TokenClickBroadcast {
+  if (!content || typeof content !== 'object') return false;
+  
+  const msg = content as any;
+  return (
+    msg.type === 'token-click-broadcast' &&
+    msg.lifecycle === 'event' &&
+    msg.clickedToken &&
+    typeof msg.clickedToken.id === 'number' &&
+    typeof msg.clickedToken.content === 'string' &&
+    typeof msg.clickedToken.semanticId === 'string' &&
+    typeof msg.sourceResourceId === 'string' &&
+    typeof msg.timestamp === 'number'
+  );
+}
+
+/**
  * Handler for notes token groups broadcast messages
  */
 function handleNotesTokenGroupsBroadcast(message: ResourceMessage<NotesTokenGroupsBroadcast>) {
   console.log(`📡 Notes token groups broadcast from ${message.fromResourceId}:`, {
     tokenGroups: message.content.tokenGroups.length,
     reference: message.content.reference,
+    timestamp: new Date(message.content.timestamp).toLocaleTimeString()
+  });
+}
+
+/**
+ * Validation function for note selection broadcast
+ */
+function isNoteSelectionBroadcast(content: unknown): content is NoteSelectionBroadcast {
+  if (!content || typeof content !== 'object') return false;
+  
+  const msg = content as any;
+  return (
+    msg.type === 'note-selection-broadcast' &&
+    msg.lifecycle === 'event' &&
+    msg.selectedNote &&
+    typeof msg.selectedNote.noteId === 'string' &&
+    typeof msg.selectedNote.tokenGroupId === 'string' &&
+    typeof msg.selectedNote.quote === 'string' &&
+    typeof msg.selectedNote.reference === 'string' &&
+    typeof msg.sourceResourceId === 'string' &&
+    typeof msg.timestamp === 'number'
+  );
+}
+
+/**
+ * Handler for token click broadcast messages
+ */
+function handleTokenClickBroadcast(message: ResourceMessage<TokenClickBroadcast>) {
+  console.log(`🖱️ Token click broadcast from ${message.fromResourceId}:`, {
+    tokenId: message.content.clickedToken.id,
+    content: message.content.clickedToken.content,
+    semanticId: message.content.clickedToken.semanticId,
+    timestamp: new Date(message.content.timestamp).toLocaleTimeString()
+  });
+}
+
+/**
+ * Handler for note selection broadcast messages
+ */
+function handleNoteSelectionBroadcast(message: ResourceMessage<NoteSelectionBroadcast>) {
+  console.log(`📝 Note selection broadcast from ${message.fromResourceId}:`, {
+    noteId: message.content.selectedNote.noteId,
+    tokenGroupId: message.content.selectedNote.tokenGroupId,
+    quote: message.content.selectedNote.quote,
+    reference: message.content.selectedNote.reference,
     timestamp: new Date(message.content.timestamp).toLocaleTimeString()
   });
 }
@@ -106,15 +173,21 @@ export const notesScripturePlugin = {
   description: 'Communication plugin for Notes and Scripture viewers',
   
   messageTypes: {
-    'notes-token-groups-broadcast': {} as NotesTokenGroupsBroadcast
+    'notes-token-groups-broadcast': {} as NotesTokenGroupsBroadcast,
+    'token-click-broadcast': {} as TokenClickBroadcast,
+    'note-selection-broadcast': {} as NoteSelectionBroadcast
   } as NotesScriptureMessageTypes,
   
   validators: {
-    'notes-token-groups-broadcast': isNotesTokenGroupsBroadcast
+    'notes-token-groups-broadcast': isNotesTokenGroupsBroadcast,
+    'token-click-broadcast': isTokenClickBroadcast,
+    'note-selection-broadcast': isNoteSelectionBroadcast
   },
   
   handlers: {
-    'notes-token-groups-broadcast': handleNotesTokenGroupsBroadcast
+    'notes-token-groups-broadcast': handleNotesTokenGroupsBroadcast,
+    'token-click-broadcast': handleTokenClickBroadcast,
+    'note-selection-broadcast': handleNoteSelectionBroadcast
   }
 };
 

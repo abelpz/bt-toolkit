@@ -92,9 +92,60 @@ export interface NotesTokenGroupsBroadcast extends BaseMessageContent {
 }
 
 /**
+ * Token click broadcast message
+ * This is an EVENT message for when a user clicks on a token in scripture
+ * Used for filtering notes by clicked tokens (non-persistent)
+ */
+export interface TokenClickBroadcast extends BaseMessageContent {
+  type: 'token-click-broadcast';
+  lifecycle: 'event';
+  
+  /** The clicked token information */
+  clickedToken: {
+    id: number;
+    content: string;
+    semanticId: string;
+    alignedSemanticIds?: string[];
+    verseRef: string;
+  };
+  
+  /** The resource ID that detected the click */
+  sourceResourceId: string;
+  
+  /** Timestamp when the click occurred */
+  timestamp: number;
+}
+
+/**
+ * Note selection broadcast message
+ * This is an EVENT message for when a user clicks on a note in the NotesViewer
+ * Used for highlighting the selected note's tokens as active
+ */
+export interface NoteSelectionBroadcast extends BaseMessageContent {
+  type: 'note-selection-broadcast';
+  lifecycle: 'event';
+  
+  /** The selected note information */
+  selectedNote: {
+    noteId: string;
+    tokenGroupId: string; // The corresponding token group ID for underlining
+    quote: string;
+    reference: string;
+  };
+  
+  /** The resource ID that detected the selection */
+  sourceResourceId: string;
+  
+  /** Timestamp when the selection occurred */
+  timestamp: number;
+}
+
+/**
  * Message registry for scripture-related messages
  */
 export interface ScriptureMessageTypes {
   'scripture-tokens-broadcast': ScriptureTokensBroadcast;
   'notes-token-groups-broadcast': NotesTokenGroupsBroadcast;
+  'token-click-broadcast': TokenClickBroadcast;
+  'note-selection-broadcast': NoteSelectionBroadcast;
 }

@@ -40,7 +40,20 @@ export interface ClearHighlightsMessage {
   timestamp: number;
 }
 
-export type CrossPanelMessage = TokenHighlightMessage | ClearHighlightsMessage;
+export interface TokenFilterMessage {
+  type: 'FILTER_BY_TOKEN';
+  originalLanguageToken: OriginalLanguageToken;
+  sourceResourceId: string;
+  timestamp: number;
+}
+
+export interface ClearTokenFilterMessage {
+  type: 'CLEAR_TOKEN_FILTER';
+  sourceResourceId?: string;
+  timestamp: number;
+}
+
+export type CrossPanelMessage = TokenHighlightMessage | ClearHighlightsMessage | TokenFilterMessage | ClearTokenFilterMessage;
 
 // Panel resource configuration
 export interface PanelResource {
@@ -135,7 +148,7 @@ export class CrossPanelCommunicationService {
     }
 
     // Broadcast the highlight message
-    const message: TokenHighlightMessage = {
+    const highlightMessage: TokenHighlightMessage = {
       type: 'HIGHLIGHT_TOKENS',
       sourceTokenId: 'id' in clickedToken ? clickedToken.id : clickedToken.uniqueId,
       sourceContent: 'text' in clickedToken ? clickedToken.text : clickedToken.content,
@@ -145,7 +158,19 @@ export class CrossPanelCommunicationService {
       timestamp: Date.now()
     };
 
-    this.broadcastMessage(message);
+    this.broadcastMessage(highlightMessage);
+    console.log('✅ Highlight message broadcast complete, now creating filter message...');
+
+    // Also broadcast token filter message for notes filtering
+    const filterMessage: TokenFilterMessage = {
+      type: 'FILTER_BY_TOKEN',
+      originalLanguageToken,
+      sourceResourceId,
+      timestamp: Date.now()
+    };
+
+    console.log('🎯 Broadcasting filter message:', filterMessage);
+    this.broadcastMessage(filterMessage);
   }
 
   /**
@@ -548,6 +573,33 @@ export class CrossPanelCommunicationService {
   clearHighlights(sourceResourceId?: string): void {
     const message: ClearHighlightsMessage = {
       type: 'CLEAR_HIGHLIGHTS',
+      sourceResourceId,
+      timestamp: Date.now()
+    };
+
+    this.broadcastMessage(message);
+  }
+
+  /**
+   * Broadcast token filter message (for notes filtering)
+   */
+  filterByToken(originalLanguageToken: OriginalLanguageToken, sourceResourceId: string): void {
+    const message: TokenFilterMessage = {
+      type: 'FILTER_BY_TOKEN',
+      originalLanguageToken,
+      sourceResourceId,
+      timestamp: Date.now()
+    };
+
+    this.broadcastMessage(message);
+  }
+
+  /**
+   * Clear token filter
+   */
+  clearTokenFilter(sourceResourceId?: string): void {
+    const message: ClearTokenFilterMessage = {
+      type: 'CLEAR_TOKEN_FILTER',
       sourceResourceId,
       timestamp: Date.now()
     };
