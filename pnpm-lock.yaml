@@ -267,6 +267,9 @@ importers:
       unified:
         specifier: 11.0.5
         version: 11.0.5
+      unist-util-visit:
+        specifier: ^5.0.0
+        version: 5.0.0
       usfm-js:
         specifier: ^3.4.3
         version: 3.4.3
@@ -502,7 +505,7 @@ importers:
         version: 5.4.19(@types/node@20.19.1)(lightningcss@1.30.1)(terser@5.42.0)
       vitest:
         specifier: ^1.0.0
-        version: 1.6.1(@types/node@20.19.1)(@vitest/ui@3.2.3)(jsdom@22.1.0)(lightningcss@1.30.1)(terser@5.42.0)
+        version: 1.6.1(@types/node@20.19.1)(@vitest/ui@3.2.3(vitest@3.2.3))(jsdom@22.1.0)(lightningcss@1.30.1)(terser@5.42.0)
 
   apps/web-e2e: {}
 
@@ -698,7 +701,7 @@ importers:
         version: 3.9.1(@types/node@20.19.1)(rollup@4.43.0)(typescript@5.7.3)(vite@5.4.19(@types/node@20.19.1)(lightningcss@1.30.1)(terser@5.42.0))
       vitest:
         specifier: ^1.0.4
-        version: 1.6.1(@types/node@20.19.1)(@vitest/ui@3.2.3)(jsdom@22.1.0)(lightningcss@1.30.1)(terser@5.42.0)
+        version: 1.6.1(@types/node@20.19.1)(@vitest/ui@3.2.3(vitest@3.2.3))(jsdom@22.1.0)(lightningcss@1.30.1)(terser@5.42.0)
       zustand:
         specifier: ^4.4.7
         version: 4.5.7(@types/react@19.0.14)(immer@10.1.1)(react@19.0.0)
@@ -24245,7 +24248,7 @@ snapshots:
     optionalDependencies:
       vite: 5.4.19(@types/node@20.19.1)(lightningcss@1.30.1)(terser@5.42.0)
 
-  vitest@1.6.1(@types/node@20.19.1)(@vitest/ui@3.2.3)(jsdom@22.1.0)(lightningcss@1.30.1)(terser@5.42.0):
+  vitest@1.6.1(@types/node@20.19.1)(@vitest/ui@3.2.3(vitest@3.2.3))(jsdom@22.1.0)(lightningcss@1.30.1)(terser@5.42.0):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1

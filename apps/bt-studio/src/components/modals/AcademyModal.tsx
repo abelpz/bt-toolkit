@@ -7,28 +7,38 @@
 
 import React, { useState, useEffect } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { useNavigation } from '../../contexts/NavigationContext';
 import { AcademyArticle, ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
+import { TranslationWordsModal } from './TranslationWordsModal';
 
 interface AcademyModalProps {
   isOpen: boolean;
   onClose: () => void;
   articleId: string; // e.g., "translate/figs-metaphor"
   title?: string;
+  onTALinkClick?: (articleId: string, title?: string) => void; // Handle TA-to-TA navigation
 }
 
 export const AcademyModal: React.FC<AcademyModalProps> = ({
   isOpen,
   onClose,
   articleId,
-  title
+  title,
+  onTALinkClick // Add this prop to handle TA-to-TA navigation
 }) => {
   const { resourceManager, processedResourceConfig, anchorResource } = useWorkspace();
+  const { currentReference } = useNavigation();
   
   const [article, setArticle] = useState<AcademyArticle | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resourceMetadata, setResourceMetadata] = useState<ResourceMetadata | null>(null);
+  
+  // Translation Words modal state (for links within TA articles)
+  const [isTWModalOpen, setIsTWModalOpen] = useState(false);
+  const [selectedWordId, setSelectedWordId] = useState<string>('');
+  const [selectedWordTitle, setSelectedWordTitle] = useState<string>('');
 
   // Find the Translation Academy global resource
   const academyResourceConfig = React.useMemo(() => {
@@ -230,7 +240,23 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({
 
                   {/* Article Content */}
                   <div className="prose prose-lg max-w-none">
-                    <MarkdownRenderer content={article.content} />
+                    <MarkdownRenderer 
+                      content={article.content}
+                      currentBook={currentReference.book}
+                      onTALinkClick={onTALinkClick ? (articleId: string, title?: string) => {
+                        console.log(`📖 TA-to-TA navigation in modal: ${articleId} (${title})`);
+                        onTALinkClick(articleId, title);
+                      } : undefined}
+                      onTWLinkClick={(wordId: string, title?: string) => {
+                        setSelectedWordId(wordId);
+                        setSelectedWordTitle(title || wordId.split('/').pop() || wordId);
+                        setIsTWModalOpen(true);
+                        console.log(`📚 Opening Translation Words from TA article: ${wordId}`);
+                      }}
+                      onDisabledLinkClick={(linkInfo: any, title?: string) => {
+                        console.log(`🚫 Disabled link clicked in TA article:`, linkInfo, title);
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -252,6 +278,14 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({
           </div>
         </div>
       </div>
+      
+      {/* Translation Words Modal (for links within TA articles) */}
+      <TranslationWordsModal
+        isOpen={isTWModalOpen}
+        onClose={() => setIsTWModalOpen(false)}
+        wordId={selectedWordId}
+        title={selectedWordTitle}
+      />
     </div>
   );
 };

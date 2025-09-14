@@ -12,12 +12,16 @@ import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
-import { ScriptureTokensBroadcast, NoteSelectionBroadcast, TokenClickBroadcast } from '../../types/scripture-messages';
+import {
+  ScriptureTokensBroadcast,
+  NoteSelectionBroadcast,
+  TokenClickBroadcast,
+  NoteTokenGroup,
+} from '../../types/scripture-messages';
 import type { OptimizedToken, OptimizedScripture } from '../../services/usfm-processor';
 import { QuoteMatcher, QuoteMatchResult } from '../../services/quote-matcher';
 import { 
   NotesTokenGroupsBroadcast, 
-  NoteTokenGroup, 
   createNotesTokenGroupsBroadcast 
 } from '../../plugins/notes-scripture-plugin';
 import { COLOR_CLASSES } from '../../contexts/TokenUnderliningContext';

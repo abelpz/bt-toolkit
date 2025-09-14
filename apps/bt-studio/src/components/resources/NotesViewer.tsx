@@ -12,15 +12,22 @@ import { ProcessedNotes, TranslationNote } from '../../services/notes-processor'
 import { ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 import { AcademyModal } from '../modals/AcademyModal';
+import { TranslationWordsModal } from '../modals/TranslationWordsModal';
 import { parseRcLink, isTranslationAcademyLink, getArticleDisplayTitle } from '../../utils/rc-link-parser';
+import { clearComponentTitleCache } from '../../services/remark-plugins/door43-rehype-plugin';
 import { QuoteMatcher, QuoteMatchResult } from '../../services/quote-matcher';
 import { OptimizedScripture, OptimizedToken } from '../../services/usfm-processor';
-import { ScriptureTokensBroadcast, TokenClickBroadcast, NoteSelectionBroadcast } from '../../types/scripture-messages';
+import {
+  ScriptureTokensBroadcast,
+  TokenClickBroadcast,
+  NoteSelectionBroadcast,
+  NoteTokenGroup,
+} from '../../types/scripture-messages';
 import { 
-  NotesTokenGroupsBroadcast, 
-  NoteTokenGroup, 
+  NotesTokenGroupsBroadcast,
   createNotesTokenGroupsBroadcast 
 } from '../../plugins/notes-scripture-plugin';
+
 import { COLOR_CLASSES } from '../../contexts/TokenUnderliningContext';
 
 export interface NotesViewerProps {
@@ -76,6 +83,14 @@ export function NotesViewer({
     };
     timestamp: number;
   } | null>(null);
+
+  // Clear component title cache when NotesViewer unmounts
+  useEffect(() => {
+    return () => {
+      clearComponentTitleCache();
+    };
+  }, []);
+
   const [targetLanguageQuotes, setTargetLanguageQuotes] = useState<Map<string, {
     quote: string;
     tokens: OptimizedToken[];
@@ -98,6 +113,11 @@ export function NotesViewer({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string>('');
   const [selectedArticleTitle, setSelectedArticleTitle] = useState<string>('');
+  
+  // Translation Words modal state
+  const [isTWModalOpen, setIsTWModalOpen] = useState(false);
+  const [selectedWordId, setSelectedWordId] = useState<string>('');
+  const [selectedWordTitle, setSelectedWordTitle] = useState<string>('');
 
   // Listen for scripture token broadcasts using useCurrentState hook
   const scriptureTokensBroadcast = useCurrentState<ScriptureTokensBroadcast>(
@@ -995,7 +1015,26 @@ export function NotesViewer({
                 {/* Note content */}
                 <div className="prose prose-sm max-w-none">
                   <div className="text-gray-800 leading-relaxed">
-                    <MarkdownRenderer content={note.note} />
+                    <MarkdownRenderer 
+                      content={note.note}
+                      currentBook={currentReference.book}
+                      onTALinkClick={(articleId: string, title?: string) => {
+                        setSelectedArticleId(articleId);
+                        setSelectedArticleTitle(title || getArticleDisplayTitle(articleId.split('/')[1] || articleId, articleId.split('/')[0] || 'translate'));
+                        setIsModalOpen(true);
+                        console.log(`🎓 Opening Translation Academy article from markdown: ${articleId}`);
+                      }}
+                      onTWLinkClick={(wordId: string, title?: string) => {
+                        setSelectedWordId(wordId);
+                        setSelectedWordTitle(title || wordId.split('/').pop() || wordId);
+                        setIsTWModalOpen(true);
+                        console.log(`📚 Opening Translation Words article from markdown: ${wordId}`);
+                      }}
+                      onDisabledLinkClick={(linkInfo: any, title?: string) => {
+                        console.log(`🚫 Disabled link clicked in markdown:`, linkInfo, title);
+                        // Could show a toast notification here
+                      }}
+                    />
                   </div>
                 </div>
 
@@ -1023,6 +1062,20 @@ export function NotesViewer({
         onClose={() => setIsModalOpen(false)}
         articleId={selectedArticleId}
         title={selectedArticleTitle}
+        onTALinkClick={(articleId: string, title?: string) => {
+          console.log(`📖 TA-to-TA navigation from modal: ${articleId} (${title})`);
+          // Update the modal to show the new article
+          setSelectedArticleId(articleId);
+          setSelectedArticleTitle(title || getArticleDisplayTitle(articleId.split('/')[1] || articleId, articleId.split('/')[0] || 'translate'));
+        }}
+      />
+      
+      {/* Translation Words Modal */}
+      <TranslationWordsModal
+        isOpen={isTWModalOpen}
+        onClose={() => setIsTWModalOpen(false)}
+        wordId={selectedWordId}
+        title={selectedWordTitle}
       />
     </div>
   );
