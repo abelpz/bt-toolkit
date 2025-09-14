@@ -150,7 +150,7 @@ function parseTranslationWordsLink(parts: string[], result: ParsedRcLink, origin
 
   result.category = category;
   result.articleId = articleId;
-  result.fullArticleId = `${category}/${articleId}`;
+  result.fullArticleId = `${category}/${articleId}`;  // Keep original format for title fetching
   result.resourceType = 'tw';
   result.isValid = true;
 

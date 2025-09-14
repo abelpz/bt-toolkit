@@ -4,7 +4,7 @@
  * Displays Translation Notes (TN) content with filtering and navigation
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useCurrentState, useResourceAPI, useMessaging } from 'linked-panels';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -113,11 +113,154 @@ export function NotesViewer({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState<string>('');
   const [selectedArticleTitle, setSelectedArticleTitle] = useState<string>('');
+
+  // Debug modal state changes
+  useEffect(() => {
+    console.log(`[TA BUTTON DEBUG] 🔄 Modal state changed:`, {
+      isModalOpen,
+      selectedArticleId,
+      selectedArticleTitle
+    });
+  }, [isModalOpen, selectedArticleId, selectedArticleTitle]);
   
   // Translation Words modal state
   const [isTWModalOpen, setIsTWModalOpen] = useState(false);
   const [selectedWordId, setSelectedWordId] = useState<string>('');
   const [selectedWordTitle, setSelectedWordTitle] = useState<string>('');
+
+  // TA button titles cache for support reference buttons
+  const [taButtonTitles, setTaButtonTitles] = useState<Map<string, string>>(new Map());
+
+  // Function to fetch TA title for support reference buttons
+  const fetchTAButtonTitle = useCallback(async (supportReference: string): Promise<string> => {
+    if (!resourceManager || !processedResourceConfig) {
+      return parseRcLink(supportReference).articleId; // Fallback to articleId
+    }
+
+    const parsed = parseRcLink(supportReference);
+    if (!parsed.isValid) {
+      return supportReference;
+    }
+
+    const cacheKey = parsed.fullArticleId;
+    
+    // Check if already cached
+    if (taButtonTitles.has(cacheKey)) {
+      return taButtonTitles.get(cacheKey)!;
+    }
+
+    try {
+      // Find TA resource config
+      const taResourceConfig = processedResourceConfig.find((config: any) => 
+        config.metadata?.type === 'academy' || config.metadata?.id === 'ta'
+      );
+      
+      if (!taResourceConfig) {
+        return parsed.articleId; // Fallback to articleId
+      }
+
+      // Construct content key for TA article
+      const contentKey = `${taResourceConfig.metadata.server}/${taResourceConfig.metadata.owner}/${taResourceConfig.metadata.language}/${taResourceConfig.metadata.id}/${parsed.fullArticleId}`;
+      
+      const content = await resourceManager.getOrFetchContent(
+        contentKey,
+        taResourceConfig.metadata.type as ResourceType
+      );
+      
+      if (content && (content as any).article?.title) {
+        const title = (content as any).article.title;
+        // Update the cache
+        setTaButtonTitles(prev => new Map(prev).set(cacheKey, title));
+        return title;
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch TA title for ${cacheKey}:`, error);
+    }
+
+    return parsed.articleId; // Fallback to articleId
+  }, [resourceManager, processedResourceConfig, taButtonTitles]);
+
+  // Component for TA button with fetched title
+  const TAButton: React.FC<{ 
+    supportReference: string;
+    onSupportReferenceClick: (supportReference: string) => void;
+  }> = React.memo(({ supportReference, onSupportReferenceClick }) => {
+    const parsed = parseRcLink(supportReference);
+    const cacheKey = parsed.fullArticleId;
+    
+    // Check if we already have the title cached
+    const cachedTitle = taButtonTitles.get(cacheKey);
+    const [buttonTitle, setButtonTitle] = useState<string>(cachedTitle || parsed.articleId);
+    const [isLoading, setIsLoading] = useState(!cachedTitle);
+
+    // Memoize the click handler to prevent re-renders
+    const handleClick = useCallback((e: React.MouseEvent) => {
+      console.log(`[TA BUTTON DEBUG] 🖱️ TAButton clicked:`, {
+        supportReference,
+        hasOnClick: !!onSupportReferenceClick,
+        event: e.type
+      });
+      
+      e.preventDefault();
+      e.stopPropagation();
+      
+      console.log(`[TA BUTTON DEBUG] 📞 Calling onSupportReferenceClick with: ${supportReference}`);
+      onSupportReferenceClick(supportReference);
+      console.log(`[TA BUTTON DEBUG] ✅ onSupportReferenceClick call completed`);
+    }, [supportReference, onSupportReferenceClick]);
+
+    useEffect(() => {
+      // Skip if we already have the title
+      if (cachedTitle) {
+        setButtonTitle(cachedTitle);
+        setIsLoading(false);
+        return;
+      }
+
+      const loadTitle = async () => {
+        try {
+          setIsLoading(true);
+          const title = await fetchTAButtonTitle(supportReference);
+          setButtonTitle(title);
+        } catch (error) {
+          console.error(`Failed to load TA title for ${supportReference}:`, error);
+          setButtonTitle(parsed.articleId); // Fallback
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadTitle();
+    }, [supportReference, cachedTitle, parsed.articleId]);
+
+    console.log(`[TA BUTTON DEBUG] 🎨 TAButton rendering:`, {
+      supportReference,
+      buttonTitle,
+      isLoading,
+      hasClickHandler: !!handleClick
+    });
+
+    return (
+      <button
+        onClick={handleClick}
+        onMouseDown={(e) => console.log(`[TA BUTTON DEBUG] 🖱️ mouseDown event:`, e.type)}
+        onMouseUp={(e) => console.log(`[TA BUTTON DEBUG] 🖱️ mouseUp event:`, e.type)}
+        onPointerDown={(e) => {
+          console.log(`[TA BUTTON DEBUG] 🖱️ pointerDown event:`, e.type);
+          // Call the click handler directly on pointerDown to avoid re-render issues 
+          // TODO: investigate rerendering issues with this
+          console.log(`[TA BUTTON DEBUG] 🚀 Calling handleClick directly from pointerDown`);
+          handleClick(e as any);
+        }}
+        onPointerUp={(e) => console.log(`[TA BUTTON DEBUG] 🖱️ pointerUp event:`, e.type)}
+        className="inline-flex items-center px-2 py-1 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+        type="button"
+        style={{ pointerEvents: 'auto', zIndex: 10 }}
+      >
+        <span className="mr-1" role="img" aria-label="graduation cap">🎓</span>
+        {isLoading ? '...' : buttonTitle}
+      </button>
+    );
+  });
 
   // Listen for scripture token broadcasts using useCurrentState hook
   const scriptureTokensBroadcast = useCurrentState<ScriptureTokensBroadcast>(
@@ -220,20 +363,34 @@ export function NotesViewer({
   };
 
   // Handle clicking on support reference links
-  const handleSupportReferenceClick = (supportReference: string) => {
+  const handleSupportReferenceClick = useCallback((supportReference: string) => {
+    console.log(`[TA BUTTON DEBUG] 🎯 handleSupportReferenceClick called with: ${supportReference}`);
+    
     if (!isTranslationAcademyLink(supportReference)) {
-      console.warn(`Not a Translation Academy link: ${supportReference}`);
+      console.warn(`[TA BUTTON DEBUG] ❌ Not a Translation Academy link: ${supportReference}`);
       return;
     }
+    console.log(`[TA BUTTON DEBUG] ✅ Confirmed TA link: ${supportReference}`);
 
     const parsed = parseRcLink(supportReference);
+    console.log(`[TA BUTTON DEBUG] 📋 Parsed link:`, parsed);
+    
     if (parsed.isValid) {
+      console.log(`[TA BUTTON DEBUG] 🔧 Setting modal state:`, {
+        articleId: parsed.fullArticleId,
+        title: getArticleDisplayTitle(parsed.articleId, parsed.category),
+        openingModal: true
+      });
+      
       setSelectedArticleId(parsed.fullArticleId);
       setSelectedArticleTitle(getArticleDisplayTitle(parsed.articleId, parsed.category));
       setIsModalOpen(true);
-      console.log(`🎓 Opening Translation Academy article: ${parsed.fullArticleId}`);
+      
+      console.log(`[TA BUTTON DEBUG] ✅ Modal state updated - should open now`);
+    } else {
+      console.error(`[TA BUTTON DEBUG] ❌ Invalid parsed link:`, parsed);
     }
-  };
+  }, []); // No dependencies needed since it only uses setters
 
   // Fetch content when navigation changes
   useEffect(() => {
@@ -1025,10 +1182,12 @@ export function NotesViewer({
                         console.log(`🎓 Opening Translation Academy article from markdown: ${articleId}`);
                       }}
                       onTWLinkClick={(wordId: string, title?: string) => {
-                        setSelectedWordId(wordId);
+                        // Add 'bible/' prefix for Door43TranslationWordsAdapter compatibility
+                        const fullWordId = wordId.startsWith('bible/') ? wordId : `bible/${wordId}`;
+                        setSelectedWordId(fullWordId);
                         setSelectedWordTitle(title || wordId.split('/').pop() || wordId);
                         setIsTWModalOpen(true);
-                        console.log(`📚 Opening Translation Words article from markdown: ${wordId}`);
+                        console.log(`📚 Opening Translation Words article from markdown: ${wordId} -> ${fullWordId}`);
                       }}
                       onDisabledLinkClick={(linkInfo: any, title?: string) => {
                         console.log(`🚫 Disabled link clicked in markdown:`, linkInfo, title);
@@ -1041,13 +1200,10 @@ export function NotesViewer({
                 {/* Translation Academy button */}
                 {note.supportReference && isTranslationAcademyLink(note.supportReference) && (
                   <div className="mt-2">
-                    <button
-                      onClick={() => handleSupportReferenceClick(note.supportReference)}
-                      className="inline-flex items-center px-2 py-1 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
-                    >
-                      <span className="mr-1" role="img" aria-label="graduation cap">🎓</span>
-                      {parseRcLink(note.supportReference).articleId}
-                    </button>
+                    <TAButton 
+                      supportReference={note.supportReference} 
+                      onSupportReferenceClick={handleSupportReferenceClick}
+                    />
                   </div>
                 )}
               </div>

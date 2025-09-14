@@ -103,11 +103,27 @@ export const TranslationWordsModal: React.FC<TranslationWordsModalProps> = ({
         
         console.log(`📋 TranslationWordsModal - Raw content received:`, content);
         
-        if (content?.content?.words && content.content.words.length > 0) {
-          // Content is wrapped in a ProcessedContent structure
-          const wordData = content.content.words[0]; // Get the first (and likely only) word
+        if (content && (content as { word?: { term?: string; definition?: string } }).word) {
+          // Content has direct word structure (same as TranslationWordsLinksViewer)
+          const wordData = (content as { word: { term: string; definition: string; id?: string } }).word;
           
           console.log(`✅ TranslationWordsModal - Word data:`, wordData);
+          
+          setWord({
+            id: wordData.id || wordId,
+            title: wordData.term || title || extractTitleFromId(wordId),
+            content: wordData.definition || 'No content available.',
+            category: extractCategoryFromId(wordId)
+          });
+          
+          // Store metadata for display
+          setResourceMetadata(wordsResourceConfig);
+          
+        } else if (content?.content?.words && content.content.words.length > 0) {
+          // Fallback: Content is wrapped in a ProcessedContent structure
+          const wordData = content.content.words[0]; // Get the first (and likely only) word
+          
+          console.log(`✅ TranslationWordsModal - Word data (fallback):`, wordData);
           
           setWord({
             id: wordData.id || wordId,
