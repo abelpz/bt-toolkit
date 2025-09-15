@@ -48,13 +48,9 @@ const useNavigationStore = create<NavigationStore>()(
         { code: 'tit', name: 'Titus', testament: 'NT' }
       ],
       
-      // Navigation history
-      navigationHistory: [{
-        book: 'tit',
-        chapter: 1,
-        verse: 1
-      }],
-      historyIndex: 0,
+      // Navigation history - start empty, will be populated by initialization
+      navigationHistory: [],
+      historyIndex: -1,
       maxHistorySize: 50,
 
       // ========================================================================
@@ -70,13 +66,45 @@ const useNavigationStore = create<NavigationStore>()(
           return
         }
 
+        const newReference = {
+          book: bookCode,
+          chapter: 1,
+          verse: 1
+        }
+
         set((state) => {
-          state.currentBook = bookCode
-          state.currentReference = {
-            book: bookCode,
-            chapter: 1,
-            verse: 1
+          // Handle first navigation (empty history) or add to history
+          if (state.navigationHistory.length === 0) {
+            // First navigation - initialize history
+            state.navigationHistory = [{ ...newReference }];
+            state.historyIndex = 0;
+          } else {
+            // Check if this is a different reference
+            const currentRef = state.currentReference;
+            const isSameReference = 
+              currentRef.book === newReference.book &&
+              currentRef.chapter === newReference.chapter &&
+              currentRef.verse === newReference.verse;
+            
+            if (!isSameReference) {
+              // Remove any forward history when navigating to a new location
+              state.navigationHistory = state.navigationHistory.slice(0, state.historyIndex + 1);
+              
+              // Add new reference to history
+              state.navigationHistory.push({ ...newReference });
+              
+              // Maintain max history size
+              if (state.navigationHistory.length > state.maxHistorySize) {
+                state.navigationHistory = state.navigationHistory.slice(-state.maxHistorySize);
+              }
+              
+              // Update history index
+              state.historyIndex = state.navigationHistory.length - 1;
+            }
           }
+          
+          state.currentBook = bookCode
+          state.currentReference = newReference
         })
 
         // Update URL
@@ -118,20 +146,27 @@ const useNavigationStore = create<NavigationStore>()(
             currentRef.endChapter === validatedReference.endChapter &&
             currentRef.endVerse === validatedReference.endVerse;
           
-          if (!isSameReference) {
-            // Remove any forward history when navigating to a new location
-            state.navigationHistory = state.navigationHistory.slice(0, state.historyIndex + 1);
-            
-            // Add new reference to history
-            state.navigationHistory.push({ ...validatedReference });
-            
-            // Maintain max history size
-            if (state.navigationHistory.length > state.maxHistorySize) {
-              state.navigationHistory = state.navigationHistory.slice(-state.maxHistorySize);
+          // Handle first navigation (empty history) or different reference
+          if (state.navigationHistory.length === 0 || !isSameReference) {
+            if (state.navigationHistory.length === 0) {
+              // First navigation - initialize history
+              state.navigationHistory = [{ ...validatedReference }];
+              state.historyIndex = 0;
+            } else {
+              // Remove any forward history when navigating to a new location
+              state.navigationHistory = state.navigationHistory.slice(0, state.historyIndex + 1);
+              
+              // Add new reference to history
+              state.navigationHistory.push({ ...validatedReference });
+              
+              // Maintain max history size
+              if (state.navigationHistory.length > state.maxHistorySize) {
+                state.navigationHistory = state.navigationHistory.slice(-state.maxHistorySize);
+              }
+              
+              // Update history index
+              state.historyIndex = state.navigationHistory.length - 1;
             }
-            
-            // Update history index
-            state.historyIndex = state.navigationHistory.length - 1;
           }
           
           state.currentBook = reference.book

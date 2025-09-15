@@ -46,7 +46,7 @@ export function NotesViewer({
 }: NotesViewerProps) {
   
   const { resourceManager, processedResourceConfig } = useWorkspace();
-  const { currentReference } = useNavigation();
+  const { currentReference, navigateToReference } = useNavigation();
   const { openModal } = useResourceModal();
   
   // Get linked-panels API for broadcasting note token groups
@@ -1139,6 +1139,10 @@ export function NotesViewer({
                           id: fullWordId,
                           title: title || wordId.split('/').pop() || wordId
                         });
+                      }}
+                      onNavigationClick={(bookCode: string, chapter: number, verse: number, title?: string) => {
+                        console.log(`🎯 NotesViewer: Navigation button clicked - ${bookCode} ${chapter}:${verse}`);
+                        navigateToReference({ book: bookCode, chapter, verse });
                       }}
                       onDisabledLinkClick={(linkInfo: any, title?: string) => {
                         console.log(`🚫 Disabled link clicked in markdown:`, linkInfo, title);
