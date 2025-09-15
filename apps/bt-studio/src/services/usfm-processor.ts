@@ -1667,7 +1667,26 @@ export class USFMProcessor {
       // Step 2: Detect document type
       const documentType = this.detectDocumentType(usfmJson);
       
-      // Step 3: Process based on document type
+      // Step 3: Extract translator sections (same as regular processing)
+      let translatorSections = this.extractTranslatorSections(usfmJson, bookCode);      
+      // Use default sections if none found in USFM
+      if (translatorSections.length === 0) {
+        console.log(`📚 No USFM sections found for ${bookCode}, trying default sections...`);
+        try {
+          const defaultSections = await defaultSectionsService.getDefaultSections(bookCode);
+          console.log(`📚 Default sections service returned ${defaultSections.length} sections for ${bookCode}:`, defaultSections);
+          if (defaultSections.length > 0) {
+            translatorSections = defaultSections;
+            console.log(`✅ Using ${translatorSections.length} default sections for ${bookCode}`);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to load default sections for ${bookCode}:`, error);
+        }
+      } else {
+        console.log(`✅ Using ${translatorSections.length} USFM sections for ${bookCode}`);
+      }
+      
+      // Step 4: Process based on document type
       const optimizedScripture = this.processOptimizedByType(
         usfmJson, 
         bookCode, 
@@ -1676,7 +1695,10 @@ export class USFMProcessor {
         language
       );
       
-      // Step 4: Add metadata
+      // Step 5: Add translator sections to optimized scripture
+      optimizedScripture.translatorSections = translatorSections;
+      
+      // Step 6: Add metadata
       optimizedScripture.meta.processingDate = new Date().toISOString();
       optimizedScripture.meta.version = '2.0-optimized';
       
