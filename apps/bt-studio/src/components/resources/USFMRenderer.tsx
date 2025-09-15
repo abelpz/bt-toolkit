@@ -311,7 +311,7 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
   );
 
   // Listen for note selection events to update active group
-  const noteSelectionMessaging = useMessaging({ 
+  useMessaging({ 
     resourceId: resourceId || 'default',
     eventTypes: ['note-selection-broadcast'],
     onEvent: (event) => {
@@ -319,7 +319,13 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
         const noteSelectionEvent = event as NoteSelectionBroadcast;
         console.log('📝 USFMRenderer received note selection:', noteSelectionEvent.selectedNote);
         
+        // Clear any existing token click highlights first to avoid confusion
+        // This ensures note selections take priority over token click highlights
+        console.log('🧹 Clearing previous token click highlights for note selection');
+        getCrossPanelCommunicationService().clearHighlights();
+        
         // Set the active group based on the selected note's token group ID
+        // This will override any previous token click highlights
         setActiveGroup(noteSelectionEvent.selectedNote.tokenGroupId);
       }
     }

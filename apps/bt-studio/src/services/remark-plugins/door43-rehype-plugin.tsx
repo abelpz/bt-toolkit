@@ -538,7 +538,6 @@ function extractTextContent(node: Element): string {
  */
 export function door43RehypePlugin(options: Door43RehypePluginOptions = {}) {
   return (tree: Node) => {
-    console.log('🔧 Door43 rehype plugin running...');
     
     // Only update global store if resources have actually changed
     const currentUpdateId = Date.now();
@@ -608,7 +607,6 @@ export function door43RehypePlugin(options: Door43RehypePluginOptions = {}) {
       }
     });
     
-    console.log(`✅ Door43 rehype plugin completed. Processed ${linkCount} links.`);
   };
 }
 

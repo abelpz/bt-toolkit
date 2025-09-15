@@ -22,20 +22,39 @@ interface TranslationWordsModalProps {
   onClose: () => void;
   wordId: string; // e.g., "kt/faith", "names/moses", "other/shepherd"
   title?: string;
+  onTWLinkClick?: (wordId: string, title?: string) => void; // Handle TW-to-TW navigation
+  onTALinkClick?: (articleId: string, title?: string) => void; // Handle TA links within TW content
 }
+
+// Utility function to remove the first heading from markdown content to avoid duplication with modal header
+const removeFirstHeading = (content: string): string => {
+  const lines = content.split('\n');
+  let firstHeadingRemoved = false;
+  
+  return lines.filter(line => {
+    // Skip the first heading (# Title)
+    if (!firstHeadingRemoved && line.trim().startsWith('# ')) {
+      firstHeadingRemoved = true;
+      return false;
+    }
+    return true;
+  }).join('\n');
+};
 
 export const TranslationWordsModal: React.FC<TranslationWordsModalProps> = ({
   isOpen,
   onClose,
   wordId,
-  title
+  title,
+  onTWLinkClick,
+  onTALinkClick
 }) => {
   const { resourceManager, processedResourceConfig, anchorResource } = useWorkspace();
   
   const [word, setWord] = useState<TranslationWord | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [resourceMetadata, setResourceMetadata] = useState<ResourceMetadata | null>(null);
+  const [, setResourceMetadata] = useState<ResourceMetadata | null>(null);
 
   // Find the Translation Words global resource
   const wordsResourceConfig = React.useMemo(() => {
@@ -225,17 +244,20 @@ export const TranslationWordsModal: React.FC<TranslationWordsModalProps> = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2">
-              <span className="text-2xl">📖</span>
-              <h2 className="text-xl font-semibold text-gray-900">
-                Translation Words
-              </h2>
+            <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
+              <span role="img" aria-label="book">📚</span>
             </div>
-            {word && (
-              <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getCategoryColor(word.category)}`}>
-                {word.category}
-              </span>
-            )}
+            <div>
+              <h2 className="text-xl font-semibold text-gray-900">
+                {word?.title || title || 'Translation Words'}
+              </h2>
+              <div className="flex items-center space-x-2 mt-1">
+                <p className="text-xs text-gray-500">
+                  {wordId}
+                </p>
+                
+              </div>
+            </div>
           </div>
           
           <button
@@ -263,7 +285,7 @@ export const TranslationWordsModal: React.FC<TranslationWordsModalProps> = ({
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-center space-x-2">
-                <span className="text-red-500">⚠️</span>
+                <span className="text-red-500" role="img" aria-label="warning">⚠️</span>
                 <span className="text-red-700 font-medium">Error</span>
               </div>
               <p className="text-red-600 mt-1">{error}</p>
@@ -272,43 +294,26 @@ export const TranslationWordsModal: React.FC<TranslationWordsModalProps> = ({
 
           {word && !loading && !error && (
             <div className="space-y-6">
-              {/* Title */}
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                  {word.title}
-                </h1>
-                <div className="flex items-center space-x-2 text-sm text-gray-500">
-                  <span>ID: {word.id}</span>
-                  {resourceMetadata && (
-                    <>
-                      <span>•</span>
-                      <span>{resourceMetadata.title || 'Translation Words'}</span>
-                      <span>•</span>
-                      <span>{resourceMetadata.language?.toUpperCase() || 'EN'}</span>
-                    </>
-                  )}
-                </div>
-              </div>
-
               {/* Content */}
               <div className="prose prose-lg max-w-none">
-                <MarkdownRenderer content={word.content} />
+                <MarkdownRenderer 
+                  content={removeFirstHeading(word.content)}
+                  onTWLinkClick={onTWLinkClick ? (wordId: string, title?: string) => {
+                    console.log(`📚 TW-to-TW navigation in modal: ${wordId} (${title})`);
+                    onTWLinkClick(wordId, title);
+                  } : undefined}
+                  onTALinkClick={onTALinkClick ? (articleId: string, title?: string) => {
+                    console.log(`📖 TA link clicked in TW modal: ${articleId} (${title})`);
+                    onTALinkClick(articleId, title);
+                  } : undefined}
+                />
               </div>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-6 border-t border-gray-200 bg-gray-50">
-          <div className="text-sm text-gray-500">
-            {resourceMetadata && (
-              <span>
-                Source: {resourceMetadata.owner}/{resourceMetadata.id} 
-                {resourceMetadata.version && ` v${resourceMetadata.version}`}
-              </span>
-            )}
-          </div>
-          
+        <div className="flex items-center justify-end p-6 border-t border-gray-200 bg-gray-50">
           <button
             onClick={onClose}
             className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"

@@ -163,8 +163,7 @@ export class EnhancedRemarkRenderer {
    * Preprocess content to handle escaped characters and Door43 patterns
    */
   private preprocessContent(content: string): string {
-    console.log('🔄 Preprocessing markdown content:', content.substring(0, 200) + '...');
-    
+   
     let processed = content
       .replace(/\\n/g, '\n')
       .replace(/\\t/g, '  ')
@@ -202,7 +201,6 @@ export class EnhancedRemarkRenderer {
       console.log('🔗 Found markdown links:', markdownLinks);
     }
 
-    console.log('✅ Preprocessed content:', processed.substring(0, 200) + '...');
     return processed;
   }
 

@@ -20,6 +20,21 @@ interface AcademyModalProps {
   onTALinkClick?: (articleId: string, title?: string) => void; // Handle TA-to-TA navigation
 }
 
+// Utility function to remove the first heading from markdown content to avoid duplication with modal header
+const removeFirstHeading = (content: string): string => {
+  const lines = content.split('\n');
+  let firstHeadingRemoved = false;
+  
+  return lines.filter(line => {
+    // Skip the first heading (# Title)
+    if (!firstHeadingRemoved && line.trim().startsWith('# ')) {
+      firstHeadingRemoved = true;
+      return false;
+    }
+    return true;
+  }).join('\n');
+};
+
 export const AcademyModal: React.FC<AcademyModalProps> = ({
   isOpen,
   onClose,
@@ -159,6 +174,8 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({
 
   if (!isOpen) return null;
 
+  console.log('🔍 AcademyModal:', {isOpen});
+
   // Determine text direction based on resource metadata
   const textDirection = resourceMetadata?.languageDirection || 'ltr';
   const textAlign = textDirection === 'rtl' ? 'text-right rtl' : 'text-left ltr';
@@ -182,10 +199,10 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({
               </div>
               <div>
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {title || article?.title || 'Translation Academy'}
+                  {article?.title || title || 'Translation Academy'}
                 </h2>
-                <p className="text-sm text-gray-600">
-                  Training Article • {articleId}
+                <p className="text-xs text-gray-500 mt-1">
+                  {articleId}
                 </p>
               </div>
             </div>
@@ -231,17 +248,11 @@ export const AcademyModal: React.FC<AcademyModalProps> = ({
             {article && !loading && !error && (
               <div className={`p-6 ${textAlign}`} dir={textDirection}>
                 <div className="max-w-none">
-                  {/* Article Category Badge */}
-                  <div className="mb-4">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                      {article.category}
-                    </span>
-                  </div>
 
                   {/* Article Content */}
                   <div className="prose prose-lg max-w-none">
                     <MarkdownRenderer 
-                      content={article.content}
+                      content={removeFirstHeading(article.content)}
                       currentBook={currentReference.book}
                       onTALinkClick={onTALinkClick ? (articleId: string, title?: string) => {
                         console.log(`📖 TA-to-TA navigation in modal: ${articleId} (${title})`);

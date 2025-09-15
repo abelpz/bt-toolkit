@@ -42,10 +42,6 @@ export function EnhancedPanelSystem() {
   const popoverRefs = useRef<{ [panelId: string]: HTMLDivElement | null }>({});
   const currentResourceIds = useRef<Record<string, string>>({});
 
-  console.log('🎯 EnhancedPanelSystem rendering...', { 
-    hasProcessedConfig: !!processedResourceConfig, 
-    hasPanelConfig: !!panelConfig 
-  });
 
   // Get testament info for smart entries
   const currentBookInfo = getBookInfo(currentReference.book);
@@ -245,25 +241,38 @@ export function EnhancedPanelSystem() {
   // Close dropdown and popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      // Handle dropdowns
+
+      // Handle dropdowns - only update if there's actually a change
       Object.keys(dropdownRefs.current).forEach(panelId => {
         const dropdownRef = dropdownRefs.current[panelId];
         if (dropdownRef && !dropdownRef.contains(event.target as Node)) {
-          setDropdownState(prev => ({
-            ...prev,
-            [panelId]: false
-          }));
+          // Only update if the dropdown is currently open
+          setDropdownState(prev => {
+            if (prev[panelId] === true) {
+              return {
+                ...prev,
+                [panelId]: false
+              };
+            }
+            return prev; // No change needed
+          });
         }
       });
 
-      // Handle popovers
+      // Handle popovers - only update if there's actually a change
       Object.keys(popoverRefs.current).forEach(panelId => {
         const popoverRef = popoverRefs.current[panelId];
         if (popoverRef && !popoverRef.contains(event.target as Node)) {
-          setPopoverState(prev => ({
-            ...prev,
-            [panelId]: false
-          }));
+          // Only update if the popover is currently open
+          setPopoverState(prev => {
+            if (prev[panelId] === true) {
+              return {
+                ...prev,
+                [panelId]: false
+              };
+            }
+            return prev; // No change needed
+          });
         }
       });
     };

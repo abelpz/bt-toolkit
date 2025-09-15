@@ -11,7 +11,7 @@ import { ProcessedWordsLinks, TranslationWordsLink } from '../../services/adapte
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { ResourceMetadata, ResourceType } from '../../types/context';
-import { MarkdownRenderer } from '../ui/MarkdownRenderer';
+import { ResourceModal } from '../modals/ResourceModal';
 import {
   ScriptureTokensBroadcast,
   NoteSelectionBroadcast,
@@ -96,14 +96,122 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
   const [displayError, setDisplayError] = useState<string | null>(error || null);
   const [resourceMetadata, setResourceMetadata] = useState<ResourceMetadata | null>(null);
   const [twTitles, setTwTitles] = useState<Map<string, string>>(new Map());
-  const [selectedLink, setSelectedLink] = useState<TranslationWordsLink | null>(null);
-  const [showLinkDetail, setShowLinkDetail] = useState(false);
-  const [selectedArticle, setSelectedArticle] = useState<{
-    title: string;
-    content: string;
+  
+  // Unified Resource modal state
+  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
+  const [initialResource, setInitialResource] = useState<{
+    type: 'ta' | 'tw';
+    id: string;
+    title?: string;
+  } | undefined>(undefined);
+
+  // TW button titles cache for TW links - using ref to avoid re-render issues
+  const twButtonTitlesRef = useRef<Map<string, string>>(new Map());
+  const [twButtonTitles, setTwButtonTitles] = useState<Map<string, string>>(new Map());
+
+  // Function to fetch TW title for TW link buttons
+  const fetchTWButtonTitle = useCallback(async (twLink: string): Promise<string> => {
+    if (!resourceManager || !processedResourceConfig) {
+      const twInfo = parseTWLink(twLink);
+      return twInfo.term; // Fallback to term
+    }
+
+    const twInfo = parseTWLink(twLink);
+    const cacheKey = `${twInfo.category}/${twInfo.term}`;
+    
+    // Check if already cached in ref (avoid re-render dependency)
+    if (twButtonTitlesRef.current.has(cacheKey)) {
+      return twButtonTitlesRef.current.get(cacheKey)!;
+    }
+
+    try {
+      // Find TW resource config
+      const twResourceConfig = processedResourceConfig.find((config: any) => 
+        config.metadata?.type === 'words' || config.metadata?.id === 'tw'
+      );
+      
+      if (!twResourceConfig) {
+        return twInfo.term; // Fallback to term
+      }
+
+      // Construct content key for TW article
+      const articleId = `bible/${twInfo.category}/${twInfo.term}`;
+      const contentKey = `${twResourceConfig.metadata.server}/${twResourceConfig.metadata.owner}/${twResourceConfig.metadata.language}/${twResourceConfig.metadata.id}/${articleId}`;
+      
+      const content = await resourceManager.getOrFetchContent(
+        contentKey,
+        twResourceConfig.metadata.type as ResourceType
+      );
+      
+      if (content && (content as any).word?.term) {
+        const title = (content as any).word.term;
+        // Update both ref and state cache
+        twButtonTitlesRef.current.set(cacheKey, title);
+        setTwButtonTitles(prev => new Map(prev).set(cacheKey, title));
+        return title;
+      }
+    } catch (error) {
+      console.warn(`Failed to fetch TW title for ${cacheKey}:`, error);
+    }
+
+    return twInfo.term; // Fallback to term
+  }, [resourceManager, processedResourceConfig]);
+
+  // Component for TW button with fetched title
+  const TWButton: React.FC<{ 
     twLink: string;
-  } | null>(null);
-  const [showArticleView, setShowArticleView] = useState(false);
+    onTWLinkClick: (twLink: string) => void;
+  }> = React.memo(({ twLink, onTWLinkClick }) => {
+    // Memoize the parsed result to prevent re-renders
+    const twInfo = useMemo(() => parseTWLink(twLink), [twLink]);
+    const cacheKey = `${twInfo.category}/${twInfo.term}`;
+    
+    // Check if we already have the title cached
+    const cachedTitle = twButtonTitles.get(cacheKey);
+    const [buttonTitle, setButtonTitle] = useState<string>(cachedTitle || twInfo.term);
+    const [isLoading, setIsLoading] = useState(!cachedTitle);
+
+    // Memoize the click handler to prevent re-renders
+    const handleClick = useCallback((e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onTWLinkClick(twLink);
+    }, [twLink, onTWLinkClick]);
+
+    useEffect(() => {
+      // Skip if we already have the title
+      if (cachedTitle) {
+        setButtonTitle(cachedTitle);
+        setIsLoading(false);
+        return;
+      }
+
+      const loadTitle = async () => {
+        try {
+          setIsLoading(true);
+          const title = await fetchTWButtonTitle(twLink);
+          setButtonTitle(title);
+        } catch (error) {
+          console.error(`Failed to load TW title for ${twLink}:`, error);
+          setButtonTitle(twInfo.term); // Fallback
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadTitle();
+    }, [twLink, cachedTitle, twInfo.term]);
+
+    return (
+      <button
+        onClick={handleClick}
+        className="inline-flex items-center px-2 py-1 text-xs text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
+        type="button"
+      >
+        <span className="mr-1" role="img" aria-label="book">📚</span>
+        {isLoading ? '...' : buttonTitle}
+      </button>
+    );
+  });
 
   // Token filter state (for filtering links by clicked tokens)
   const [tokenFilter, setTokenFilter] = useState<{
@@ -926,71 +1034,38 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
     }
   }, [filteredLinks, resourceManager, processedResourceConfig, twTitles, onLinksFiltered]);
 
-  const handleLinkPress = (link: TranslationWordsLink) => {
+  const handleTranslationWordPress = useCallback((twLink: string) => {
+    const twInfo = parseTWLink(twLink);
+    const articleId = `bible/${twInfo.category}/${twInfo.term}`;
+    
+    console.log(`📚 Opening Translation Words article: ${articleId}`);
+    setInitialResource({
+      type: 'tw',
+      id: articleId,
+      title: twInfo.term
+    });
+    setIsResourceModalOpen(true);
+    
+    // Also call the original callback if provided
+    if (onTranslationWordPress) {
+      onTranslationWordPress(twLink);
+    }
+  }, [onTranslationWordPress]);
+
+  const handleLinkPress = useCallback((link: TranslationWordsLink) => {
     if (onLinkPress) {
       onLinkPress(link);
     }
     
     if (!compact) {
-      setSelectedLink(link);
-      setShowLinkDetail(true);
+      // Open the TW article in the ResourceModal
+      handleTranslationWordPress(link.twLink);
     }
-  };
+  }, [onLinkPress, compact, handleTranslationWordPress]);
 
   const handleWordPress = (link: TranslationWordsLink) => {
     if (onWordHighlight) {
       onWordHighlight(link.origWords, parseInt(link.occurrence) || 1);
-    }
-  };
-
-  const handleTranslationWordPress = async (twLink: string) => {
-    try {
-      // Parse the TW link to get the term info
-      const twInfo = parseTWLink(twLink);
-      
-      // Find the TW resource config
-      const twResourceConfig = processedResourceConfig?.find((config: { metadata?: { type?: string } }) => 
-        config.metadata?.type === ResourceType.WORDS
-      );
-      
-      if (!twResourceConfig || !resourceManager) {
-        console.warn('Translation Words resource not found');
-        return;
-      }
-      
-      // Construct the content key for the TW article
-      const articleId = `bible/${twInfo.category}/${twInfo.term}`;
-      const contentKey = `${twResourceConfig.metadata.server}/${twResourceConfig.metadata.owner}/${twResourceConfig.metadata.language}/${twResourceConfig.metadata.id}/${articleId}`;
-      
-      console.log(`🔍 Loading TW article: ${articleId} (key: ${contentKey})`);
-      
-      // Fetch the TW content
-      const twContent = await resourceManager.getOrFetchContent(
-        contentKey,
-        twResourceConfig.metadata.type as ResourceType
-      );
-      
-      if (twContent && (twContent as { word?: { term?: string; definition?: string } }).word) {
-        const wordData = (twContent as { word: { term: string; definition: string } }).word;
-        
-        setSelectedArticle({
-          title: wordData.term,
-          content: wordData.definition,
-          twLink: twLink
-        });
-        setShowArticleView(true);
-        
-        console.log(`✅ Loaded TW article: ${wordData.term}`);
-      } else {
-        console.warn(`⚠️ No content found for TW article: ${articleId}`);
-      }
-    } catch (error) {
-      console.error(`❌ Failed to load TW article for ${twLink}:`, error);
-    }
-    
-    // Also call the original callback if provided
-    if (onTranslationWordPress) {
-      onTranslationWordPress(twLink);
     }
   };
 
@@ -1006,23 +1081,6 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
     return { category: 'unknown', term: twLink };
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'kt': return 'text-blue-600 bg-blue-50 border-blue-200'; // Blue for key terms
-      case 'names': return 'text-green-600 bg-green-50 border-green-200'; // Green for names
-      case 'other': return 'text-purple-600 bg-purple-50 border-purple-200'; // Purple for other terms
-      default: return 'text-gray-600 bg-gray-50 border-gray-200'; // Gray for unknown
-    }
-  };
-
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case 'kt': return 'Key Term';
-      case 'names': return 'Name';
-      case 'other': return 'Other';
-      default: return 'Term';
-    }
-  };
 
   const renderOriginalWords = (origWords: string) => {
     // Check if it contains Hebrew or Greek characters
@@ -1037,8 +1095,6 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
   };
 
   const renderLink = (link: TranslationWordsLink, index: number) => {
-    const twInfo = parseTWLink(link.twLink);
-
     return (
       <div
         key={link.id}
@@ -1124,158 +1180,15 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
           )}
         </div>
 
-        {/* Translation Words definition - more compact */}
-        <button
-          className="w-full bg-green-50 border border-green-200 text-green-800 p-2 rounded hover:bg-green-100 transition-colors text-left"
-          onClick={(e) => {
-            e.stopPropagation();
-            handleTranslationWordPress(link.twLink);
-          }}
-        >
-          <div className="font-medium text-sm">
-            <span role="img" aria-label="book">📖</span> {twTitles.get(twInfo.term) || twInfo.term.replace(/[-_]/g, ' ')}
-          </div>
-        </button>
+        {/* Translation Words button */}
+        <TWButton 
+          twLink={link.twLink}
+          onTWLinkClick={handleTranslationWordPress}
+        />
       </div>
     );
   };
 
-  const renderArticleView = () => {
-    if (!selectedArticle) return null;
-
-    return (
-      <div className="flex flex-col h-full">
-        {/* Header with close button */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
-          <h2 className="text-lg font-semibold text-gray-900 flex items-center">
-            <span role="img" aria-label="book" className="mr-2">📖</span>
-            {selectedArticle.title}
-          </h2>
-          <button
-            className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
-            onClick={() => {
-              setShowArticleView(false);
-              setSelectedArticle(null);
-            }}
-          >
-            ✕
-          </button>
-        </div>
-
-        {/* Article content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="prose prose-sm max-w-none">
-            {selectedArticle.content ? (
-              <MarkdownRenderer 
-                content={selectedArticle.content}
-                className="text-gray-800 leading-relaxed"
-                linkTarget="_blank"
-                headerBaseLevel={2}
-              />
-            ) : (
-              <div className="text-gray-500">No content available</div>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderLinkDetailModal = () => {
-    if (!selectedLink || !showLinkDetail) return null;
-
-    const twInfo = parseTWLink(selectedLink.twLink);
-    const categoryColorClass = getCategoryColor(twInfo.category);
-
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
-            <h2 className="text-xl font-semibold text-gray-900">Translation Words Link</h2>
-            <button
-              className="w-8 h-8 rounded-full bg-gray-200 hover:bg-gray-300 flex items-center justify-center transition-colors"
-              onClick={() => setShowLinkDetail(false)}
-            >
-              ✕
-            </button>
-          </div>
-          
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-            <div className="mb-6">
-              <div className="text-lg font-semibold text-blue-600 mb-3">
-                {selectedLink.reference}
-              </div>
-              {selectedLink.origWords && (
-                (() => {
-                  const linkKey = selectedLink.id || `${selectedLink.reference}-${selectedLink.origWords.trim()}`;
-                  const targetQuote = targetLanguageQuotes.get(linkKey);
-                  
-                  if (targetQuote) {
-                    // Show target language quote when available
-                    return (
-                      <button
-                        className="bg-purple-50 text-purple-800 px-4 py-3 rounded-lg text-base font-medium hover:bg-purple-100 transition-colors"
-                        onClick={() => handleWordPress(selectedLink)}
-                      >
-                        {targetQuote.quote}
-                      </button>
-                    );
-                  } else {
-                    // Show original language words when no target quote is built
-                    return (
-                      <button
-                        className="bg-blue-50 text-blue-800 px-4 py-3 rounded-lg text-base font-medium hover:bg-blue-100 transition-colors"
-                        onClick={() => handleWordPress(selectedLink)}
-                      >
-                        {renderOriginalWords(selectedLink.origWords)}
-                      </button>
-                    );
-                  }
-                })()
-              )}
-            </div>
-
-            <div className="mb-6">
-              <span className={`inline-block px-3 py-2 rounded-full text-sm font-semibold border ${categoryColorClass}`}>
-                {getCategoryLabel(twInfo.category)}
-              </span>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-base font-semibold text-gray-900 mb-3">Translation Word:</h3>
-              <button
-                className="w-full bg-green-50 border border-green-200 text-green-800 p-4 rounded-lg hover:bg-green-100 transition-colors text-left"
-                onClick={() => handleTranslationWordPress(selectedLink.twLink)}
-              >
-                <div className="font-semibold text-lg mb-2">
-                  <span role="img" aria-label="book">📖</span> {twTitles.get(twInfo.term) || twInfo.term.replace(/[-_]/g, ' ')}
-                </div>
-                <div className="text-sm text-green-600 italic">
-                  {twTitles.get(twInfo.term) ? 'Tap to view full definition' : 'Loading title...'}
-                </div>
-              </button>
-            </div>
-
-            {selectedLink.tags && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">Tags:</h3>
-                <p className="text-sm text-gray-600">{selectedLink.tags}</p>
-              </div>
-            )}
-
-            <div className="p-4 bg-gray-100 rounded-lg">
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Link Information:</h3>
-              <div className="space-y-1 text-xs text-gray-600 font-mono">
-                <div>ID: {selectedLink.id}</div>
-                <div>Occurrence: {selectedLink.occurrence}</div>
-                <div>Link: {selectedLink.twLink}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   // Show loading state
   if (isLoading) {
@@ -1309,14 +1222,6 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
     );
   }
 
-  // Show article view if selected
-  if (showArticleView && selectedArticle) {
-    return (
-      <div className={`flex flex-col h-full ${className}`}>
-        {renderArticleView()}
-      </div>
-    );
-  }
 
   return (
     <div className={`flex flex-col h-full ${className}`}>
@@ -1387,7 +1292,15 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
         </div>
       </div>
       
-      {renderLinkDetailModal()}
+      {/* Unified Resource Modal */}
+      <ResourceModal
+        isOpen={isResourceModalOpen}
+        onClose={() => {
+          setIsResourceModalOpen(false);
+          setInitialResource(undefined);
+        }}
+        initialResource={initialResource}
+      />
     </div>
   );
 };
