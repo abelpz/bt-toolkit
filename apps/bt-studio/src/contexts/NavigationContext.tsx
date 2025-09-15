@@ -47,6 +47,15 @@ const useNavigationStore = create<NavigationStore>()(
         { code: 'jhn', name: 'John', testament: 'NT' },
         { code: 'tit', name: 'Titus', testament: 'NT' }
       ],
+      
+      // Navigation history
+      navigationHistory: [{
+        book: 'tit',
+        chapter: 1,
+        verse: 1
+      }],
+      historyIndex: 0,
+      maxHistorySize: 50,
 
       // ========================================================================
       // NAVIGATION ACTIONS
@@ -100,6 +109,31 @@ const useNavigationStore = create<NavigationStore>()(
         }
 
         set((state) => {
+          // Add to history (if not navigating via history)
+          const currentRef = state.currentReference;
+          const isSameReference = 
+            currentRef.book === validatedReference.book &&
+            currentRef.chapter === validatedReference.chapter &&
+            currentRef.verse === validatedReference.verse &&
+            currentRef.endChapter === validatedReference.endChapter &&
+            currentRef.endVerse === validatedReference.endVerse;
+          
+          if (!isSameReference) {
+            // Remove any forward history when navigating to a new location
+            state.navigationHistory = state.navigationHistory.slice(0, state.historyIndex + 1);
+            
+            // Add new reference to history
+            state.navigationHistory.push({ ...validatedReference });
+            
+            // Maintain max history size
+            if (state.navigationHistory.length > state.maxHistorySize) {
+              state.navigationHistory = state.navigationHistory.slice(-state.maxHistorySize);
+            }
+            
+            // Update history index
+            state.historyIndex = state.navigationHistory.length - 1;
+          }
+          
           state.currentBook = reference.book
           state.currentReference = validatedReference
         })
@@ -319,6 +353,83 @@ const useNavigationStore = create<NavigationStore>()(
         console.log(`📚 Using workspace sections for ${bookCode} (${workspaceSections!.length} sections)`)
         // Use workspace sections if they're meaningful
         return workspaceSections!
+      },
+
+      // ========================================================================
+      // HISTORY NAVIGATION ACTIONS
+      // ========================================================================
+      
+      canGoBack: () => {
+        const state = get();
+        return state.historyIndex > 0;
+      },
+
+      canGoForward: () => {
+        const state = get();
+        return state.historyIndex < state.navigationHistory.length - 1;
+      },
+
+      goBack: () => {
+        const state = get();
+        if (state.historyIndex > 0) {
+          const newIndex = state.historyIndex - 1;
+          const targetReference = state.navigationHistory[newIndex];
+          
+          set((draft) => {
+            draft.historyIndex = newIndex;
+            draft.currentBook = targetReference.book;
+            draft.currentReference = targetReference;
+          });
+          
+          // Update URL without adding to history
+          get().updateURL(targetReference);
+          
+          console.log(`⬅️ Navigated back to: ${targetReference.book} ${targetReference.chapter}:${targetReference.verse}`);
+        }
+      },
+
+      goForward: () => {
+        const state = get();
+        if (state.historyIndex < state.navigationHistory.length - 1) {
+          const newIndex = state.historyIndex + 1;
+          const targetReference = state.navigationHistory[newIndex];
+          
+          set((draft) => {
+            draft.historyIndex = newIndex;
+            draft.currentBook = targetReference.book;
+            draft.currentReference = targetReference;
+          });
+          
+          // Update URL without adding to history
+          get().updateURL(targetReference);
+          
+          console.log(`➡️ Navigated forward to: ${targetReference.book} ${targetReference.chapter}:${targetReference.verse}`);
+        }
+      },
+
+      clearHistory: () => {
+        const currentRef = get().currentReference;
+        set((state) => {
+          state.navigationHistory = [{ ...currentRef }];
+          state.historyIndex = 0;
+        });
+        console.log('🧹 Navigation history cleared');
+      },
+
+      getHistoryAt: (index: number) => {
+        const state = get();
+        if (index >= 0 && index < state.navigationHistory.length) {
+          return state.navigationHistory[index];
+        }
+        return null;
+      },
+
+      getHistoryLength: () => {
+        return get().navigationHistory.length;
+      },
+
+      getCurrentHistoryIndex: () => {
+        return get().historyIndex;
       }
     })),
     { name: 'navigation-store' }
@@ -558,36 +669,62 @@ export function useNavigationSelector<T>(selector: (state: NavigationStore) => T
   return useNavigationStore(selector)
 }
 
+// Stable selector functions to prevent infinite loops
+const currentNavigationSelector = (state: NavigationStore) => ({
+  currentBook: state.currentBook,
+  currentReference: state.currentReference,
+  bookInfo: state.getBookInfo(state.currentBook)
+})
+
+const availableBooksSelector = (state: NavigationStore) => ({
+  books: state.availableBooks,
+  getBookInfo: state.getBookInfo
+})
+
+const navigationActionsSelector = (state: NavigationStore) => ({
+  navigateToBook: state.navigateToBook,
+  navigateToReference: state.navigateToReference,
+  navigateToChapter: state.navigateToChapter,
+  navigateToVerse: state.navigateToVerse,
+  navigateToRange: state.navigateToRange,
+  
+  // History navigation
+  canGoBack: state.canGoBack,
+  canGoForward: state.canGoForward,
+  goBack: state.goBack,
+  goForward: state.goForward,
+  clearHistory: state.clearHistory,
+  getHistoryAt: state.getHistoryAt,
+  getHistoryLength: state.getHistoryLength,
+  getCurrentHistoryIndex: state.getCurrentHistoryIndex
+})
+
+const historyIndexSelector = (state: NavigationStore) => state.historyIndex
+
 /**
  * Hook to get current navigation state
  */
 export function useCurrentNavigation() {
-  return useNavigationSelector((state) => ({
-    currentBook: state.currentBook,
-    currentReference: state.currentReference,
-    bookInfo: state.getBookInfo(state.currentBook)
-  }))
+  return useNavigationSelector(currentNavigationSelector)
 }
 
 /**
  * Hook to get available books
  */
 export function useAvailableBooks() {
-  return useNavigationSelector((state) => ({
-    books: state.availableBooks,
-    getBookInfo: state.getBookInfo
-  }))
+  return useNavigationSelector(availableBooksSelector)
 }
 
 /**
  * Hook to get navigation actions
  */
 export function useNavigationActions() {
-  return useNavigationSelector((state) => ({
-    navigateToBook: state.navigateToBook,
-    navigateToReference: state.navigateToReference,
-    navigateToChapter: state.navigateToChapter,
-    navigateToVerse: state.navigateToVerse,
-    navigateToRange: state.navigateToRange
-  }))
+  return useNavigationSelector(navigationActionsSelector)
+}
+
+/**
+ * Hook to get history index
+ */
+export function useNavigationHistoryIndex() {
+  return useNavigationSelector(historyIndexSelector)
 }

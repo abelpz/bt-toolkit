@@ -5,6 +5,7 @@
  */
 
 import { ScriptureNavigator } from './navigation/ScriptureNavigator'
+import { NavigationHistory } from './navigation/NavigationHistory'
 import { AppLogo } from './shared/AppLogo'
 import { NavigationContainer } from './shared/NavigationContainer'
 
@@ -17,6 +18,9 @@ export function NavigationBar() {
 
       {/* Navigation Controls */}
       <div className="flex items-center space-x-3">
+        {/* Navigation History - Simplified version */}
+        <NavigationHistory compact />
+        
         {/* Modern Scripture Navigator */}
         <ScriptureNavigator />
       </div>

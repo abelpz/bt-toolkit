@@ -153,6 +153,11 @@ export interface NavigationState {
   currentBook: string
   currentReference: NavigationReference
   availableBooks: BookInfo[]
+  
+  // Navigation history
+  navigationHistory: NavigationReference[]
+  historyIndex: number
+  maxHistorySize: number
 }
 
 export interface BookInfo {
@@ -533,11 +538,24 @@ export interface WorkspaceActions {
 
 export interface NavigationActions {
   // Navigation
+  // Core navigation actions
   navigateToBook: (bookCode: string) => void
   navigateToReference: (reference: NavigationReference) => void
   navigateToChapter: (chapter: number) => void
   navigateToVerse: (verse: number) => void
   navigateToRange: (startChapter: number, startVerse: number, endChapter?: number, endVerse?: number) => void
+  
+  // History navigation (platform-agnostic)
+  canGoBack: () => boolean
+  canGoForward: () => boolean
+  goBack: () => void
+  goForward: () => void
+  clearHistory: () => void
+  
+  // History inspection
+  getHistoryAt: (index: number) => NavigationReference | null
+  getHistoryLength: () => number
+  getCurrentHistoryIndex: () => number
   
   // URL synchronization
   updateURL: (reference: NavigationReference) => void
