@@ -554,37 +554,49 @@ export function useWorkspaceSelector<T>(selector: (state: WorkspaceStore) => T):
 /**
  * Hook to get workspace loading state
  */
-export function useWorkspaceLoading() {
-  return useWorkspaceSelector((state) => ({
+// Stable selector for workspace loading to prevent infinite loops
+const workspaceLoadingSelector = (state: WorkspaceStore) => {
+  const hasErrors = Object.keys(state.errors).length > 0;
+  return {
     initializing: state.initializing,
     loadingStates: state.loadingStates,
-    hasErrors: Object.keys(state.errors).length > 0,
+    hasErrors,
     errors: state.errors
-  }))
+  };
+};
+
+export function useWorkspaceLoading() {
+  return useWorkspaceSelector(workspaceLoadingSelector);
 }
 
 /**
  * Hook to get workspace configuration
  */
+// Stable selector for workspace config to prevent infinite loops
+const workspaceConfigSelector = (state: WorkspaceStore) => ({
+  owner: state.owner,
+  language: state.language,
+  server: state.server
+});
+
 export function useWorkspaceConfig() {
-  return useWorkspaceSelector((state) => ({
-    owner: state.owner,
-    language: state.language,
-    server: state.server
-  }))
+  return useWorkspaceSelector(workspaceConfigSelector);
 }
 
 /**
  * Hook to get resource information
  */
+// Stable selector for workspace resources to prevent infinite loops
+const workspaceResourcesSelector = (state: WorkspaceStore) => ({
+  resources: state.resources,
+  resourceMetadata: state.resourceMetadata,
+  getResource: state.getResource,
+  isResourceAvailable: state.isResourceAvailable,
+  loadResource: state.loadResource
+});
+
 export function useWorkspaceResources() {
-  return useWorkspaceSelector((state) => ({
-    resources: state.resources,
-    resourceMetadata: state.resourceMetadata,
-    getResource: state.getResource,
-    isResourceAvailable: state.isResourceAvailable,
-    loadResource: state.loadResource
-  }))
+  return useWorkspaceSelector(workspaceResourcesSelector);
 }
 
 /**
@@ -592,4 +604,34 @@ export function useWorkspaceResources() {
  */
 export function useWorkspacePanels() {
   return useWorkspaceSelector((state) => state.panelConfig)
+}
+
+/**
+ * Hook to get processed resource config
+ */
+// Stable selector for processed resource config to prevent infinite loops
+const processedResourceConfigSelector = (state: WorkspaceStore) => state.processedResourceConfig;
+
+export function useProcessedResourceConfig() {
+  return useWorkspaceSelector(processedResourceConfigSelector);
+}
+
+/**
+ * Hook to get workspace language only
+ */
+// Stable selector for workspace language to prevent infinite loops
+const workspaceLanguageSelector = (state: WorkspaceStore) => state.language;
+
+export function useWorkspaceLanguage() {
+  return useWorkspaceSelector(workspaceLanguageSelector);
+}
+
+/**
+ * Hook to get processed resource language only
+ */
+// Stable selector for processed resource language to prevent infinite loops
+const processedResourceLanguageSelector = (state: WorkspaceStore) => state.processedResourceConfig?.language;
+
+export function useProcessedResourceLanguage() {
+  return useWorkspaceSelector(processedResourceLanguageSelector);
 }
