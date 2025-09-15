@@ -31,6 +31,7 @@ interface MarkdownRendererProps {
   // Door43-specific props
   onTALinkClick?: (articleId: string, title?: string) => void;
   onTWLinkClick?: (wordId: string, title?: string) => void;
+  onNavigationClick?: (bookCode: string, chapter: number, verse: number, title?: string) => void;
   onDisabledLinkClick?: (linkInfo: any, title?: string) => void;
   currentBook?: string; // For resolving relative navigation links
 }
@@ -43,6 +44,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   showStats = false,
   onTALinkClick,
   onTWLinkClick,
+  onNavigationClick,
   onDisabledLinkClick,
   currentBook
 }) => {
@@ -85,12 +87,10 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           },
           
           onNavigationClick: (bookCode: string, chapter: number, verse: number, title?: string) => {
-            console.log(`📍 Navigation clicked: ${bookCode} ${chapter}:${verse}`, title);
-            navigateToReference({
-              book: bookCode,
-              chapter,
-              verse
-            });
+            console.log(`🧭 Navigation Link clicked: ${bookCode} ${chapter}:${verse}`, title);
+            if (onNavigationClick) {
+              onNavigationClick(bookCode, chapter, verse, title);
+            }
           },
           
           onDisabledLinkClick: (linkInfo: any, title?: string) => {

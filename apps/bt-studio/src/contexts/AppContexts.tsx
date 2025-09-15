@@ -8,7 +8,9 @@
 import React from 'react'
 import { WorkspaceProvider } from './WorkspaceContext'
 import { NavigationProvider } from './NavigationContext'
+import { ResourceModalProvider } from './ResourceModalContext'
 import { ErrorBoundary } from '../components/ErrorBoundary'
+import { ResourceModalWrapper } from '../components/modals/ResourceModalWrapper'
 
 interface AppContextsProps {
   children: React.ReactNode
@@ -34,7 +36,11 @@ export function AppContexts({
       >
         <ErrorBoundary>
           <NavigationProvider initialBook={initialBook}>
-            {children}
+            <ResourceModalProvider>
+              {children}
+              {/* ResourceModal rendered at app level, outside of panels */}
+              <ResourceModalWrapper />
+            </ResourceModalProvider>
           </NavigationProvider>
         </ErrorBoundary>
       </WorkspaceProvider>
@@ -45,3 +51,4 @@ export function AppContexts({
 // Export individual providers for flexibility
 export { WorkspaceProvider, useWorkspace, useWorkspaceSelector, useWorkspaceLoading, useWorkspaceConfig, useWorkspaceResources } from './WorkspaceContext'
 export { NavigationProvider, useNavigation, useNavigationSelector, useCurrentNavigation, useAvailableBooks, useNavigationActions } from './NavigationContext'
+export { ResourceModalProvider, useResourceModal } from './ResourceModalContext'

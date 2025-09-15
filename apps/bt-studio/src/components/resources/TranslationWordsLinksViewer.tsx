@@ -10,8 +10,8 @@ import { useCurrentState, useResourceAPI, useMessaging } from 'linked-panels';
 import { ProcessedWordsLinks, TranslationWordsLink } from '../../services/adapters/Door43TranslationWordsLinksAdapter';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useResourceModal } from '../../contexts/ResourceModalContext';
 import { ResourceMetadata, ResourceType } from '../../types/context';
-import { ResourceModal } from '../modals/ResourceModal';
 import {
   ScriptureTokensBroadcast,
   NoteSelectionBroadcast,
@@ -60,6 +60,7 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
 }) => {
   const { resourceManager, processedResourceConfig } = useWorkspace();
   const { currentReference } = useNavigation();
+  const { openModal } = useResourceModal();
   
   // Get linked-panels API for broadcasting TWL token groups
   const linkedPanelsAPI = useResourceAPI<NotesTokenGroupsBroadcast>(resourceId);
@@ -97,13 +98,7 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
   const [resourceMetadata, setResourceMetadata] = useState<ResourceMetadata | null>(null);
   const [twTitles, setTwTitles] = useState<Map<string, string>>(new Map());
   
-  // Unified Resource modal state
-  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
-  const [initialResource, setInitialResource] = useState<{
-    type: 'ta' | 'tw';
-    id: string;
-    title?: string;
-  } | undefined>(undefined);
+  // Removed internal modal state - using ResourceModalContext
 
   // TW button titles cache for TW links - using ref to avoid re-render issues
   const twButtonTitlesRef = useRef<Map<string, string>>(new Map());
@@ -1039,18 +1034,17 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
     const articleId = `bible/${twInfo.category}/${twInfo.term}`;
     
     console.log(`📚 Opening Translation Words article: ${articleId}`);
-    setInitialResource({
+    openModal({
       type: 'tw',
       id: articleId,
       title: twInfo.term
     });
-    setIsResourceModalOpen(true);
     
     // Also call the original callback if provided
     if (onTranslationWordPress) {
       onTranslationWordPress(twLink);
     }
-  }, [onTranslationWordPress]);
+  }, [onTranslationWordPress, openModal]);
 
   const handleLinkPress = useCallback((link: TranslationWordsLink) => {
     if (onLinkPress) {
@@ -1292,15 +1286,7 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
         </div>
       </div>
       
-      {/* Unified Resource Modal */}
-      <ResourceModal
-        isOpen={isResourceModalOpen}
-        onClose={() => {
-          setIsResourceModalOpen(false);
-          setInitialResource(undefined);
-        }}
-        initialResource={initialResource}
-      />
+      {/* ResourceModal now managed by ResourceModalContext */}
     </div>
   );
 };

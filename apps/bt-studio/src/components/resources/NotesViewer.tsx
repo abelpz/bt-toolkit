@@ -8,10 +8,10 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useCurrentState, useResourceAPI, useMessaging } from 'linked-panels';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { useResourceModal } from '../../contexts/ResourceModalContext';
 import { ProcessedNotes, TranslationNote } from '../../services/notes-processor';
 import { ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
-import { ResourceModal } from '../modals/ResourceModal';
 import { parseRcLink, isTranslationAcademyLink, getArticleDisplayTitle } from '../../utils/rc-link-parser';
 import { clearComponentTitleCache } from '../../services/remark-plugins/door43-rehype-plugin';
 import { QuoteMatcher, QuoteMatchResult } from '../../services/quote-matcher';
@@ -47,6 +47,7 @@ export function NotesViewer({
   
   const { resourceManager, processedResourceConfig } = useWorkspace();
   const { currentReference } = useNavigation();
+  const { openModal } = useResourceModal();
   
   // Get linked-panels API for broadcasting note token groups
   const linkedPanelsAPI = useResourceAPI<NotesTokenGroupsBroadcast>(resourceId);
@@ -109,13 +110,7 @@ export function NotesViewer({
     timestamp: number;
   } | null>(null);
   
-  // Unified Resource modal state
-  const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
-  const [initialResource, setInitialResource] = useState<{
-    type: 'ta' | 'tw';
-    id: string;
-    title?: string;
-  } | undefined>(undefined);
+  // Removed internal modal state - using ResourceModalContext
 
   // TA button titles cache for support reference buttons - using ref to avoid re-render issues
   const taButtonTitlesRef = useRef<Map<string, string>>(new Map());
@@ -336,12 +331,11 @@ export function NotesViewer({
     const parsed = parseRcLink(supportReference);
     
     if (parsed.isValid) {
-      setInitialResource({
+      openModal({
         type: 'ta',
         id: parsed.fullArticleId,
         title: getArticleDisplayTitle(parsed.articleId, parsed.category)
       });
-      setIsResourceModalOpen(true);
     }
   }, []); // No dependencies needed since it only uses setters
 
@@ -1130,23 +1124,21 @@ export function NotesViewer({
                       currentBook={currentReference.book}
                       onTALinkClick={(articleId: string, title?: string) => {
                         console.log(`📖 Opening Translation Academy article from markdown: ${articleId}`);
-                        setInitialResource({
+                        openModal({
                           type: 'ta',
                           id: articleId,
                           title: title || getArticleDisplayTitle(articleId.split('/')[1] || articleId, articleId.split('/')[0] || 'translate')
                         });
-                        setIsResourceModalOpen(true);
                       }}
                       onTWLinkClick={(wordId: string, title?: string) => {
                         // Add 'bible/' prefix for Door43TranslationWordsAdapter compatibility
                         const fullWordId = wordId.startsWith('bible/') ? wordId : `bible/${wordId}`;
                         console.log(`📚 Opening Translation Words article from markdown: ${wordId} -> ${fullWordId}`);
-                        setInitialResource({
+                        openModal({
                           type: 'tw',
                           id: fullWordId,
                           title: title || wordId.split('/').pop() || wordId
                         });
-                        setIsResourceModalOpen(true);
                       }}
                       onDisabledLinkClick={(linkInfo: any, title?: string) => {
                         console.log(`🚫 Disabled link clicked in markdown:`, linkInfo, title);
@@ -1171,15 +1163,7 @@ export function NotesViewer({
         )}
       </div>
 
-      {/* Unified Resource Modal */}
-      <ResourceModal
-        isOpen={isResourceModalOpen}
-        onClose={() => {
-          setIsResourceModalOpen(false);
-          setInitialResource(undefined);
-        }}
-        initialResource={initialResource}
-      />
+      {/* ResourceModal now managed by ResourceModalContext */}
     </div>
   );
 }
