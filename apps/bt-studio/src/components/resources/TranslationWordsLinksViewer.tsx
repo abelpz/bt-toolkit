@@ -11,6 +11,7 @@ import { ProcessedWordsLinks, TranslationWordsLink } from '../../services/adapte
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { useResourceModal } from '../../contexts/ResourceModalContext';
+import { Icon } from '../ui/Icon';
 import { ResourceMetadata, ResourceType } from '../../types/context';
 import {
   ScriptureTokensBroadcast,
@@ -202,7 +203,7 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
         className="inline-flex items-center px-2 py-1 text-xs text-green-700 bg-green-50 rounded hover:bg-green-100 transition-colors"
         type="button"
       >
-        <span className="mr-1" role="img" aria-label="book">📚</span>
+        <Icon name="translation-words" size={14} className="mr-1 flex-shrink-0" aria-label="book" />
         {isLoading ? '...' : buttonTitle}
       </button>
     );
@@ -1118,8 +1119,8 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
                 title="This color matches the token underlining in scripture"
               ></div>
             )}
-            <div className="text-xs font-semibold text-blue-600">
-              {link.reference}
+          <div className="text-xs font-semibold text-blue-600">
+            {link.reference}
             </div>
           </div>
           {parseInt(link.occurrence) > 1 && (
@@ -1140,39 +1141,39 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
                 if (targetQuote) {
                   // Show target language quote when available
                   return (
-                    <button
+            <button
                       className="bg-purple-50 text-purple-800 px-2 py-1 rounded text-xs font-medium hover:bg-purple-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleWordPress(link);
-                      }}
-                    >
+              onClick={(e) => {
+                e.stopPropagation();
+                handleWordPress(link);
+              }}
+            >
                       {targetQuote.quote}
-                    </button>
+            </button>
                   );
                 } else {
                   // Show original language words when no target quote is built
                   return (
-                    <button
+        <button
                       className="bg-blue-50 text-blue-800 px-2 py-1 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
+          onClick={(e) => {
+            e.stopPropagation();
                         handleWordPress(link);
-                      }}
-                    >
+          }}
+        >
                       {renderOriginalWords(link.origWords)}
-                    </button>
+        </button>
                   );
                 }
               })()}
-            </div>
+        </div>
           )}
           {link.tags && (
             <span className="text-xs text-gray-500">
               {link.tags}
             </span>
-          )}
-        </div>
+              )}
+            </div>
 
         {/* Translation Words button */}
         <TWButton 
@@ -1217,14 +1218,14 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
   }
 
 
-  return (
-    <div className={`flex flex-col h-full ${className}`}>
+    return (
+      <div className={`flex flex-col h-full ${className}`}>
       {/* Token Filter Banner */}
       {tokenFilter && (
         <div className="bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <span className="text-blue-600 text-sm font-medium">
-              <span role="img" aria-label="Target">🎯</span> 
+              <Icon name="search" size={16} className="text-green-600" aria-label="Target" /> 
             </span>
             <span className="text-blue-800 font-mono text-sm bg-blue-100 px-2 py-1 rounded">
               {tokenFilter.originalLanguageToken.content}
@@ -1232,7 +1233,7 @@ export const TranslationWordsLinksViewer: React.FC<TranslationWordsLinksViewerPr
             <span className="text-blue-600 text-xs">
               ({filteredLinks.length})
             </span>
-          </div>
+      </div>
           <button
             onClick={() => {
               setTokenFilter(null);

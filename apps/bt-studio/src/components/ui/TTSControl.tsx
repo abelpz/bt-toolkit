@@ -9,6 +9,7 @@ import React, { useState } from 'react';
 import { useTTS } from '../../hooks/useTTS';
 import { getTTSService } from '../../services/tts/tts-service';
 import { TTSWordBoundary } from '../../types/tts';
+import { Icon, IconButton } from './Icon';
 
 export interface TTSControlProps {
   /** Text content to be spoken */
@@ -133,12 +134,12 @@ export const TTSControl: React.FC<TTSControlProps> = ({
     return 'Play text with speech';
   };
 
-  const getPlayButtonIcon = (): string => {
-    if (hasError) return '⚠️';
-    if (isLoading) return '⏳';
-    if (isPlaying) return '⏸️';
-    if (isPaused) return '▶️';
-    return '🔊';
+  const getPlayButtonIcon = () => {
+    if (hasError) return 'warning';
+    if (isLoading) return 'loading';
+    if (isPlaying) return 'pause';
+    if (isPaused) return 'play';
+    return 'volume';
   };
 
   const getButtonColor = (): string => {
@@ -170,66 +171,44 @@ export const TTSControl: React.FC<TTSControlProps> = ({
       return (
         <div className={`inline-flex items-center space-x-1 ${className}`}>
           {/* Play/Pause Button */}
-          <button
+          <IconButton
+            name={getPlayButtonIcon()}
             onClick={handlePlayPauseClick}
             disabled={disabled || isLoading}
             title={getPlayButtonTitle()}
-            className={`
-              inline-flex items-center justify-center
-              w-8 h-8 rounded-full
-              ${getButtonColor()}
-              hover:bg-gray-100 active:bg-gray-200
-              transition-colors duration-200
-              disabled:opacity-50 disabled:cursor-not-allowed
-            `}
-          >
-            <span className="text-sm" role="img" aria-label={getPlayButtonTitle()}>
-              {getPlayButtonIcon()}
-            </span>
-          </button>
+            aria-label={getPlayButtonTitle()}
+            variant="ghost"
+            buttonSize="md"
+            className={getButtonColor()}
+          />
           
           {/* Stop Button */}
-          <button
+          <IconButton
+            name="stop"
             onClick={handleStop}
             disabled={disabled}
             title="Stop and rewind"
-            className={`
-              inline-flex items-center justify-center
-              w-8 h-8 rounded-full
-              text-gray-600 hover:text-red-600
-              hover:bg-gray-100 active:bg-gray-200
-              transition-colors duration-200
-              disabled:opacity-50 disabled:cursor-not-allowed
-            `}
-          >
-            <span className="text-sm" role="img" aria-label="Stop and rewind">
-              ⏹️
-            </span>
-          </button>
+            aria-label="Stop and rewind"
+            variant="ghost"
+            buttonSize="md"
+            className="text-gray-600 hover:text-red-600"
+          />
         </div>
       );
     }
 
     // Single play button when not playing
     return (
-      <button
+      <IconButton
+        name={getPlayButtonIcon()}
         onClick={handlePlayPauseClick}
         disabled={disabled || isLoading}
         title={getPlayButtonTitle()}
-        className={`
-          inline-flex items-center justify-center
-          w-8 h-8 rounded-full
-          ${getButtonColor()}
-          hover:bg-gray-100 active:bg-gray-200
-          transition-colors duration-200
-          disabled:opacity-50 disabled:cursor-not-allowed
-          ${className}
-        `}
-      >
-        <span className="text-sm" role="img" aria-label={getPlayButtonTitle()}>
-          {getPlayButtonIcon()}
-        </span>
-      </button>
+        aria-label={getPlayButtonTitle()}
+        variant="ghost"
+        buttonSize="md"
+        className={`${getButtonColor()} ${className}`}
+      />
     );
   }
 
@@ -249,9 +228,11 @@ export const TTSControl: React.FC<TTSControlProps> = ({
           disabled:opacity-50 disabled:cursor-not-allowed
         `}
       >
-        <span className="text-sm" role="img" aria-label={getPlayButtonTitle()}>
-          {getPlayButtonIcon()}
-        </span>
+        <Icon
+          name={getPlayButtonIcon()}
+          size={14}
+          className="flex-shrink-0"
+        />
         {!isLoading && (
           <span className="hidden sm:inline">
             {hasError ? 'Error' : isPlaying ? 'Pause' : isPaused ? 'Resume' : 'Play'}
@@ -261,21 +242,15 @@ export const TTSControl: React.FC<TTSControlProps> = ({
 
       {/* Stop button when playing/paused */}
       {(isPlaying || isPaused) && (
-        <button
+        <IconButton
+          name="stop"
           onClick={handleStop}
           title="Stop and rewind"
-          className="
-            inline-flex items-center justify-center
-            w-6 h-6 rounded
-            text-gray-500 hover:text-red-600
-            hover:bg-gray-100
-            transition-colors duration-200
-          "
-        >
-          <span className="text-xs" role="img" aria-label="Stop and rewind">
-            ⏹️
-          </span>
-        </button>
+          aria-label="Stop and rewind"
+          variant="ghost"
+          buttonSize="sm"
+          className="text-gray-500 hover:text-red-600"
+        />
       )}
 
       {/* Progress indicator */}

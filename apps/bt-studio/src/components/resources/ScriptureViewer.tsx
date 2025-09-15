@@ -13,6 +13,7 @@ import { ScriptureTokensBroadcast } from '../../types/scripture-messages';
 import { extractTokensFromVerseRange, getTokenSummary } from '../../utils/scripture-token-utils';
 import { TTSControl } from '../ui/TTSControl';
 import { TTSWordBoundary } from '../../types/tts';
+import { Icon } from '../ui/Icon';
 
 export interface ScriptureViewerProps {
   scripture?: OptimizedScripture;
@@ -383,7 +384,7 @@ export function ScriptureViewer({
       <div className="h-full flex items-center justify-center bg-red-50">
         <div className="text-center max-w-md">
           <div className="text-red-500 text-xl mb-2">
-            <span role="img" aria-label="Warning">⚠️</span>
+            <Icon name="warning" size={16} className="text-yellow-500" aria-label="Warning" />
           </div>
           <h3 className="text-lg font-medium text-red-900 mb-2">Failed to Load Scripture</h3>
           <p className="text-red-700 text-sm">{error}</p>
@@ -398,7 +399,7 @@ export function ScriptureViewer({
       <div className="h-full flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md">
           <div className="text-gray-400 text-xl mb-2">
-            <span role="img" aria-label="Book">📖</span>
+            <Icon name="book-open" size={16} className="text-gray-500" aria-label="Book" />
           </div>
           <p className="text-gray-600 mb-4">No scripture content available</p>
           
@@ -426,7 +427,7 @@ export function ScriptureViewer({
           {/* Navigation Reference Display for testing */}
           <div className="mt-4 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 rounded text-sm inline-block">
             <span className="text-blue-800 dark:text-blue-200 font-medium">
-              <span role="img" aria-label="Location">📍</span> Navigation: {formatNavigationRange()}
+              <Icon name="search" size={14} className="inline mr-1" aria-label="Location" /> Navigation: {formatNavigationRange()}
             </span>
           </div>
         </div>

@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { Icon } from '../ui/Icon';
 import { TranslatorSection } from '../../types/context';
 
 interface VerseRange {
@@ -239,7 +240,7 @@ export function ScriptureNavigator() {
             transition-colors duration-200
           "
         >
-          <span className="text-blue-600" role="img" aria-label="book">📖</span>
+          <Icon name="book-open" size={16} className="text-blue-600" aria-label="book" />
           <span>{currentBookInfo?.name || currentReference.book.toUpperCase()}</span>
           <span className="text-gray-400">
             ▼
@@ -260,7 +261,7 @@ export function ScriptureNavigator() {
             }
           `}
         >
-          <span className="text-green-600" role="img" aria-label="target">🎯</span>
+          <Icon name="search" size={16} className="text-green-600" aria-label="target" />
           <span>{formatReferenceOnly()}</span>
           {isContentLoaded ? (
             <span className="text-gray-400">

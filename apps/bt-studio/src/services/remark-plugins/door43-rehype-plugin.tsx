@@ -9,6 +9,7 @@ import React, { useState, useEffect, memo } from 'react';
 import { visit } from 'unist-util-visit';
 import type { Node } from 'unist';
 import type { Element } from 'hast';
+import { Icon } from '../../components/ui/Icon';
 import { 
   parseRcLink, 
   parseRelativeLink, 
@@ -452,13 +453,13 @@ const Door43Link: React.FC<{
     }
   };
 
-  const getIcon = (): string => {
+  const getIcon = () => {
     switch (parsedLink.resourceType) {
-      case 'ta': return '🎓';
-      case 'tw': return '📚';
-      case 'tn': return '📍';
-      case 'obs': return '📜';
-      default: return '🔗';
+      case 'ta': return 'academy';
+      case 'tw': return 'translation-words';
+      case 'tn': return 'search'; // Navigation/search icon for translation notes
+      case 'obs': return 'book-open'; // Open book for OBS
+      default: return 'file'; // Generic file icon for other links
     }
   };
 
@@ -502,7 +503,7 @@ const Door43Link: React.FC<{
       title={getTooltip()}
       style={{ cursor: isClickable ? 'pointer' : 'default' }}
     >
-      <span className="text-xs">{getIcon()}</span>
+      <Icon name={getIcon()} size={12} className="flex-shrink-0" />
       <span>
         {shouldShowFetchedTitle ? fetchedTitle : (
           isLoadingTitle && (parsedLink.resourceType === 'ta' || parsedLink.resourceType === 'tw') 

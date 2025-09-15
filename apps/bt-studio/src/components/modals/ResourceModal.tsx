@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { useNavigation } from '../../contexts/NavigationContext';
+import { Icon, IconButton } from '../ui/Icon';
 import { AcademyArticle, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
@@ -440,8 +441,8 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
 
   // Removed getCategoryColor as it's not being used in the current UI
 
-  const getResourceIcon = (type: ResourceContentType): string => {
-    return type === 'ta' ? '🎓' : '📚';
+  const getResourceIcon = (type: ResourceContentType) => {
+    return type === 'ta' ? 'academy' : 'translation-words';
   };
 
   const getResourceTypeLabel = (type: ResourceContentType): string => {
@@ -463,9 +464,11 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
           aria-label="Restore resource modal"
         >
           <div className="flex items-center space-x-2">
-            <span role="img" aria-label={currentResource ? getResourceTypeLabel(currentResource.type) : 'Resource'}>
-              {currentResource ? getResourceIcon(currentResource.type) : '📖'}
-            </span>
+            <Icon
+              name={currentResource ? getResourceIcon(currentResource.type) : 'book-open'}
+              size={16}
+              aria-label={currentResource ? getResourceTypeLabel(currentResource.type) : 'Resource'}
+            />
             <span className="hidden sm:block text-sm font-medium">
               {currentResource?.displayTitle || currentResource?.title || 'Resource'}
             </span>
@@ -494,34 +497,24 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
           <div className="flex items-center space-x-2 flex-1">
             {/* Navigation Controls */}
             <div className="flex items-center space-x-1">
-              <button
+              <IconButton
+                name="chevron-left"
                 onClick={navigateBack}
                 disabled={!canGoBack}
-                className={`p-1.5 rounded-md transition-colors ${
-                  canGoBack 
-                    ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100' 
-                    : 'text-gray-300 cursor-not-allowed'
-                }`}
+                variant="ghost"
+                buttonSize="sm"
+                className={canGoBack ? 'text-gray-600 hover:text-gray-800' : 'text-gray-300'}
                 aria-label="Go back"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <button
+              />
+              <IconButton
+                name="chevron-right"
                 onClick={navigateForward}
                 disabled={!canGoForward}
-                className={`p-1.5 rounded-md transition-colors ${
-                  canGoForward 
-                    ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100' 
-                    : 'text-gray-300 cursor-not-allowed'
-                }`}
+                variant="ghost"
+                buttonSize="sm"
+                className={canGoForward ? 'text-gray-600 hover:text-gray-800' : 'text-gray-300'}
                 aria-label="Go forward"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </button>
+              />
             </div>
 
             {/* Resource Info */}
@@ -530,9 +523,12 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
                 <div className="w-px h-5 bg-gray-300 mx-2" />
                 <div className="flex items-center space-x-2">
                   <div className="flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full">
-                    <span role="img" aria-label={getResourceTypeLabel(currentResource.type)} className="text-sm">
-                      {getResourceIcon(currentResource.type)}
-                    </span>
+                    <Icon
+                      name={getResourceIcon(currentResource.type)}
+                      size={14}
+                      aria-label={getResourceTypeLabel(currentResource.type)}
+                      className="text-blue-600"
+                    />
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900 leading-tight">
@@ -549,26 +545,24 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
           
           <div className="flex items-center space-x-1">
             {/* Minimize Button */}
-            <button
+            <IconButton
+              name="minimize"
               onClick={handleMinimize}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              variant="ghost"
+              buttonSize="sm"
+              className="text-gray-400 hover:text-gray-600"
               aria-label="Minimize modal"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-              </svg>
-            </button>
+            />
             
             {/* Close Button */}
-            <button
+            <IconButton
+              name="close"
               onClick={onClose}
-              className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              variant="ghost"
+              buttonSize="sm"
+              className="text-gray-400 hover:text-gray-600"
               aria-label="Close modal"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
+            />
           </div>
         </div>
 
@@ -586,7 +580,7 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
           {error && (
             <div className="flex items-center justify-center p-12">
               <div className="text-center text-red-600">
-                <span role="img" aria-label="error">⚠️</span>
+                <Icon name="warning" size={16} className="text-red-500" aria-label="error" />
                 <p className="mt-2 font-medium">Failed to load content</p>
                 <p className="text-sm text-gray-500 mt-1">{error}</p>
               </div>
