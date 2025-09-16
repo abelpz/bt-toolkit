@@ -1330,8 +1330,8 @@ export function NotesViewer({
                     : ''
                 } ${
                   shouldNoteHaveColorIndicator(note) && activeNoteId === (note.id || `${note.reference}-${note.quote}`)
-                    ? 'border-blue-500 bg-blue-50 shadow-md'
-                    : 'border-gray-200 bg-white hover:bg-blue-50/50'
+                    ? 'border-gray-300 border-2 shadow-md'
+                    : 'border-gray-200 bg-white hover:bg-blue-50/20'
                 }`}
                 onClick={shouldNoteHaveColorIndicator(note) ? () => handleNoteClick(note) : undefined}
                 title={shouldNoteHaveColorIndicator(note) ? "Click to highlight this note's tokens in scripture" : undefined}

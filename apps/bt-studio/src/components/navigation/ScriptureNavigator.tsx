@@ -370,6 +370,7 @@ export function ScriptureNavigator() {
               <Icon name="book-open" size={20} />
             </div>
           }
+          disableContentScrolling={bookModalTab === 'passages'}
         >
           <div className="space-y-4">
             {/* Book Modal Tabs */}
@@ -752,9 +753,10 @@ interface ModalProps {
   onClose: () => void;
   title: string | React.ReactNode;
   children: React.ReactNode;
+  disableContentScrolling?: boolean;
 }
 
-function Modal({ isOpen, onClose, title, children }: ModalProps) {
+function Modal({ isOpen, onClose, title, children, disableContentScrolling = false }: ModalProps) {
   useEffect(() => {
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -800,7 +802,7 @@ function Modal({ isOpen, onClose, title, children }: ModalProps) {
           </div>
           
           {/* Content */}
-          <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+          <div className={`p-4 ${disableContentScrolling ? '' : 'overflow-y-auto max-h-[calc(90vh-80px)]'}`}>
             {children}
           </div>
         </div>
