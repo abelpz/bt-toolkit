@@ -38,16 +38,15 @@ const TokenUnderliningContext = createContext<TokenUnderliningContextType | null
 // Colors are assigned cyclically using modulo operation: colorIndex = groupCount % COLOR_CLASSES.length
 // Each color has active (bright) and inactive (dimmed border only with /20 suffix) variants
 export const COLOR_CLASSES = [
-  { active: 'border-b-2 border-blue-500 bg-blue-100 font-medium', inactive: 'border-b-2 border-blue-500/30', bgColor: 'bg-blue-500' },
-  { active: 'border-b-2 border-green-500 bg-green-100 font-medium', inactive: 'border-b-2 border-green-500/30', bgColor: 'bg-green-500' },
-  { active: 'border-b-2 border-purple-500 bg-purple-100 font-medium', inactive: 'border-b-2 border-purple-500/30', bgColor: 'bg-purple-500' },
-  { active: 'border-b-2 border-indigo-500 bg-indigo-100 font-medium', inactive: 'border-b-2 border-indigo-500/30', bgColor: 'bg-indigo-500' },
-  { active: 'border-b-2 border-teal-500 bg-teal-100 font-medium', inactive: 'border-b-2 border-teal-500/30', bgColor: 'bg-teal-500' },
-  { active: 'border-b-2 border-cyan-500 bg-cyan-100 font-medium', inactive: 'border-b-2 border-cyan-500/30', bgColor: 'bg-cyan-500' },
-  { active: 'border-b-2 border-violet-500 bg-violet-100 font-medium', inactive: 'border-b-2 border-violet-500/30', bgColor: 'bg-violet-500' },
-  { active: 'border-b-2 border-sky-500 bg-sky-100 font-medium', inactive: 'border-b-2 border-sky-500/30', bgColor: 'bg-sky-500' },
-  { active: 'border-b-2 border-emerald-500 bg-emerald-100 font-medium', inactive: 'border-b-2 border-emerald-500/30', bgColor: 'bg-emerald-500' },
-  { active: 'border-b-2 border-slate-500 bg-slate-100 font-medium', inactive: 'border-b-2 border-slate-500/30', bgColor: 'bg-slate-500' },
+  { active: 'border-b-2 border-blue-500 bg-blue-100 font-medium', inactive: 'border-b-2 border-dotted border-blue-500/30', bgColor: 'bg-blue-500' },
+  { active: 'border-b-2 border-green-500 bg-green-100 font-medium', inactive: 'border-b-2 border-dotted border-green-500/30', bgColor: 'bg-green-500' },
+  { active: 'border-b-2 border-purple-500 bg-purple-100 font-medium', inactive: 'border-b-2 border-dotted border-purple-500/30', bgColor: 'bg-purple-500' },
+  { active: 'border-b-2 border-indigo-500 bg-indigo-100 font-medium', inactive: 'border-b-2 border-dotted border-indigo-500/30', bgColor: 'bg-indigo-500' },
+  { active: 'border-b-2 border-teal-500 bg-teal-100 font-medium', inactive: 'border-b-2 border-dotted border-teal-500/30', bgColor: 'bg-teal-500' },
+  { active: 'border-b-2 border-cyan-500 bg-cyan-100 font-medium', inactive: 'border-b-2 border-dotted border-cyan-500/30', bgColor: 'bg-cyan-500' },
+  { active: 'border-b-2 border-violet-500 bg-violet-100 font-medium', inactive: 'border-b-2 border-dotted border-violet-500/30', bgColor: 'bg-violet-500' },
+  { active: 'border-b-2 border-sky-500 bg-sky-100 font-medium', inactive: 'border-b-2 border-dotted border-sky-500/30', bgColor: 'bg-sky-500' },
+  { active: 'border-b-2 border-emerald-500 bg-emerald-100 font-medium', inactive: 'border-b-2 border-dotted border-emerald-500/30', bgColor: 'bg-emerald-500' },
 ];
 
 export const TokenUnderliningProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
