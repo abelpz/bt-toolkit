@@ -368,7 +368,6 @@ export function ScriptureNavigator() {
           title={
             <div className="flex items-center space-x-2 text-gray-400">
               <Icon name="book-open" size={20} />
-              <span className="hidden sm:inline">Navigate</span>
             </div>
           }
         >
@@ -513,7 +512,7 @@ function BookSelector({ availableBooks, selectedBook, onBookSelect }: BookSelect
   return (
     <div className="space-y-2">
       
-      <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto overflow-x-hidden">
+      <div className="grid grid-cols-2 gap-2 max-h-[calc(90vh-200px)] overflow-y-auto overflow-x-hidden">
         {availableBooks.map((book) => (
           <button
             key={book.code}
@@ -832,12 +831,52 @@ function PassageSetSelector({ passageSet, error, onPassageSelect }: PassageSetSe
     setExpandedGroups(newExpanded);
   };
 
+  // Helper function to check if a node matches the search term
+  const nodeMatchesSearch = (node: PassageSetNode): boolean => {
+    if (!searchTerm) return true;
+    
+    const searchLower = searchTerm.toLowerCase();
+    
+    if (node.type === 'group') {
+      const group = node as PassageGroup;
+      // Check if group label or description matches
+      if (group.label.toLowerCase().includes(searchLower) ||
+          group.description?.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+      // Check if any child matches
+      return group.children.some(child => nodeMatchesSearch(child));
+    } else {
+      const leaf = node as PassageLeaf;
+      // Check if leaf label matches
+      if (leaf.label.toLowerCase().includes(searchLower)) {
+        return true;
+      }
+      // Check if any passage matches
+      return leaf.passages.some(passage => {
+        const bookInfo = getBookInfo(passage.bookCode);
+        const bookName = bookInfo?.name || passage.bookCode;
+        
+        return passage.label?.toLowerCase().includes(searchLower) ||
+               passage.metadata?.title?.toLowerCase().includes(searchLower) ||
+               passage.bookCode.toLowerCase().includes(searchLower) ||
+               bookName.toLowerCase().includes(searchLower);
+      });
+    }
+  };
+
   const renderPassageSetNode = (node: PassageSetNode, depth = 0): React.ReactNode => {
+    // Filter out nodes that don't match the search
+    if (!nodeMatchesSearch(node)) {
+      return null;
+    }
+
     const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 12)}` : '';
     
     if (node.type === 'group') {
       const group = node as PassageGroup;
-      const isExpanded = expandedGroups.has(group.id);
+      // Auto-expand groups when searching to show matching results
+      const isExpanded = searchTerm ? true : expandedGroups.has(group.id);
       
       return (
         <div key={group.id} className={`${indentClass}`}>
@@ -895,15 +934,22 @@ function PassageSetSelector({ passageSet, error, onPassageSelect }: PassageSetSe
             <div className="font-medium text-sm text-gray-800 mb-2">{leaf.label}</div>
             <div className="space-y-2">
               {leaf.passages.map((passage, index) => {
-                // Filter passages based on search term
+                // Always calculate bookName and bookInfo for use in rendering
                 const bookInfo = getBookInfo(passage.bookCode);
                 const bookName = bookInfo?.name || passage.bookCode;
                 
-                if (searchTerm && !passage.label?.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                    !passage.metadata?.title?.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                    !passage.bookCode.toLowerCase().includes(searchTerm.toLowerCase()) &&
-                    !bookName.toLowerCase().includes(searchTerm.toLowerCase())) {
-                  return null;
+                // If there's a search term, only show passages that match
+                if (searchTerm) {
+                  const searchLower = searchTerm.toLowerCase();
+                  
+                  const passageMatches = passage.label?.toLowerCase().includes(searchLower) ||
+                                       passage.metadata?.title?.toLowerCase().includes(searchLower) ||
+                                       passage.bookCode.toLowerCase().includes(searchLower) ||
+                                       bookName.toLowerCase().includes(searchLower);
+                  
+                  if (!passageMatches) {
+                    return null;
+                  }
                 }
 
                 const refString = typeof passage.ref === 'string' 
@@ -1036,7 +1082,7 @@ function PassageSetSelector({ passageSet, error, onPassageSelect }: PassageSetSe
       </div>
 
       {/* Passage Set Navigation */}
-      <div className="max-h-96 overflow-y-auto space-y-2">
+      <div className="max-h-[calc(90vh-300px)] overflow-y-auto space-y-2">
         {passageSet.root.map(node => renderPassageSetNode(node))}
       </div>
     </div>

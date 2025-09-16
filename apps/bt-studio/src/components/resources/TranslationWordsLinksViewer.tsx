@@ -26,6 +26,7 @@ import {
   ScriptureTokensBroadcast,
   NoteSelectionBroadcast,
   TokenClickBroadcast,
+  VerseReferenceFilterBroadcast,
   NoteTokenGroup,
 } from '../../types/scripture-messages';
 import type {
@@ -263,6 +264,17 @@ export const TranslationWordsLinksViewer: React.FC<
       content: string;
       alignedSemanticIds?: string[];
       verseRef: string;
+    };
+    sourceResourceId: string;
+    timestamp: number;
+  } | null>(null);
+
+  // Verse reference filter state (for filtering links by verse reference)
+  const [verseReferenceFilter, setVerseReferenceFilter] = useState<{
+    verseReference: {
+      book: string;
+      chapter: number;
+      verse: number;
     };
     sourceResourceId: string;
     timestamp: number;
@@ -549,6 +561,9 @@ export const TranslationWordsLinksViewer: React.FC<
           tokenClickEvent
         );
 
+        // Clear verse reference filter when token filter is applied
+        setVerseReferenceFilter(null);
+
         // Set token filter based on clicked token
         setTokenFilter({
           originalLanguageToken: {
@@ -564,9 +579,36 @@ export const TranslationWordsLinksViewer: React.FC<
     },
   });
 
-  // Clear token filter when navigation changes (since messages are immediate/transient)
+  // Listen for verse reference filter broadcasts via linked-panels events (transient messages)
+  useMessaging({
+    resourceId,
+    eventTypes: ['verse-reference-filter-broadcast'],
+    onEvent: (event) => {
+      if (event.type === 'verse-reference-filter-broadcast') {
+        const verseRefEvent = event as VerseReferenceFilterBroadcast;
+        console.log('📍 TWL Viewer received verse reference filter event:', verseRefEvent);
+        
+        // Clear token filter when verse reference filter is applied
+        setTokenFilter(null);
+        
+        // Set verse reference filter based on clicked verse
+        setVerseReferenceFilter({
+          verseReference: {
+            book: verseRefEvent.verseReference.book,
+            chapter: verseRefEvent.verseReference.chapter,
+            verse: verseRefEvent.verseReference.verse
+          },
+          sourceResourceId: verseRefEvent.sourceResourceId,
+          timestamp: verseRefEvent.timestamp
+        });
+      }
+    },
+  });
+
+  // Clear filters when navigation changes (since messages are immediate/transient)
   useEffect(() => {
     setTokenFilter(null);
+    setVerseReferenceFilter(null);
   }, [currentReference.book, currentReference.chapter, currentReference.verse]);
 
   // Update local state when broadcast changes
@@ -1136,68 +1178,136 @@ export const TranslationWordsLinksViewer: React.FC<
   }, []); // Empty dependency array is INTENTIONAL - ensures cleanup only on unmount (team-review pattern)
 
 
-  // Apply token filter on top of navigation-filtered links with fallback
-  const { filteredLinks, tokenFilterCount } = useMemo(() => {
-    if (!tokenFilter || !quoteMatches.size) {
-      return { filteredLinks: filteredLinksByNavigation, tokenFilterCount: filteredLinksByNavigation.length };
+  // Apply secondary filter (token or verse reference) on top of navigation-filtered links with fallback
+  const { filteredLinks, secondaryFilterCount, secondaryFilterType } = useMemo(() => {
+    // If no secondary filter is active, return navigation-filtered links
+    if (!tokenFilter && !verseReferenceFilter) {
+      return { 
+        filteredLinks: filteredLinksByNavigation, 
+        secondaryFilterCount: filteredLinksByNavigation.length,
+        secondaryFilterType: 'none' as const
+      };
     }
 
-    console.log('🔍 Applying token filter to TWL links:', {
-      tokenFilter: tokenFilter.originalLanguageToken,
-      totalLinks: filteredLinksByNavigation.length,
-      quoteMatchesCount: quoteMatches.size,
-    });
+    // Handle token filter (quote-based filtering)
+    if (tokenFilter && quoteMatches.size > 0) {
+      console.log('🔍 Applying token filter to TWL links:', {
+        tokenFilter: tokenFilter.originalLanguageToken,
+        totalLinks: filteredLinksByNavigation.length,
+        quoteMatchesCount: quoteMatches.size,
+      });
 
-    // Filter links that have quote matches containing the clicked token
-    const tokenFilteredLinks = filteredLinksByNavigation.filter((link) => {
-      const linkKey = link.id || `${link.reference}-${link.origWords?.trim()}`;
-      const quoteMatch = quoteMatches.get(linkKey);
+      // Filter links that have quote matches containing the clicked token
+      const tokenFilteredLinks = filteredLinksByNavigation.filter((link) => {
+        const linkKey = link.id || `${link.reference}-${link.origWords?.trim()}`;
+        const quoteMatch = quoteMatches.get(linkKey);
 
-      if (!quoteMatch || !quoteMatch.totalTokens.length) {
-        return false;
+        if (!quoteMatch || !quoteMatch.totalTokens.length) {
+          return false;
+        }
+
+        // Check if any of the link's matched tokens have the same ID as the clicked token
+        const hasMatchingToken = quoteMatch.totalTokens.some(
+          (token) =>
+            token.id.toString() ===
+              tokenFilter.originalLanguageToken.semanticId ||
+            (tokenFilter.originalLanguageToken.alignedSemanticIds &&
+              tokenFilter.originalLanguageToken.alignedSemanticIds.includes(
+                token.id.toString()
+              ))
+        );
+
+        if (hasMatchingToken) {
+          console.log('✅ TWL Link matches token filter:', {
+            linkId: linkKey,
+            origWords: link.origWords,
+            matchedTokenIds: quoteMatch.totalTokens.map((t) => t.id),
+            filterTokenId: tokenFilter.originalLanguageToken.semanticId,
+          });
+        }
+
+        return hasMatchingToken;
+      });
+
+      // Fallback: If token filter produces no results, show all navigation-filtered links
+      // but keep the actual filter count (0) for display
+      if (tokenFilteredLinks.length === 0) {
+        console.log('🔄 TWL - Token filter produced no results, falling back to navigation filter');
+        return { 
+          filteredLinks: filteredLinksByNavigation, 
+          secondaryFilterCount: 0,
+          secondaryFilterType: 'token' as const
+        };
       }
 
-      // Check if any of the link's matched tokens have the same ID as the clicked token
-      const hasMatchingToken = quoteMatch.totalTokens.some(
-        (token) =>
-          token.id.toString() ===
-            tokenFilter.originalLanguageToken.semanticId ||
-          (tokenFilter.originalLanguageToken.alignedSemanticIds &&
-            tokenFilter.originalLanguageToken.alignedSemanticIds.includes(
-              token.id.toString()
-            ))
-      );
-
-      if (hasMatchingToken) {
-        console.log('✅ TWL Link matches token filter:', {
-          linkId: linkKey,
-          origWords: link.origWords,
-          matchedTokenIds: quoteMatch.totalTokens.map((t) => t.id),
-          filterTokenId: tokenFilter.originalLanguageToken.semanticId,
-        });
-      }
-
-      return hasMatchingToken;
-    });
-
-    // Fallback: If token filter produces no results, show all navigation-filtered links
-    // but keep the actual filter count (0) for display
-    if (tokenFilteredLinks.length === 0) {
-      console.log('🔄 TWL - Token filter produced no results, falling back to navigation filter');
-      return { filteredLinks: filteredLinksByNavigation, tokenFilterCount: 0 };
+      return { 
+        filteredLinks: tokenFilteredLinks, 
+        secondaryFilterCount: tokenFilteredLinks.length,
+        secondaryFilterType: 'token' as const
+      };
     }
 
-    return { filteredLinks: tokenFilteredLinks, tokenFilterCount: tokenFilteredLinks.length };
-  }, [filteredLinksByNavigation, tokenFilter, quoteMatches]);
+    // Handle verse reference filter
+    if (verseReferenceFilter) {
+      console.log('📍 Applying verse reference filter to TWL links:', {
+        verseReference: verseReferenceFilter.verseReference,
+        totalLinks: filteredLinksByNavigation.length
+      });
 
-  // Auto-activate first item when token filter produces results
+      // Filter links that match the specific verse reference
+      const verseFilteredLinks = filteredLinksByNavigation.filter(link => {
+        // Parse the link's reference to extract chapter and verse
+        const referenceMatch = link.reference.match(/^(\d+):(\d+)$/);
+        if (!referenceMatch) {
+          return false; // Skip links with invalid reference format
+        }
+
+        const linkChapter = parseInt(referenceMatch[1], 10);
+        const linkVerse = parseInt(referenceMatch[2], 10);
+
+        // Check if link matches the verse reference filter
+        const matches = linkChapter === verseReferenceFilter.verseReference.chapter &&
+                       linkVerse === verseReferenceFilter.verseReference.verse;
+
+        if (matches) {
+          console.log('✅ TWL Link matches verse reference filter:', {
+            linkReference: link.reference,
+            filterReference: `${verseReferenceFilter.verseReference.chapter}:${verseReferenceFilter.verseReference.verse}`,
+            origWords: link.origWords
+          });
+        }
+
+        return matches;
+      });
+
+      // No fallback for verse reference filter - if no results, show empty
+      return { 
+        filteredLinks: verseFilteredLinks, 
+        secondaryFilterCount: verseFilteredLinks.length,
+        secondaryFilterType: 'verse' as const
+      };
+    }
+
+    // Default case (shouldn't reach here)
+    return { 
+      filteredLinks: filteredLinksByNavigation, 
+      secondaryFilterCount: filteredLinksByNavigation.length,
+      secondaryFilterType: 'none' as const
+    };
+  }, [filteredLinksByNavigation, tokenFilter, verseReferenceFilter, quoteMatches]);
+
+  // Auto-activate first item when token filter produces results (but NOT for verse reference filters)
   const lastAutoActivatedTokenRef = useRef<string | null>(null);
   const lastAutoActivatedLinkRef = useRef<string | null>(null);
+  const lastVerseFilterRef = useRef<string | null>(null);
   
   useEffect(() => {
     const currentTokenId = tokenFilter?.originalLanguageToken?.semanticId;
+    const currentVerseFilter = verseReferenceFilter ? 
+      `${verseReferenceFilter.verseReference.chapter}:${verseReferenceFilter.verseReference.verse}` : null;
     
-    if (tokenFilter && tokenFilterCount > 0 && currentTokenId) {
+    // Only auto-activate for token filters, not verse reference filters
+    if (tokenFilter && secondaryFilterType === 'token' && secondaryFilterCount > 0 && currentTokenId) {
       const firstLink = filteredLinks[0];
       const linkKey = firstLink.id || `${firstLink.reference}-${firstLink.origWords?.trim()}`;
       
@@ -1206,7 +1316,7 @@ export const TranslationWordsLinksViewer: React.FC<
       const isDifferentFirstLink = lastAutoActivatedLinkRef.current !== linkKey;
       
       if (isNewToken || isDifferentFirstLink) {
-        console.log('🎯 Auto-activating first filtered TWL link:', linkKey, { isNewToken, isDifferentFirstLink });
+        console.log('🎯 Auto-activating first filtered TWL link (token filter):', linkKey, { isNewToken, isDifferentFirstLink });
         
         // Update refs to prevent re-triggering
         lastAutoActivatedTokenRef.current = currentTokenId;
@@ -1230,14 +1340,29 @@ export const TranslationWordsLinksViewer: React.FC<
         };
         (linkedPanelsAPI.messaging as any).sendToAll(linkSelectionBroadcast);
       }
-    } else if (tokenFilter && tokenFilterCount === 0) {
+    } else if (tokenFilter && secondaryFilterType === 'token' && secondaryFilterCount === 0) {
       // Clear active state when token filter produces no results
       console.log('🧹 Clearing active TWL link - no token filter results');
       lastAutoActivatedTokenRef.current = null;
       lastAutoActivatedLinkRef.current = null;
       setActiveLinkId(null);
+    } else if (verseReferenceFilter && secondaryFilterType === 'verse') {
+      // Only clear active state when verse reference filter is FIRST applied (not on re-evaluations)
+      const isNewVerseFilter = lastVerseFilterRef.current !== currentVerseFilter;
+      if (isNewVerseFilter) {
+        console.log('📍 Verse reference filter applied - clearing active TWL link (no auto-activation)');
+        lastAutoActivatedTokenRef.current = null;
+        lastAutoActivatedLinkRef.current = null;
+        lastVerseFilterRef.current = currentVerseFilter;
+        setActiveLinkId(null);
+      }
+    } else if (!tokenFilter && !verseReferenceFilter) {
+      // Clear refs when no filters are active
+      lastAutoActivatedTokenRef.current = null;
+      lastAutoActivatedLinkRef.current = null;
+      lastVerseFilterRef.current = null;
     }
-  }, [tokenFilter?.originalLanguageToken?.semanticId, tokenFilterCount, filteredLinks, resourceId, linkedPanelsAPI]);
+  }, [tokenFilter?.originalLanguageToken?.semanticId, verseReferenceFilter, secondaryFilterType, secondaryFilterCount, filteredLinks, resourceId, linkedPanelsAPI]);
 
   // Function to get the color for a link using the same cycling logic as token groups
   // Always use the original navigation-filtered links (before token filter) to maintain consistent colors
@@ -1642,22 +1767,65 @@ export const TranslationWordsLinksViewer: React.FC<
                 name="search"
                 size={16}
                 className="text-green-600"
-                aria-label="Target"
+                aria-label="Token Filter"
               />
             </span>
             <span className="text-blue-800 font-mono text-sm bg-blue-100 px-2 py-1 rounded">
               {tokenFilter.originalLanguageToken.content}
             </span>
             <span className="text-blue-600 text-xs">
-              ({tokenFilterCount})
+              ({secondaryFilterCount})
             </span>
-      </div>
+          </div>
           <button
             onClick={() => {
               setTokenFilter(null);
             }}
             className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-1 transition-colors"
             title="Clear token filter"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Verse Reference Filter Banner */}
+      {verseReferenceFilter && (
+        <div className="bg-purple-50 border-b border-purple-200 px-3 py-2 flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <span className="text-purple-600 text-sm font-medium">
+              <Icon
+                name="bookmark"
+                size={16}
+                className="text-purple-600"
+                aria-label="Verse Filter"
+              />
+            </span>
+            <span className="text-purple-800 font-mono text-sm bg-purple-100 px-2 py-1 rounded">
+              {verseReferenceFilter.verseReference.chapter}:{verseReferenceFilter.verseReference.verse}
+            </span>
+            <span className="text-purple-600 text-xs">
+              ({secondaryFilterCount})
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              setVerseReferenceFilter(null);
+            }}
+            className="text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded p-1 transition-colors"
+            title="Clear verse reference filter"
           >
             <svg
               className="w-4 h-4"

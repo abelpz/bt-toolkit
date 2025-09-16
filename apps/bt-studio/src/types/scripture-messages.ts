@@ -143,6 +143,29 @@ export interface NoteSelectionBroadcast extends BaseMessageContent {
 }
 
 /**
+ * Verse reference filter broadcast message
+ * This is an EVENT message for when a user clicks on a verse number in the scripture viewer
+ * Used for filtering notes/TWL by verse reference (secondary filter type)
+ */
+export interface VerseReferenceFilterBroadcast extends BaseMessageContent {
+  type: 'verse-reference-filter-broadcast';
+  lifecycle: 'event';
+  
+  /** The verse reference to filter by */
+  verseReference: {
+    book: string;
+    chapter: number;
+    verse: number;
+  };
+  
+  /** The resource ID that initiated the verse filter */
+  sourceResourceId: string;
+  
+  /** Timestamp when the verse filter was applied */
+  timestamp: number;
+}
+
+/**
  * Message registry for scripture-related messages
  */
 export interface ScriptureMessageTypes {
@@ -150,4 +173,5 @@ export interface ScriptureMessageTypes {
   'notes-token-groups-broadcast': NotesTokenGroupsBroadcast;
   'token-click-broadcast': TokenClickBroadcast;
   'note-selection-broadcast': NoteSelectionBroadcast;
+  'verse-reference-filter-broadcast': VerseReferenceFilterBroadcast;
 }
