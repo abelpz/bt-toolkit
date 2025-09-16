@@ -23,10 +23,15 @@ import {
   // Navigation icons
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ArrowLeft,
   ArrowRight,
   Home,
   Menu,
+  Target,
+  List,
+  Grid3X3,
+  Layers,
   
   // Action icons
   Search,
@@ -84,10 +89,15 @@ export const iconMap = {
   // Navigation
   'chevron-left': ChevronLeft,
   'chevron-right': ChevronRight,
+  'chevron-down': ChevronDown,
   'arrow-left': ArrowLeft,
   'arrow-right': ArrowRight,
   'home': Home,
   'menu': Menu,
+  'target': Target,
+  'list': List,
+  'grid': Grid3X3,
+  'layers': Layers,
   
   // Actions
   'search': Search,
@@ -105,6 +115,7 @@ export const iconMap = {
   // Status
   'warning': AlertTriangle,
   'error': AlertCircle,
+  'alert-circle': AlertCircle,
   'info': Info,
   'success': CheckCircle,
   'cancel': XCircle,

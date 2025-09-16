@@ -266,12 +266,10 @@ export const TranslationWordsLinksRenderer: React.FC<TranslationWordsLinksRender
   if (filteredLinks.length === 0) {
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyText}>
-          {currentReference 
-            ? `No translation word links for ${currentReference}`
-            : 'No translation word links available'
-          }
-        </Text>
+        <View style={styles.emptyIconContainer}>
+          <Text style={styles.emptyIcon}>🔍</Text>
+          <Text style={styles.emptyIcon}>❌</Text>
+        </View>
       </View>
     );
   }
@@ -442,10 +440,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#64748b',
+  emptyIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIcon: {
+    fontSize: 24,
+    color: '#9ca3af',
     textAlign: 'center',
+    marginVertical: 4,
   },
   // Modal styles
   modalContainer: {

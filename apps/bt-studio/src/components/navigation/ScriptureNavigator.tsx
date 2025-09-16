@@ -10,6 +10,18 @@ import { useState, useEffect } from 'react';
 import { useNavigation } from '../../contexts/NavigationContext';
 import { Icon } from '../ui/Icon';
 import { TranslatorSection } from '../../types/context';
+import { 
+  PassageSet, 
+  PassageSetNode, 
+  PassageGroup, 
+  PassageLeaf, 
+  Passage 
+} from '../../types/passage-sets';
+import { 
+  loadPassageSetFromObject, 
+  parsePassageString 
+} from '../../utils/passage-sets';
+import newGenerationsStorySets from '../../examples/new-generations-story-sets.json';
 
 interface VerseRange {
   startChapter: number;
@@ -37,15 +49,31 @@ export function ScriptureNavigator() {
 
   const [isBookModalOpen, setIsBookModalOpen] = useState(false);
   const [isNavModalOpen, setIsNavModalOpen] = useState(false);
+  const [bookModalTab, setBookModalTab] = useState<'books' | 'passages'>('books');
   const [navTab, setNavTab] = useState<'range' | 'sections'>('range');
   const [chapterCount, setChapterCount] = useState<number>(1);
   const [verseCountByChapter, setVerseCountByChapter] = useState<Record<number, number>>({});
   const [isContentLoaded, setIsContentLoaded] = useState(false);
   const [sections, setSections] = useState<Section[]>([]);
-  const [currentRangeSelection, setCurrentRangeSelection] = useState<VerseRange | null>(null);
+  // Removed unused currentRangeSelection state
+  const [passageSet, setPassageSet] = useState<PassageSet | null>(null);
+  const [passageSetError, setPassageSetError] = useState<string | null>(null);
   
 
   const currentBookInfo = getBookInfo(currentReference.book);
+
+  // Load passage set data on component mount
+  useEffect(() => {
+    try {
+      const loadedPassageSet = loadPassageSetFromObject(newGenerationsStorySets);
+      setPassageSet(loadedPassageSet);
+      setPassageSetError(null);
+    } catch (error) {
+      console.error('Failed to load passage set:', error);
+      setPassageSetError(error instanceof Error ? error.message : 'Failed to load passage set');
+      setPassageSet(null);
+    }
+  }, []);
 
   // Convert TranslatorSection to Section format
   const convertTranslatorSections = (translatorSections: TranslatorSection[]): Section[] => {
@@ -54,12 +82,12 @@ export function ScriptureNavigator() {
       const endRef = `${section.end.chapter}:${section.end.verse}`;
       
       // Create a descriptive title
-      let title = `Section ${index + 1}`;
+      let title = `${index + 1}`;
       if (section.start.chapter === section.end.chapter) {
         if (section.start.verse === section.end.verse) {
-          title = `Chapter ${section.start.chapter}:${section.start.verse}`;
+          title = `${section.start.chapter}:${section.start.verse}`;
         } else {
-          title = `Chapter ${section.start.chapter}:${section.start.verse}-${section.end.verse}`;
+          title = `${section.start.chapter}:${section.start.verse}-${section.end.verse}`;
         }
       } else {
         title = `${startRef} - ${endRef}`;
@@ -83,7 +111,7 @@ export function ScriptureNavigator() {
       setIsContentLoaded(false);
       try {
         // Load content once and extract all information from it
-        const content = await (window as any).loadBookContentWithWorkspace?.(currentReference.book);
+        const content = await (window as { loadBookContentWithWorkspace?: (book: string) => Promise<{ chapters: { verses?: unknown[] }[]; translatorSections?: unknown[] }> }).loadBookContentWithWorkspace?.(currentReference.book);
         
         if (content && content.chapters) {
           // Extract chapter count
@@ -92,7 +120,7 @@ export function ScriptureNavigator() {
           
           // Extract verse counts for all chapters from the loaded content
           const verseCounts: Record<number, number> = {};
-          content.chapters.forEach((chapter: any, index: number) => {
+          content.chapters.forEach((chapter: { verses?: unknown[] }, index: number) => {
             const chapterNumber = index + 1;
             verseCounts[chapterNumber] = chapter.verses?.length || 31;
           });
@@ -107,7 +135,7 @@ export function ScriptureNavigator() {
             const fallbackSections = [];
             for (let chapter = 1; chapter <= count; chapter++) {
               fallbackSections.push({
-                title: `Chapter ${chapter}`,
+                title: `${chapter}`,
                 range: { 
                   startChapter: chapter, 
                   startVerse: 1, 
@@ -146,13 +174,13 @@ export function ScriptureNavigator() {
               setSections(convertedSections);
             } else {
               setSections([
-                { title: 'Chapter 1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
+                { title: '1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
               ]);
             }
           } catch (error) {
             console.warn(`Failed to load sections for ${currentReference.book}:`, error);
             setSections([
-              { title: 'Chapter 1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
+              { title: '1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
             ]);
           }
         }
@@ -163,7 +191,7 @@ export function ScriptureNavigator() {
         setChapterCount(1);
         setVerseCountByChapter({ 1: 31 });
         setSections([
-          { title: 'Chapter 1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
+          { title: '1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
         ]);
         setIsContentLoaded(true);
       }
@@ -200,6 +228,50 @@ export function ScriptureNavigator() {
   const handleBookSelect = (bookCode: string) => {
     navigateToBook(bookCode);
     setIsBookModalOpen(false);
+  };
+
+  const handlePassageSelect = (passage: Passage) => {
+    try {
+      // Convert passage reference to navigation format
+      // NavigationContext expects lowercase book codes
+      let reference: {
+        book: string;
+        chapter?: number;
+        verse?: number;
+        endChapter?: number;
+        endVerse?: number;
+      } = {
+        book: passage.bookCode.toLowerCase()
+      };
+
+      if (typeof passage.ref === 'string') {
+        // Parse string reference like "1:1-25"
+        const parsed = parsePassageString(`${passage.bookCode} ${passage.ref}`);
+        if (typeof parsed.ref === 'object') {
+          reference = {
+            book: parsed.bookCode.toLowerCase(),
+            chapter: parsed.ref.startChapter,
+            verse: parsed.ref.startVerse,
+            endChapter: parsed.ref.endChapter,
+            endVerse: parsed.ref.endVerse
+          };
+        }
+      } else {
+        // Use RefRange object directly
+        reference = {
+          book: passage.bookCode.toLowerCase(),
+          chapter: passage.ref.startChapter,
+          verse: passage.ref.startVerse,
+          endChapter: passage.ref.endChapter,
+          endVerse: passage.ref.endVerse
+        };
+      }
+
+      navigateToReference(reference);
+      setIsBookModalOpen(false);
+    } catch (error) {
+      console.error('Failed to navigate to passage:', error);
+    }
   };
 
   const handleBookModalToggle = () => {
@@ -240,11 +312,16 @@ export function ScriptureNavigator() {
             transition-colors duration-200
           "
         >
-          <Icon name="book-open" size={16} className="text-blue-600" aria-label="book" />
-          <span>{currentBookInfo?.name || currentReference.book.toUpperCase()}</span>
-          <span className="text-gray-400">
-            ▼
+          <Icon
+            name="book-open"
+            size={16}
+            className="text-blue-600"
+            aria-label="book"
+          />
+          <span>
+            {currentBookInfo?.name || currentReference.book.toUpperCase()}
           </span>
+          <span className="text-gray-400">▼</span>
         </button>
 
         {/* Chapter/Verse Navigation Button */}
@@ -255,18 +332,22 @@ export function ScriptureNavigator() {
             flex items-center space-x-2 px-4 py-2 h-10
             border font-medium text-sm
             transition-colors duration-200
-            ${isContentLoaded 
-              ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
-              : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+            ${
+              isContentLoaded
+                ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
+                : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
             }
           `}
         >
-          <Icon name="search" size={16} className="text-green-600" aria-label="target" />
+          <Icon
+            name="search"
+            size={16}
+            className="text-green-600"
+            aria-label="target"
+          />
           <span>{formatReferenceOnly()}</span>
           {isContentLoaded ? (
-            <span className="text-gray-400">
-              ▼
-            </span>
+            <span className="text-gray-400">▼</span>
           ) : (
             <span className="animate-spin">⟳</span>
           )}
@@ -278,13 +359,67 @@ export function ScriptureNavigator() {
         <Modal
           isOpen={isBookModalOpen}
           onClose={() => setIsBookModalOpen(false)}
-          title="Select Book"
+          title={
+            <div className="flex items-center space-x-2 text-gray-400">
+              <Icon name="book-open" size={20} />
+              <span className="hidden sm:inline">Navigate</span>
+            </div>
+          }
         >
-          <BookSelector
-            availableBooks={availableBooks}
-            selectedBook={currentReference.book}
-            onBookSelect={handleBookSelect}
-          />
+          <div className="space-y-4">
+            {/* Book Modal Tabs */}
+            <div className="flex border-b border-gray-200">
+              <button
+                onClick={() => setBookModalTab('books')}
+                className={`
+                  flex-1 px-4 py-3 text-sm font-medium
+                  transition-colors duration-200 flex items-center justify-center space-x-2
+                  ${
+                    bookModalTab === 'books'
+                      ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }
+                `}
+                title="Books"
+              >
+                <Icon name="book-open" size={16} />
+              </button>
+              <button
+                onClick={() => setBookModalTab('passages')}
+                className={`
+                  flex-1 px-4 py-3 text-sm font-medium
+                  transition-colors duration-200 flex items-center justify-center space-x-2
+                  ${
+                    bookModalTab === 'passages'
+                      ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }
+                `}
+                title="Passage Sets"
+              >
+                <Icon name="layers" size={16} />
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            <div className="min-h-[300px]">
+              {bookModalTab === 'books' && (
+                <BookSelector
+                  availableBooks={availableBooks}
+                  selectedBook={currentReference.book}
+                  onBookSelect={handleBookSelect}
+                />
+              )}
+
+              {bookModalTab === 'passages' && (
+                <PassageSetSelector
+                  passageSet={passageSet}
+                  error={passageSetError}
+                  onPassageSelect={handlePassageSelect}
+                />
+              )}
+            </div>
+          </div>
         </Modal>
       )}
 
@@ -293,7 +428,11 @@ export function ScriptureNavigator() {
         <Modal
           isOpen={isNavModalOpen}
           onClose={() => setIsNavModalOpen(false)}
-          title="Navigate to Reference"
+          title={
+            <div className="flex items-center space-x-2 text-gray-400">
+              <Icon name="search" size={20} />
+            </div>
+          }
         >
           <div className="space-y-4">
             {/* Navigation Tabs */}
@@ -302,27 +441,31 @@ export function ScriptureNavigator() {
                 onClick={() => setNavTab('range')}
                 className={`
                   flex-1 px-4 py-3 text-sm font-medium
-                  transition-colors duration-200
-                  ${navTab === 'range'
-                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  transition-colors duration-200 flex items-center justify-center space-x-2
+                  ${
+                    navTab === 'range'
+                      ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }
                 `}
+                title="Custom Range"
               >
-                Custom Range
+                <Icon name="grid" size={16} />
               </button>
               <button
                 onClick={() => setNavTab('sections')}
                 className={`
                   flex-1 px-4 py-3 text-sm font-medium
-                  transition-colors duration-200
-                  ${navTab === 'sections'
-                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  transition-colors duration-200 flex items-center justify-center space-x-2
+                  ${
+                    navTab === 'sections'
+                      ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }
                 `}
+                title="Sections"
               >
-                Sections
+                <Icon name="list" size={16} />
               </button>
             </div>
 
@@ -334,10 +477,10 @@ export function ScriptureNavigator() {
                   verseCountByChapter={verseCountByChapter}
                   currentReference={currentReference}
                   onRangeSelect={handleRangeSelect}
-                  onSelectionChange={setCurrentRangeSelection}
+                  onSelectionChange={() => {}} // No longer needed
                 />
               )}
-              
+
               {navTab === 'sections' && (
                 <SectionsNavigator
                   sections={sections}
@@ -363,9 +506,7 @@ interface BookSelectorProps {
 function BookSelector({ availableBooks, selectedBook, onBookSelect }: BookSelectorProps) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-700 mb-3">
-        Available Books ({availableBooks.length})
-      </h3>
+      
       <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto overflow-x-hidden">
         {availableBooks.map((book) => (
           <button
@@ -487,17 +628,14 @@ function RangeSelector({ chapterCount, verseCountByChapter, currentReference, on
 
   return (
     <div className="space-y-4">
-
-      
-
       <div className="max-h-64 overflow-y-auto space-y-3">
         {Array.from({ length: chapterCount }, (_, i) => i + 1).map((chapter) => {
           const verseCount = verseCountByChapter[chapter] || 31;
           return (
             <div key={chapter} className="space-y-2">
-              <h4 className="text-xs font-medium text-gray-600">
-                Chapter {chapter}
-              </h4>
+                <h4 className="text-sm font-bold text-gray-700 bg-gray-100 rounded-md px-2 py-1 inline-block">
+                  {chapter}
+                </h4>
               <div className="grid grid-cols-10 gap-1">
                 {Array.from({ length: verseCount }, (_, i) => i + 1).map((verse) => {
                   const isSelected = 
@@ -544,9 +682,10 @@ function RangeSelector({ chapterCount, verseCountByChapter, currentReference, on
               };
               onRangeSelect(range);
             }}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center space-x-2"
+            title="Done"
           >
-            Done
+            <Icon name="check" size={16} />
           </button>
         </div>
       )}
@@ -564,13 +703,13 @@ interface SectionsNavigatorProps {
 function SectionsNavigator({ sections, currentReference, onRangeSelect }: SectionsNavigatorProps) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-700 mb-3">
-        Predefined Sections ({sections.length})
-      </h3>
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {sections.length === 0 ? (
           <div className="text-sm text-gray-500 p-3">
-            No sections available for this book.
+            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+              <Icon name="info" size={24} />
+              <span className="text-sm mt-2">No sections available</span>
+            </div>
           </div>
         ) : (
           sections.map((section, index) => {
@@ -593,12 +732,7 @@ function SectionsNavigator({ sections, currentReference, onRangeSelect }: Sectio
               `}
             >
               <div className="font-medium text-sm">{section.title}</div>
-              <div className="text-xs opacity-75">
-                {section.range.startChapter}:{section.range.startVerse}
-                {section.range.endChapter && section.range.endVerse && 
-                  ` - ${section.range.endChapter}:${section.range.endVerse}`
-                }
-              </div>
+             
             </button>
           );
         }))}
@@ -611,7 +745,7 @@ function SectionsNavigator({ sections, currentReference, onRangeSelect }: Sectio
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title: string | React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -665,6 +799,239 @@ function Modal({ isOpen, onClose, title, children }: ModalProps) {
             {children}
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Passage Set Selector Component
+interface PassageSetSelectorProps {
+  passageSet: PassageSet | null;
+  error: string | null;
+  onPassageSelect: (passage: Passage) => void;
+}
+
+function PassageSetSelector({ passageSet, error, onPassageSelect }: PassageSetSelectorProps) {
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [searchTerm, setSearchTerm] = useState('');
+  const { getBookInfo } = useNavigation();
+
+  const toggleGroup = (groupId: string) => {
+    const newExpanded = new Set(expandedGroups);
+    if (newExpanded.has(groupId)) {
+      newExpanded.delete(groupId);
+    } else {
+      newExpanded.add(groupId);
+    }
+    setExpandedGroups(newExpanded);
+  };
+
+  const renderPassageSetNode = (node: PassageSetNode, depth = 0): React.ReactNode => {
+    const indentClass = depth > 0 ? `ml-${Math.min(depth * 4, 12)}` : '';
+    
+    if (node.type === 'group') {
+      const group = node as PassageGroup;
+      const isExpanded = expandedGroups.has(group.id);
+      
+      return (
+        <div key={group.id} className={`${indentClass}`}>
+          <button
+            onClick={() => toggleGroup(group.id)}
+            className="w-full flex items-center justify-between p-3 text-left hover:bg-gray-50 rounded-lg transition-colors duration-200"
+          >
+            <div className="flex items-center space-x-2">
+              <Icon 
+                name={isExpanded ? "chevron-down" : "chevron-right"} 
+                size={16} 
+                className="text-gray-400" 
+              />
+              <div>
+                <div className="font-medium text-sm text-gray-900">{group.label}</div>
+                {group.description && (
+                  <div className="text-xs text-gray-500 mt-1">{group.description}</div>
+                )}
+                {group.metadata?.totalVerses && (
+                  <div className="text-xs text-blue-600 mt-1">
+                    {group.metadata.totalVerses} verses
+                  </div>
+                )}
+              </div>
+            </div>
+            {group.metadata?.difficulty && (
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: 5 }, (_, i) => (
+                  <div
+                    key={i}
+                    className={`w-2 h-2 rounded-full ${
+                      i < (group.metadata?.difficulty || 0)
+                        ? 'bg-yellow-400' 
+                        : 'bg-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+          </button>
+          
+          {isExpanded && (
+            <div className="mt-2 space-y-1">
+              {group.children.map(child => renderPassageSetNode(child, depth + 1))}
+            </div>
+          )}
+        </div>
+      );
+    } else {
+      const leaf = node as PassageLeaf;
+      
+      return (
+        <div key={leaf.id} className={`${indentClass}`}>
+          <div className="bg-gray-50 rounded-lg p-3">
+            <div className="font-medium text-sm text-gray-800 mb-2">{leaf.label}</div>
+            <div className="space-y-2">
+              {leaf.passages.map((passage, index) => {
+                // Filter passages based on search term
+                const bookInfo = getBookInfo(passage.bookCode);
+                const bookName = bookInfo?.name || passage.bookCode;
+                
+                if (searchTerm && !passage.label?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                    !passage.metadata?.title?.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                    !passage.bookCode.toLowerCase().includes(searchTerm.toLowerCase()) &&
+                    !bookName.toLowerCase().includes(searchTerm.toLowerCase())) {
+                  return null;
+                }
+
+                const refString = typeof passage.ref === 'string' 
+                  ? passage.ref 
+                  : `${passage.ref.startChapter}:${passage.ref.startVerse}${
+                      passage.ref.endVerse ? `-${passage.ref.endVerse}` : ''
+                    }${passage.ref.endChapter && passage.ref.endChapter !== passage.ref.startChapter 
+                      ? `-${passage.ref.endChapter}:${passage.ref.endVerse}` : ''}`;
+
+                return (
+                  <button
+                    key={`${leaf.id}-${index}`}
+                    onClick={() => onPassageSelect(passage)}
+                    className="w-full text-left p-2 hover:bg-white rounded border border-transparent hover:border-blue-200 transition-all duration-200"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="font-mono text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            {bookName} {refString}
+                          </span>
+                          {passage.metadata?.difficulty && (
+                            <div className="flex items-center space-x-1">
+                              {Array.from({ length: 5 }, (_, i) => (
+                                <div
+                                  key={i}
+                                  className={`w-1.5 h-1.5 rounded-full ${
+                                    i < (passage.metadata?.difficulty || 0)
+                                      ? 'bg-yellow-400' 
+                                      : 'bg-gray-200'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-700 mt-1">
+                          {passage.metadata?.title || passage.label}
+                        </div>
+                        {passage.metadata?.theme && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Theme: {passage.metadata.theme}
+                          </div>
+                        )}
+                      </div>
+                      {passage.metadata?.estimatedTime && (
+                        <div className="text-xs text-gray-500 ml-2">
+                          ~{passage.metadata.estimatedTime}min
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      );
+    }
+  };
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-red-500">
+        <Icon name="alert-circle" size={24} />
+        <span className="text-sm mt-2">Failed to load passage sets</span>
+        <span className="text-xs mt-1 text-gray-500">{error}</span>
+      </div>
+    );
+  }
+
+  if (!passageSet) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+        <div className="animate-spin">⟳</div>
+        <span className="text-sm mt-2">Loading passage sets...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Search Bar */}
+      <div className="relative">
+        <Icon 
+          name="search" 
+          size={16} 
+          className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" 
+        />
+        <input
+          type="text"
+          placeholder="Search passages..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      {/* Passage Set Info */}
+      <div className="bg-blue-50 rounded-lg p-3">
+        <div className="font-medium text-sm text-blue-900">{passageSet.name}</div>
+        {passageSet.description && (
+          <div className="text-xs text-blue-700 mt-1">{passageSet.description}</div>
+        )}
+            {passageSet.metadata && (
+              <div className="flex items-center space-x-4 mt-2 text-xs text-blue-600">
+                {passageSet.metadata.passageCount && (
+                  <span>{passageSet.metadata.passageCount} passages</span>
+                )}
+                {passageSet.metadata.totalTime && (
+                  <span>~{passageSet.metadata.totalTime}min total</span>
+                )}
+                {passageSet.metadata.difficulty && (
+                  <div className="flex items-center space-x-1">
+                    <span>Difficulty:</span>
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <div
+                        key={i}
+                        className={`w-2 h-2 rounded-full ${
+                          i < (passageSet.metadata?.difficulty || 0)
+                            ? 'bg-blue-400' 
+                            : 'bg-blue-200'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+      </div>
+
+      {/* Passage Set Navigation */}
+      <div className="max-h-96 overflow-y-auto space-y-2">
+        {passageSet.root.map(node => renderPassageSetNode(node))}
       </div>
     </div>
   );

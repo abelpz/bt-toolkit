@@ -602,9 +602,60 @@ export const TranslationWordsLinksViewer: React.FC<
   const displayLinks = actualLinks || propLinks;
   const isLoading = loading || contentLoading;
 
-  // Process quote matches when we have both links and original scripture
+  // Filter links by current navigation range (matching NotesViewer logic) - MOVED UP
+  const filteredLinksByNavigation = useMemo(() => {
+    if (!displayLinks?.links || !currentReference) {
+      return displayLinks?.links || [];
+    }
+
+    return displayLinks.links.filter((link) => {
+      // Parse chapter and verse from reference (e.g., "1:1" -> chapter: 1, verse: 1)
+      const refParts = link.reference.split(':');
+      const linkChapter = parseInt(refParts[0] || '1');
+      const linkVerse = parseInt(refParts[1] || '1');
+
+      // Determine the range bounds (default to single verse/chapter if no end specified)
+      const startChapter = currentReference.chapter;
+      const startVerse = currentReference.verse;
+      const endChapter =
+        currentReference.endChapter || currentReference.chapter;
+      const endVerse = currentReference.endVerse || currentReference.verse;
+
+      // Skip filtering if we don't have valid chapter/verse data
+      if (!startChapter || !startVerse) {
+        return true;
+      }
+
+      // Check if link is within the chapter range
+      if (linkChapter < startChapter) {
+        return false;
+      }
+      if (endChapter && linkChapter > endChapter) {
+        return false;
+      }
+
+      // Filter by start verse in start chapter
+      if (linkChapter === startChapter && linkVerse < startVerse) {
+        return false;
+      }
+
+      // Filter by end verse in end chapter
+      if (
+        endChapter &&
+        endVerse &&
+        linkChapter === endChapter &&
+        linkVerse > endVerse
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [displayLinks?.links, currentReference]);
+
+  // Process quote matches ONLY for navigation-filtered links
   useEffect(() => {
-    if (!originalScripture || !displayLinks?.links || !currentReference.book) {
+    if (!originalScripture || !filteredLinksByNavigation.length || !currentReference.book) {
       console.log('⏳ TWL - Missing dependencies for quote matching');
       setQuoteMatches(new Map());
       return;
@@ -612,11 +663,14 @@ export const TranslationWordsLinksViewer: React.FC<
 
     const processQuoteMatches = async () => {
       try {
-        console.log('🔄 TWL - Processing quote matches for links');
+        console.log('🔄 TWL - Processing quote matches for filtered links', {
+          totalLinks: filteredLinksByNavigation.length,
+          reference: `${currentReference.book} ${currentReference.chapter}:${currentReference.verse}`
+        });
         const newQuoteMatches = new Map<string, QuoteMatchResult>();
 
-        // Process each link that has origWords
-        for (const link of displayLinks.links) {
+        // Process each navigation-filtered link that has origWords
+        for (const link of filteredLinksByNavigation) {
           if (!link.origWords || !link.reference) {
             continue;
           }
@@ -719,7 +773,7 @@ export const TranslationWordsLinksViewer: React.FC<
     processQuoteMatches();
   }, [
     originalScripture,
-    displayLinks?.links,
+    filteredLinksByNavigation,
     currentReference.book,
     quoteMatcher,
   ]);
@@ -1071,56 +1125,6 @@ export const TranslationWordsLinksViewer: React.FC<
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array is INTENTIONAL - ensures cleanup only on unmount (team-review pattern)
 
-  // Filter links by current navigation range (matching NotesViewer and QuestionsViewer logic)
-  const filteredLinksByNavigation = useMemo(() => {
-    if (!displayLinks?.links || !currentReference) {
-      return displayLinks?.links || [];
-    }
-
-    return displayLinks.links.filter((link) => {
-      // Parse chapter and verse from reference (e.g., "1:1" -> chapter: 1, verse: 1)
-      const refParts = link.reference.split(':');
-      const linkChapter = parseInt(refParts[0] || '1');
-      const linkVerse = parseInt(refParts[1] || '1');
-
-      // Determine the range bounds (default to single verse/chapter if no end specified)
-      const startChapter = currentReference.chapter;
-      const startVerse = currentReference.verse;
-      const endChapter =
-        currentReference.endChapter || currentReference.chapter;
-      const endVerse = currentReference.endVerse || currentReference.verse;
-
-      // Skip filtering if we don't have valid chapter/verse data
-      if (!startChapter || !startVerse) {
-        return true;
-      }
-
-      // Check if link is within the chapter range
-      if (linkChapter < startChapter) {
-        return false;
-      }
-      if (endChapter && linkChapter > endChapter) {
-        return false;
-      }
-
-      // Filter by start verse in start chapter
-      if (linkChapter === startChapter && linkVerse < startVerse) {
-        return false;
-      }
-
-      // Filter by end verse in end chapter
-      if (
-        endChapter &&
-        endVerse &&
-        linkChapter === endChapter &&
-        linkVerse > endVerse
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  }, [displayLinks?.links, currentReference]);
 
   // Apply token filter on top of navigation-filtered links
   const filteredLinks = useMemo(() => {

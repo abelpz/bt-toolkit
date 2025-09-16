@@ -143,10 +143,10 @@ export const TTSControl: React.FC<TTSControlProps> = ({
   };
 
   const getButtonColor = (): string => {
-    if (hasError) return 'text-red-600 hover:text-red-700';
-    if (isPlaying) return 'text-blue-600 hover:text-blue-700';
-    if (isPaused) return 'text-orange-600 hover:text-orange-700';
-    return 'text-gray-600 hover:text-gray-700';
+    if (hasError) return 'text-red-600 hover:text-red-700 bg-gray-100';
+    if (isPlaying) return 'text-blue-600 hover:text-blue-700 bg-gray-100';
+    if (isPaused) return 'text-orange-600 hover:text-orange-700 bg-gray-100';
+    return 'text-gray-600 hover:text-gray-700 bg-gray-100';
   };
 
   const handlePlayPauseClick = () => {
@@ -169,7 +169,7 @@ export const TTSControl: React.FC<TTSControlProps> = ({
     // Show both pause and stop buttons when playing or paused
     if (isPlaying || isPaused) {
       return (
-        <div className={`inline-flex items-center space-x-1 ${className}`}>
+        <div className={`inline-flex items-center space-x-1 bg-gray-100 ${className}`}>
           {/* Play/Pause Button */}
           <IconButton
             name={getPlayButtonIcon()}
@@ -191,7 +191,7 @@ export const TTSControl: React.FC<TTSControlProps> = ({
             aria-label="Stop and rewind"
             variant="ghost"
             buttonSize="md"
-            className="text-gray-600 hover:text-red-600"
+            className="text-gray-600 hover:text-red-600 bg-gray-100"
           />
         </div>
       );
