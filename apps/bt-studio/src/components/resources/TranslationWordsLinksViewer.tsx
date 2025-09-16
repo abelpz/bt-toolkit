@@ -1280,7 +1280,17 @@ export const TranslationWordsLinksViewer: React.FC<
         return matches;
       });
 
-      // No fallback for verse reference filter - if no results, show empty
+      // Apply fallback logic like token filter - if no results, show navigation-filtered links
+      // but keep the actual filter count (0) for display
+      if (verseFilteredLinks.length === 0) {
+        console.log('🔄 TranslationWordsLinksViewer - Verse reference filter produced no results, falling back to navigation filter');
+        return { 
+          filteredLinks: filteredLinksByNavigation, 
+          secondaryFilterCount: 0,
+          secondaryFilterType: 'verse' as const
+        };
+      }
+
       return { 
         filteredLinks: verseFilteredLinks, 
         secondaryFilterCount: verseFilteredLinks.length,

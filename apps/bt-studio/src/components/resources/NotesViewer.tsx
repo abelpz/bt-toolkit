@@ -983,7 +983,17 @@ export function NotesViewer({
         return matches;
       });
 
-      // No fallback for verse reference filter - if no results, show empty
+      // Apply fallback logic like token filter - if no results, show navigation-filtered notes
+      // but keep the actual filter count (0) for display
+      if (verseFilteredNotes.length === 0) {
+        console.log('🔄 NotesViewer - Verse reference filter produced no results, falling back to navigation filter');
+        return { 
+          filteredNotes: filteredNotesByNavigation, 
+          secondaryFilterCount: 0,
+          secondaryFilterType: 'verse' as const
+        };
+      }
+
       return { 
         filteredNotes: verseFilteredNotes, 
         secondaryFilterCount: verseFilteredNotes.length,
