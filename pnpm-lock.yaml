@@ -252,6 +252,9 @@ importers:
       linked-panels:
         specifier: link:..\..\packages\ui\linked-panels
         version: link:../../packages/ui/linked-panels
+      lucide-react:
+        specifier: ^0.544.0
+        version: 0.544.0(react@19.0.0)
       rehype-react:
         specifier: 8.0.0
         version: 8.0.0
@@ -7755,6 +7758,11 @@ packages:
   lru-cache@7.18.3:
     resolution: {integrity: sha512-jumlc0BIUrS3qJGgIkWZsyfAM7NCWiBcCDhnd+3NNM5KbBmLTgHVfWBcg6W+rLUsIpzpERPsvwUP7CckAQSOoA==}
     engines: {node: '>=12'}
+
+  lucide-react@0.544.0:
+    resolution: {integrity: sha512-t5tS44bqd825zAW45UQxpG2CvcC4urOwn2TrwSH8u+MjeE+1NnWl6QqeQ/6NdjMqdOygyiT9p3Ev0p1NJykxjw==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   lunr@2.3.9:
     resolution: {integrity: sha512-zTU3DaZaF3Rt9rhN3uBMGQD3dD2/vFQqnvZCDv4dl5iOzq2IZQqTxu90r4E5J+nP70J3ilqVCrbho2eWaeW8Ow==}
@@ -20560,6 +20568,10 @@ snapshots:
       yallist: 4.0.0
 
   lru-cache@7.18.3: {}
+
+  lucide-react@0.544.0(react@19.0.0):
+    dependencies:
+      react: 19.0.0
 
   lunr@2.3.9: {}
 

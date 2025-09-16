@@ -9,6 +9,7 @@ import React from 'react';
 import { visit } from 'unist-util-visit';
 import type { Node } from 'unist';
 import type { Element } from 'hast';
+import { Icon } from '../../components/ui/Icon';
 import { 
   parseRcLink, 
   parseRelativeLink, 
@@ -96,7 +97,7 @@ const Door43Link: React.FC<{
       case 'ta':
         return `${baseStyle} bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100`;
       case 'tw':
-        return `${baseStyle} bg-green-50 text-green-700 border border-green-200 hover:bg-green-100`;
+        return `${baseStyle} bg-green-600 text-white border border-green-700 hover:bg-green-700`;
       case 'tn':
         return `${baseStyle} bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100`;
       case 'obs':
@@ -106,13 +107,13 @@ const Door43Link: React.FC<{
     }
   };
 
-  const getIcon = (): string => {
+  const getIcon = () => {
     switch (parsedLink.resourceType) {
-      case 'ta': return '📖';
-      case 'tw': return '📚';
-      case 'tn': return '📍';
-      case 'obs': return '📜';
-      default: return '🔗';
+      case 'ta': return 'academy';
+      case 'tw': return 'translation-words';
+      case 'tn': return 'search';
+      case 'obs': return 'book-open';
+      default: return 'file';
     }
   };
 
@@ -143,7 +144,7 @@ const Door43Link: React.FC<{
       onClick={parsedLink.resourceType !== 'obs' ? handleClick : undefined}
       title={getTooltip()}
     >
-      <span className="text-xs">{getIcon()}</span>
+      <Icon name={getIcon()} size={12} className="flex-shrink-0" />
       <span>{children}</span>
     </span>
   );

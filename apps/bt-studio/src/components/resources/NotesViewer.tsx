@@ -12,6 +12,7 @@ import { useResourceModal } from '../../contexts/ResourceModalContext';
 import { ProcessedNotes, TranslationNote } from '../../services/notes-processor';
 import { ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
+import { Icon } from '../ui/Icon';
 import { parseRcLink, isTranslationAcademyLink, getArticleDisplayTitle } from '../../utils/rc-link-parser';
 import { clearComponentTitleCache } from '../../services/remark-plugins/door43-rehype-plugin';
 import { QuoteMatcher, QuoteMatchResult } from '../../services/quote-matcher';
@@ -213,10 +214,10 @@ export function NotesViewer({
     return (
       <button
         onClick={handleClick}
-        className="inline-flex items-center px-2 py-1 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+        className="inline-flex items-center px-2 py-1 text-sm text-blue-700 bg-blue-50 rounded border border-blue-700/30 hover:bg-blue-100 transition-colors"
         type="button"
       >
-        <span className="mr-1" role="img" aria-label="graduation cap">🎓</span>
+        <Icon name="academy" size={14} className="mr-1 flex-shrink-0" aria-label="graduation cap" />
         {isLoading ? '...' : buttonTitle}
       </button>
     );
@@ -996,7 +997,7 @@ export function NotesViewer({
       <div className="h-full flex items-center justify-center">
         <div className="text-center text-red-600">
           <div className="text-red-500 text-xl mb-2">
-            <span role="img" aria-label="Warning">⚠️</span>
+            <Icon name="warning" size={16} className="text-yellow-500" aria-label="Warning" />
           </div>
           <p className="font-medium">Error loading notes</p>
           <p className="text-sm mt-2">{displayError}</p>
@@ -1026,7 +1027,7 @@ export function NotesViewer({
           <div className="bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="text-blue-600 text-sm font-medium">
-                <span role="img" aria-label="Target">🎯</span> 
+                <Icon name="search" size={16} className="text-green-600" aria-label="Target" /> 
               </span>
               <span className="text-blue-800 font-mono text-sm bg-blue-100 px-2 py-1 rounded">
                 {tokenFilter.originalLanguageToken.content}
@@ -1073,7 +1074,7 @@ export function NotesViewer({
                 key={note.id || index} 
                 className={`border border-gray-200 rounded p-2 bg-white transition-colors ${
                   shouldNoteHaveColorIndicator(note) 
-                    ? 'hover:bg-blue-50 cursor-pointer' 
+                    ? 'hover:bg-blue-50/50 cursor-pointer' 
                     : ''
                 }`}
                 onClick={shouldNoteHaveColorIndicator(note) ? () => handleNoteClick(note) : undefined}
@@ -1104,7 +1105,9 @@ export function NotesViewer({
                       if (targetQuote) {
                         // Show target language quote when available
                         return (
-                          <p className="text-purple-700 italic text-sm">"{targetQuote.quote}"</p>
+                          <p className="text-purple-700 italic text-sm font-medium">
+                            “{targetQuote.quote}”
+                          </p>
                         );
                       } else {
                         // Show original language quote when no target quote is built

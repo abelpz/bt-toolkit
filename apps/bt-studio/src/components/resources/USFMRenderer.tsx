@@ -12,6 +12,7 @@ import { getCrossPanelCommunicationService, type CrossPanelMessage, type TokenHi
 import { TokenUnderliningProvider, useTokenUnderlining, type TokenGroup } from '../../contexts/TokenUnderliningContext';
 import type { NotesTokenGroupsBroadcast, TokenClickBroadcast, NoteSelectionBroadcast } from '../../types/scripture-messages';
 import { useNavigation } from '../../contexts/NavigationContext';
+import type { TTSWordBoundary } from '../../types/tts';
 
 /**
  * Find tokens in optimized format that align to the given original language token
@@ -113,6 +114,116 @@ function findTokensAlignedToOriginalLanguageTokenOptimized(
   
   
   return [...new Set(tokenIds)]; // Remove duplicates
+}
+
+/**
+ * Check if a token should be highlighted for TTS word-by-word reading
+ * Uses position-based matching to handle multiple occurrences of the same word
+ */
+function shouldHighlightTokenForTTS(
+  token: OptimizedToken,
+  currentTTSWord: TTSWordBoundary | null,
+  ttsText: string | undefined,
+  allTokensInOrder?: OptimizedToken[]
+): boolean {
+  if (!currentTTSWord || !ttsText || !allTokensInOrder) {
+    return false;
+  }
+
+  // Extract the current word from the TTS text at the character position
+  const wordAtPosition = ttsText.substring(
+    currentTTSWord.charIndex,
+    currentTTSWord.charIndex + currentTTSWord.charLength
+  ).trim();
+
+  // Clean the words for comparison
+  const cleanTokenText = token.text.toLowerCase().trim().replace(/[.,;:!?'"()[\]{}]/g, '');
+  const cleanTTSWord = wordAtPosition.toLowerCase().trim().replace(/[.,;:!?'"()[\]{}]/g, '');
+  
+  // First check if the words match at all
+  if (cleanTokenText !== cleanTTSWord || cleanTokenText.length === 0) {
+    return false;
+  }
+
+  // Find the expected occurrence of this word based on TTS progress
+  const expectedOccurrence = findExpectedWordOccurrence(
+    cleanTTSWord,
+    currentTTSWord.charIndex,
+    ttsText,
+    allTokensInOrder
+  );
+
+  // Find which occurrence this token represents
+  const tokenOccurrence = findTokenOccurrence(token, cleanTTSWord, allTokensInOrder);
+
+  // Only highlight if this token matches the expected occurrence
+  return tokenOccurrence === expectedOccurrence;
+}
+
+/**
+ * Find which occurrence of a word should be highlighted based on TTS character position
+ */
+function findExpectedWordOccurrence(
+  cleanWord: string,
+  charIndex: number,
+  ttsText: string,
+  allTokens: OptimizedToken[]
+): number {
+  // Build a map of TTS text positions to token occurrences
+  let ttsPosition = 0;
+  let occurrence = 0;
+  
+  for (const token of allTokens) {
+    const cleanTokenText = token.text.toLowerCase().trim().replace(/[.,;:!?'"()[\]{}]/g, '');
+    
+    if (cleanTokenText === cleanWord) {
+      occurrence++;
+      // Check if this token's position in TTS text matches our target
+      const tokenStartInTTS = ttsText.toLowerCase().indexOf(cleanTokenText, ttsPosition);
+      
+      if (tokenStartInTTS !== -1 && tokenStartInTTS <= charIndex && 
+          charIndex < tokenStartInTTS + cleanTokenText.length) {
+        return occurrence;
+      }
+      
+      // Update position for next search
+      if (tokenStartInTTS !== -1) {
+        ttsPosition = tokenStartInTTS + cleanTokenText.length;
+      }
+    } else {
+      // Update position based on token text length
+      const tokenInTTS = ttsText.toLowerCase().indexOf(token.text.toLowerCase(), ttsPosition);
+      if (tokenInTTS !== -1) {
+        ttsPosition = tokenInTTS + token.text.length;
+      }
+    }
+  }
+  
+  return occurrence; // Return the last occurrence if no exact match found
+}
+
+/**
+ * Find which occurrence number this specific token represents
+ */
+function findTokenOccurrence(
+  targetToken: OptimizedToken,
+  cleanWord: string,
+  allTokens: OptimizedToken[]
+): number {
+  let occurrence = 0;
+  
+  for (const token of allTokens) {
+    const cleanTokenText = token.text.toLowerCase().trim().replace(/[.,;:!?'"()[\]{}]/g, '');
+    
+    if (cleanTokenText === cleanWord) {
+      occurrence++;
+      if (token.id === targetToken.id) {
+        return occurrence;
+      }
+    }
+  }
+  
+  return occurrence;
 }
 
 /**
@@ -273,6 +384,10 @@ export interface USFMRendererProps {
   onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
   /** Custom styling */
   className?: string;
+  /** Current TTS word being spoken for highlighting */
+  currentTTSWord?: TTSWordBoundary | null;
+  /** Full TTS text for word matching */
+  ttsText?: string;
 }
 
 // Internal component that uses the context
@@ -292,7 +407,9 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
   highlightWords = [],
   onWordClick,
   onTokenClick,
-  className = ''
+  className = '',
+  currentTTSWord,
+  ttsText
 }) => {
   const { currentReference } = useNavigation();
   const { addTokenGroup, clearTokenGroups, setActiveGroup, activeGroupId } = useTokenUnderlining();
@@ -541,6 +658,11 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
 
   const versesToRender = getVersesToRender(scripture, { chapter, verseRange, startRef, endRef });
 
+  // Create ordered token list for TTS highlighting across all verses
+  const allTokensInOrder = versesToRender.flatMap(verse => 
+    verse.tokens.filter(token => token.type !== 'paragraph-marker' && token.type !== 'whitespace')
+  );
+
   if (versesToRender.length === 0) {
     return (
       <div className={`text-center py-8 text-gray-500 ${className}`}>
@@ -565,7 +687,10 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
           resourceType,
           language,
           highlightedTokenRefs,
-          activeTokenRefs
+          activeTokenRefs,
+          currentTTSWord,
+          ttsText,
+          allTokensInOrder
         })}
       </div>
     );
@@ -591,6 +716,9 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
             language={language}
             highlightedTokenRefs={highlightedTokenRefs}
             activeTokenRefs={activeTokenRefs}
+            currentTTSWord={currentTTSWord}
+            ttsText={ttsText}
+            allTokensInOrder={allTokensInOrder}
         />
         );
       })}
@@ -613,6 +741,9 @@ interface RenderingOptions {
   language: 'en' | 'el-x-koine' | 'hbo';
   highlightedTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
   activeTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
+  currentTTSWord?: TTSWordBoundary | null;
+  ttsText?: string;
+  allTokensInOrder?: OptimizedToken[];
 }
 
 /**
@@ -790,12 +921,16 @@ function renderParagraphsForChapter(
             // Check if this token should be highlighted
             const isHighlighted = shouldHighlightToken(token, options.highlightTarget, options.language);
             
+            // Use the provided ordered tokens for TTS highlighting
+            const isTTSHighlighted = shouldHighlightTokenForTTS(token, options.currentTTSWord, options.ttsText, options.allTokensInOrder);
+            
             return (
               <React.Fragment key={`token-${token.id}`}>
                 <WordTokenRenderer
                   token={token}
                   verse={contentItem.verse}
                   isHighlighted={isHighlighted}
+                  isTTSHighlighted={isTTSHighlighted}
                   showAlignments={options.showAlignments}
                   onWordClick={options.onWordClick}
                   onTokenClick={options.onTokenClick}
@@ -832,6 +967,9 @@ const VerseRenderer: React.FC<{
   language: 'en' | 'el-x-koine' | 'hbo';
   highlightedTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
   activeTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
+  currentTTSWord?: TTSWordBoundary | null;
+  ttsText?: string;
+  allTokensInOrder?: OptimizedToken[];
 }> = ({
   verse,
   chapterNumber,
@@ -844,7 +982,10 @@ const VerseRenderer: React.FC<{
   resourceType,
   language,
   highlightedTokenRefs,
-  activeTokenRefs
+  activeTokenRefs,
+  currentTTSWord,
+  ttsText,
+  allTokensInOrder
 }) => {
   const isOriginalLanguage = language === 'el-x-koine' || language === 'hbo';
   
@@ -863,12 +1004,16 @@ const VerseRenderer: React.FC<{
             const nextToken = filteredTokens[index + 1];
             const isHighlighted = shouldHighlightToken(token, highlightTarget, language);
             
+            // Use the provided ordered tokens for TTS highlighting
+            const isTTSHighlighted = shouldHighlightTokenForTTS(token, currentTTSWord || null, ttsText, allTokensInOrder);
+            
             return (
               <React.Fragment key={`token-${token.id}`}>
                 <WordTokenRenderer
                   token={token}
           verse={verse}
                   isHighlighted={isHighlighted}
+                  isTTSHighlighted={isTTSHighlighted}
           showAlignments={showAlignments}
           onWordClick={onWordClick}
           onTokenClick={onTokenClick}
@@ -1049,6 +1194,7 @@ const WordTokenRenderer: React.FC<{
   token: OptimizedToken;
   verse: OptimizedVerse;
   isHighlighted: boolean;
+  isTTSHighlighted?: boolean;
   showAlignments: boolean;
   onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
   onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
@@ -1061,6 +1207,7 @@ const WordTokenRenderer: React.FC<{
   token,
   verse,
   isHighlighted,
+  isTTSHighlighted = false,
   showAlignments,
   onWordClick,
   onTokenClick,
@@ -1146,8 +1293,9 @@ const WordTokenRenderer: React.FC<{
   // Check if this token has an active underline (note was clicked)
   const hasActiveUnderline = underlineClass.includes('bg-') && activeGroupId;
   
-  // Prioritize note underlining over word highlighting
-  const shouldShowHighlight = isHighlighted && !hasActiveUnderline;
+  // Prioritize TTS highlighting, then note underlining, then word highlighting
+  const shouldShowTTSHighlight = isTTSHighlighted;
+  const shouldShowHighlight = isHighlighted && !hasActiveUnderline && !shouldShowTTSHighlight;
 
         return (
           <span
@@ -1174,9 +1322,10 @@ const WordTokenRenderer: React.FC<{
               }
             }}
             className={`
+        ${shouldShowTTSHighlight ? 'border-b-2 border-dotted border-green-500 bg-green-100' : ''}
         ${shouldShowHighlight ? 'bg-yellow-200 font-semibold shadow-sm' : ''}
         ${isClickable ? 'cursor-pointer hover:bg-blue-100 hover:shadow-sm transition-colors duration-150' : ''}
-        ${isOriginalLanguage ? 'font-medium' : ''}
+        ${isOriginalLanguage && !shouldShowTTSHighlight ? 'font-medium' : ''}
         ${isNumber ? 'text-gray-600' : ''}
         ${underlineClass}
         inline-block rounded-sm ${isPunctuation ? '' : 'px-0.5'}

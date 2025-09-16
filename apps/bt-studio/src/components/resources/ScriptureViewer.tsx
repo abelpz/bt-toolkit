@@ -3,7 +3,7 @@
  * Displays OptimizedScripture content with chapters, verses, and paragraphs
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useResourceAPI } from 'linked-panels';
 import { OptimizedScripture } from '../../services/usfm-processor';
 import { useNavigation } from '../../contexts/NavigationContext';
@@ -11,6 +11,9 @@ import { useWorkspace } from '../../contexts/WorkspaceContext';
 import { USFMRenderer } from './USFMRenderer';
 import { ScriptureTokensBroadcast } from '../../types/scripture-messages';
 import { extractTokensFromVerseRange, getTokenSummary } from '../../utils/scripture-token-utils';
+import { TTSControl } from '../ui/TTSControl';
+import { TTSWordBoundary } from '../../types/tts';
+import { Icon } from '../ui/Icon';
 
 export interface ScriptureViewerProps {
   scripture?: OptimizedScripture;
@@ -45,6 +48,68 @@ export function ScriptureViewer({
   const [contentError, setContentError] = useState<string | null>(null);
   const [resourceMetadata, setResourceMetadata] = useState<any>(null);
   const [loadingProgress, setLoadingProgress] = useState<string>('');
+  
+  // State for TTS word highlighting
+  const [currentTTSWord, setCurrentTTSWord] = useState<TTSWordBoundary | null>(null);
+
+  // Extract text content for TTS from current scripture display
+  const ttsText = useMemo(() => {
+    const displayScripture = scripture || actualScripture;
+    if (!displayScripture?.chapters) return '';
+    
+    try {
+      // Get the current chapter content
+      const chapterNumber = currentReference.chapter;
+      if (!chapterNumber) return '';
+      
+      // Find the chapter in the chapters array
+      const currentChapterData = displayScripture.chapters.find(ch => ch.number === chapterNumber);
+      if (!currentChapterData) return '';
+      
+      // If we have a specific verse range, extract just that
+      if (currentReference.verse) {
+        const startVerse = currentReference.verse;
+        const endVerse = currentReference.endVerse || startVerse;
+        
+        let text = '';
+        for (let v = startVerse; v <= endVerse; v++) {
+          const verseData = currentChapterData.verses?.find(verse => verse.number === v);
+          if (verseData?.text) {
+            text += verseData.text + ' ';
+          }
+        }
+        return text.trim();
+      } else {
+        // Extract all verses from the chapter
+        return currentChapterData.verses
+          ?.map(verse => verse.text || '')
+          .join(' ')
+          .trim() || '';
+      }
+    } catch (error) {
+      console.warn('Failed to extract TTS text:', error);
+      return '';
+    }
+  }, [scripture, actualScripture, currentReference]);
+  
+  // TTS word boundary callback for word-by-word highlighting
+  const handleTTSWordBoundary = useCallback((wordBoundary: TTSWordBoundary) => {
+    console.log('🔊 TTS Word Boundary in ScriptureViewer:', wordBoundary);
+    // Clear highlighting if word is empty (indicates pause/stop/end)
+    if (!wordBoundary.word || wordBoundary.word.trim() === '') {
+      setCurrentTTSWord(null);
+    } else {
+      setCurrentTTSWord(wordBoundary);
+    }
+  }, []);
+  
+  // Clear TTS highlighting when TTS stops or pauses
+  const handleTTSStateChange = useCallback((isPlaying: boolean) => {
+    if (!isPlaying) {
+      console.log('🔊 TTS stopped/paused - clearing word highlighting');
+      setCurrentTTSWord(null);
+    }
+  }, []);
   
   // Listen for notes token groups broadcasts using the plugin system
   // Note: NotesTokenGroupsBroadcast is handled by USFMRenderer via TokenUnderliningContext
@@ -319,7 +384,7 @@ export function ScriptureViewer({
       <div className="h-full flex items-center justify-center bg-red-50">
         <div className="text-center max-w-md">
           <div className="text-red-500 text-xl mb-2">
-            <span role="img" aria-label="Warning">⚠️</span>
+            <Icon name="warning" size={16} className="text-yellow-500" aria-label="Warning" />
           </div>
           <h3 className="text-lg font-medium text-red-900 mb-2">Failed to Load Scripture</h3>
           <p className="text-red-700 text-sm">{error}</p>
@@ -334,7 +399,7 @@ export function ScriptureViewer({
       <div className="h-full flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md">
           <div className="text-gray-400 text-xl mb-2">
-            <span role="img" aria-label="Book">📖</span>
+            <Icon name="book-open" size={16} className="text-gray-500" aria-label="Book" />
           </div>
           <p className="text-gray-600 mb-4">No scripture content available</p>
           
@@ -362,7 +427,7 @@ export function ScriptureViewer({
           {/* Navigation Reference Display for testing */}
           <div className="mt-4 px-3 py-2 bg-blue-100 dark:bg-blue-900/30 rounded text-sm inline-block">
             <span className="text-blue-800 dark:text-blue-200 font-medium">
-              <span role="img" aria-label="Location">📍</span> Navigation: {formatNavigationRange()}
+              <Icon name="search" size={14} className="inline mr-1" aria-label="Location" /> Navigation: {formatNavigationRange()}
             </span>
           </div>
         </div>
@@ -370,10 +435,22 @@ export function ScriptureViewer({
     );
   }
 
+
   return (
-    <div className="flex flex-col bg-white h-full">
-      {/* Scripture Header */}
-      
+    <div className="flex flex-col bg-white h-full relative">
+      {/* Floating TTS Control - positioned absolutely in top-right corner */}
+      {ttsText && (
+        <div className="absolute top-2 right-2 z-10">
+          <TTSControl
+            text={ttsText}
+            compact={true}
+            title={`Read ${formatNavigationRange()} aloud`}
+            className="shadow-sm"
+            onWordBoundary={handleTTSWordBoundary}
+            onStateChange={handleTTSStateChange}
+          />
+        </div>
+      )}
 
       {/* Scripture Content using USFMRenderer */}
       <div className="flex-1 min-h-0 overflow-y-auto">
@@ -410,6 +487,8 @@ export function ScriptureViewer({
                 showParagraphs={true}
                 showAlignments={false}
                 className="scripture-content"
+                currentTTSWord={currentTTSWord}
+                ttsText={ttsText}
               />
             </div>
           )}

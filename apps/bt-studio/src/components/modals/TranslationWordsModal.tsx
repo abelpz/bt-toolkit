@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useWorkspace } from '../../contexts/WorkspaceContext';
+import { Icon } from '../ui/Icon';
 import { ResourceMetadata, ResourceType } from '../../types/context';
 import { MarkdownRenderer } from '../ui/MarkdownRenderer';
 
@@ -245,7 +246,7 @@ export const TranslationWordsModal: React.FC<TranslationWordsModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center space-x-3">
             <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full">
-              <span role="img" aria-label="book">📚</span>
+              <Icon name="translation-words" size={16} aria-label="book" />
             </div>
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
