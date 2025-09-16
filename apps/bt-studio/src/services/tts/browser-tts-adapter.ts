@@ -102,8 +102,12 @@ export class BrowserTTSAdapter implements TTSAdapter {
 
     // Track word-level progress with detailed information
     const startTime = Date.now();
+    let wordBoundaryFallbackTimer: NodeJS.Timeout | null = null;
+    let boundaryEventFired = false;
+    
     utterance.onboundary = (event) => {
       if (event.name === 'word' && text.length > 0) {
+        boundaryEventFired = true;
         const progress = Math.min(event.charIndex / text.length, 1);
         const elapsedTime = (Date.now() - startTime) / 1000; // Convert to seconds
         
@@ -121,7 +125,7 @@ export class BrowserTTSAdapter implements TTSAdapter {
           elapsedTime
         };
         
-        console.log('🔊 TTS: Word boundary:', wordBoundary);
+        console.log('🔊 TTS: Word boundary (native):', wordBoundary);
         
         this.updatePlaybackState({ 
           progress,
@@ -132,6 +136,81 @@ export class BrowserTTSAdapter implements TTSAdapter {
         if (options.onWordBoundary) {
           options.onWordBoundary(wordBoundary);
         }
+      }
+    };
+    
+    // Mobile fallback: Simulate word boundaries using timing
+    // This is needed because Android Chrome often doesn't fire onboundary events
+    const setupMobileFallback = () => {
+      // Wait a bit to see if native boundary events work
+      setTimeout(() => {
+        if (!boundaryEventFired && this.playbackState.isPlaying && options.onWordBoundary) {
+          console.log('🔊 TTS: Native word boundaries not working, using mobile fallback');
+          
+          // Estimate speech rate (average 150-200 words per minute)
+          const words = text.split(/\s+/).filter(word => word.length > 0);
+          const estimatedWPM = 180; // words per minute
+          const msPerWord = (60 * 1000) / estimatedWPM;
+          
+          let currentWordIndex = 0;
+          let currentCharIndex = 0;
+          
+          const simulateWordBoundary = () => {
+            if (!this.playbackState.isPlaying || currentWordIndex >= words.length) {
+              return;
+            }
+            
+            const currentWord = words[currentWordIndex];
+            const progress = Math.min(currentCharIndex / text.length, 1);
+            const elapsedTime = (Date.now() - startTime) / 1000;
+            
+            const wordBoundary = {
+              word: currentWord,
+              charIndex: currentCharIndex,
+              charLength: currentWord.length,
+              progress,
+              elapsedTime
+            };
+            
+            console.log('🔊 TTS: Word boundary (fallback):', wordBoundary);
+            
+            this.updatePlaybackState({ 
+              progress,
+              currentWord: wordBoundary
+            });
+            
+            if (options.onWordBoundary) {
+              options.onWordBoundary(wordBoundary);
+            }
+            
+            // Move to next word
+            currentWordIndex++;
+            currentCharIndex += currentWord.length + 1; // +1 for space
+            
+            // Schedule next word
+            if (currentWordIndex < words.length && this.playbackState.isPlaying) {
+              wordBoundaryFallbackTimer = setTimeout(simulateWordBoundary, msPerWord);
+            }
+          };
+          
+          // Start the fallback
+          simulateWordBoundary();
+        }
+      }, 500); // Wait 500ms to see if native events work
+    };
+    
+    // Set up mobile fallback
+    setupMobileFallback();
+    
+    // Clean up fallback timer when speech ends
+    const originalOnEnd = utterance.onend;
+    utterance.onend = (event) => {
+      if (wordBoundaryFallbackTimer) {
+        clearTimeout(wordBoundaryFallbackTimer);
+        wordBoundaryFallbackTimer = null;
+      }
+      if (originalOnEnd) {
+        originalOnEnd.call(utterance, event);
       }
     };
   }

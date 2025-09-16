@@ -449,6 +449,44 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
     return type === 'ta' ? 'Translation Academy' : 'Translation Words';
   };
 
+  const getResourceColors = (type: ResourceContentType) => {
+    switch (type) {
+      case 'ta':
+        return {
+          bg: 'bg-blue-50',
+          text: 'text-blue-700',
+          border: 'border-blue-200',
+          hover: 'hover:bg-blue-100',
+          iconBg: 'bg-blue-100',
+          iconText: 'text-blue-600',
+          buttonBg: 'bg-blue-600',
+          buttonHover: 'hover:bg-blue-700'
+        };
+      case 'tw':
+        return {
+          bg: 'bg-green-100',
+          text: 'text-green-900',
+          border: 'border-green-200',
+          hover: 'hover:bg-green-200',
+          iconBg: 'bg-green-100',
+          iconText: 'text-green-800',
+          buttonBg: 'bg-green-600',
+          buttonHover: 'hover:bg-green-700'
+        };
+      default:
+        return {
+          bg: 'bg-gray-50',
+          text: 'text-gray-700',
+          border: 'border-gray-200',
+          hover: 'hover:bg-gray-100',
+          iconBg: 'bg-gray-100',
+          iconText: 'text-gray-600',
+          buttonBg: 'bg-gray-600',
+          buttonHover: 'hover:bg-gray-700'
+        };
+    }
+  };
+
   if (!isOpen) return null;
 
   const canGoBack = currentIndex > 0;
@@ -456,11 +494,12 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
 
   // Minimized state - show floating button
   if (isMinimized) {
+    const colors = currentResource ? getResourceColors(currentResource.type) : getResourceColors('ta');
     return (
       <div className="fixed bottom-4 right-4 z-50">
         <button
           onClick={handleRestore}
-          className="bg-blue-600 hover:bg-blue-700 text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-105 flex items-center space-x-3"
+          className={`${colors.buttonBg} ${colors.buttonHover} text-white rounded-full p-4 shadow-lg transition-all duration-200 hover:scale-105 flex items-center space-x-3`}
           aria-label="Restore resource modal"
         >
           <div className="flex items-center space-x-2">
@@ -522,12 +561,12 @@ export const ResourceModal: React.FC<ResourceModalProps> = ({
               <>
                 <div className="w-px h-5 bg-gray-300 mx-2" />
                 <div className="flex items-center space-x-2">
-                  <div className="flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full">
+                  <div className={`flex items-center justify-center w-6 h-6 ${getResourceColors(currentResource.type).iconBg} rounded-full`}>
                     <Icon
                       name={getResourceIcon(currentResource.type)}
                       size={14}
                       aria-label={getResourceTypeLabel(currentResource.type)}
-                      className="text-blue-600"
+                      className={getResourceColors(currentResource.type).iconText}
                     />
                   </div>
                   <div>

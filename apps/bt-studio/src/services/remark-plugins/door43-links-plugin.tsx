@@ -97,7 +97,7 @@ const Door43Link: React.FC<{
       case 'ta':
         return `${baseStyle} bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100`;
       case 'tw':
-        return `${baseStyle} bg-green-50 text-green-700 border border-green-200 hover:bg-green-100`;
+        return `${baseStyle} bg-green-600 text-white border border-green-700 hover:bg-green-700`;
       case 'tn':
         return `${baseStyle} bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100`;
       case 'obs':

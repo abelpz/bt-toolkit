@@ -214,7 +214,7 @@ export function NotesViewer({
     return (
       <button
         onClick={handleClick}
-        className="inline-flex items-center px-2 py-1 text-xs text-blue-700 bg-blue-50 rounded hover:bg-blue-100 transition-colors"
+        className="inline-flex items-center px-2 py-1 text-sm text-blue-700 bg-blue-50 rounded border border-blue-700/30 hover:bg-blue-100 transition-colors"
         type="button"
       >
         <Icon name="academy" size={14} className="mr-1 flex-shrink-0" aria-label="graduation cap" />
@@ -1074,7 +1074,7 @@ export function NotesViewer({
                 key={note.id || index} 
                 className={`border border-gray-200 rounded p-2 bg-white transition-colors ${
                   shouldNoteHaveColorIndicator(note) 
-                    ? 'hover:bg-blue-50 cursor-pointer' 
+                    ? 'hover:bg-blue-50/50 cursor-pointer' 
                     : ''
                 }`}
                 onClick={shouldNoteHaveColorIndicator(note) ? () => handleNoteClick(note) : undefined}
@@ -1105,7 +1105,9 @@ export function NotesViewer({
                       if (targetQuote) {
                         // Show target language quote when available
                         return (
-                          <p className="text-purple-700 italic text-sm">"{targetQuote.quote}"</p>
+                          <p className="text-purple-700 italic text-sm">
+                            “{targetQuote.quote}”
+                          </p>
                         );
                       } else {
                         // Show original language quote when no target quote is built

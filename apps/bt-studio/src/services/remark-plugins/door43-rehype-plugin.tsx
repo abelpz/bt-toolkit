@@ -397,14 +397,7 @@ const Door43Link: React.FC<{
         break;
         
       case 'tn':
-        console.log('🧭 TN link details:', {
-          bookCode: parsedLink.bookCode,
-          chapter: parsedLink.chapter,
-          verse: parsedLink.verse,
-          currentBook,
-          hasNavigationHandler: !!handlers?.onNavigationClick
-        });
-        
+     
         if (parsedLink.bookCode && parsedLink.chapter && parsedLink.verse) {
           const bookCode = parsedLink.bookCode === 'navigation' && currentBook 
             ? currentBook 
@@ -443,7 +436,7 @@ const Door43Link: React.FC<{
       case 'ta':
         return `${baseStyle} bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100`;
       case 'tw':
-        return `${baseStyle} bg-green-50 text-green-700 border border-green-200 hover:bg-green-100`;
+        return `${baseStyle} bg-green-100 text-green-900 border-green-700/30 hover:bg-green-200`;
       case 'tn':
         return `${baseStyle} bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100`;
       case 'obs':

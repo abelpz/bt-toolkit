@@ -504,6 +504,7 @@ export function WorkspaceProvider({
   resourceMode?: 'minimal' | 'default' | 'comprehensive' 
 }) {
   const store = useWorkspaceStore()
+  console.log('🏗️ WorkspaceProvider rendering, store:', store)
 
   // Expose store to window for debugging
   useEffect(() => {
@@ -516,10 +517,12 @@ export function WorkspaceProvider({
   // Initialize workspace on mount
   useEffect(() => {
     if (initialOwner && initialLanguage) {
+      console.log('🚀 Initializing workspace with:', { initialOwner, initialLanguage, initialServer, resourceMode })
       store.initializeWorkspace(initialOwner, initialLanguage, initialServer, resourceMode)
     }
   }, [store, initialOwner, initialLanguage, initialServer, resourceMode])
 
+  console.log('🎯 WorkspaceProvider providing context value:', store)
   return (
     <WorkspaceContext.Provider value={store}>
       {children}
@@ -533,7 +536,9 @@ export function WorkspaceProvider({
 
 export function useWorkspace(): WorkspaceStore {
   const context = useContext(WorkspaceContext)
+  console.log('🔍 useWorkspace called, context:', context)
   if (!context) {
+    console.error('❌ WorkspaceContext is null - component is outside WorkspaceProvider or provider failed to initialize')
     throw new Error('useWorkspace must be used within a WorkspaceProvider')
   }
   return context
