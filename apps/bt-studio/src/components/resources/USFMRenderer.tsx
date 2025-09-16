@@ -10,7 +10,7 @@ import type { WordAlignment } from '../../types/context';
 import type { OptimizedToken, OptimizedScripture, OptimizedVerse } from '../../services/usfm-processor';
 import { getCrossPanelCommunicationService, type CrossPanelMessage, type TokenHighlightMessage, type OriginalLanguageToken } from '../../services/cross-panel-communication';
 import { TokenUnderliningProvider, useTokenUnderlining, type TokenGroup } from '../../contexts/TokenUnderliningContext';
-import type { NotesTokenGroupsBroadcast, TokenClickBroadcast, NoteSelectionBroadcast } from '../../types/scripture-messages';
+import type { NotesTokenGroupsBroadcast, TokenClickBroadcast, NoteSelectionBroadcast, VerseReferenceFilterBroadcast } from '../../types/scripture-messages';
 import { useNavigation } from '../../contexts/NavigationContext';
 import type { TTSWordBoundary } from '../../types/tts';
 
@@ -441,9 +441,15 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
         console.log('🧹 Clearing previous token click highlights for note selection');
         getCrossPanelCommunicationService().clearHighlights();
         
-        // Set the active group based on the selected note's token group ID
-        // This will override any previous token click highlights
-        setActiveGroup(noteSelectionEvent.selectedNote.tokenGroupId);
+        if (noteSelectionEvent.selectedNote === null) {
+          // Clear the active group when note selection is cleared
+          console.log('🧹 Clearing active group for note deselection');
+          setActiveGroup(null);
+        } else {
+          // Set the active group based on the selected note's token group ID
+          // This will override any previous token click highlights
+          setActiveGroup(noteSelectionEvent.selectedNote.tokenGroupId);
+        }
       }
     }
   });
@@ -616,6 +622,30 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
     }
   }, [crossPanelService, resourceId, onTokenClick, linkedPanelsAPI, resourceType, currentReference, setActiveGroup]);
 
+  // Handle verse number clicks to broadcast verse reference filter
+  const handleVerseClick = useCallback((verseNumber: number, chapterNumber: number) => {
+    if (!currentReference?.book || !linkedPanelsAPI?.messaging) {
+      console.warn('Cannot broadcast verse reference filter: missing book or messaging API');
+      return;
+    }
+
+    // Create verse reference filter broadcast
+    const verseReferenceFilterBroadcast: VerseReferenceFilterBroadcast = {
+      type: 'verse-reference-filter-broadcast',
+      lifecycle: 'event',
+      verseReference: {
+        book: currentReference.book,
+        chapter: chapterNumber,
+        verse: verseNumber
+      },
+      sourceResourceId: resourceId,
+      timestamp: Date.now()
+    };
+
+    console.log('📍 Broadcasting verse reference filter via linked-panels:', verseReferenceFilterBroadcast);
+    linkedPanelsAPI.messaging.sendToAll(verseReferenceFilterBroadcast);
+  }, [currentReference, resourceId, linkedPanelsAPI]);
+
   // Register panel and set up cross-panel communication
   useEffect(() => {
     
@@ -684,6 +714,7 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
           highlightTarget,
           onWordClick,
           onTokenClick: handleTokenClick,
+          onVerseClick: handleVerseClick,
           resourceType,
           language,
           highlightedTokenRefs,
@@ -712,6 +743,7 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
           highlightTarget={highlightTarget}
           onWordClick={onWordClick}
           onTokenClick={handleTokenClick}
+          onVerseClick={handleVerseClick}
             resourceType={resourceType}
             language={language}
             highlightedTokenRefs={highlightedTokenRefs}
@@ -737,6 +769,7 @@ interface RenderingOptions {
   highlightTarget: OriginalLanguageToken | null;
   onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
   onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
+  onVerseClick?: (verseNumber: number, chapterNumber: number) => void;
   resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
   language: 'en' | 'el-x-koine' | 'hbo';
   highlightedTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
@@ -804,6 +837,7 @@ function renderParagraphsForChapter(
     highlightTarget: OriginalLanguageToken | null;
     onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
     onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
+    onVerseClick?: (verseNumber: number, chapterNumber: number) => void;
     resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
     language: 'en' | 'el-x-koine' | 'hbo';
   }
@@ -900,7 +934,11 @@ function renderParagraphsForChapter(
         <React.Fragment key={`content-${contentIndex}`}>
           {/* Show verse number if this is the first content item for this verse */}
           {contentItem.showVerseNumber && options.showVerseNumbers && (
-            <span className="verse-number text-sm font-bold text-blue-600 mr-1 select-none">
+            <span 
+              className="verse-number text-sm font-bold text-blue-600 mr-1 select-none cursor-pointer hover:bg-blue-100 px-1 rounded transition-colors"
+              onClick={() => options.onVerseClick?.(contentItem.verse.number, chapterNumber)}
+              title={`Filter by verse ${chapterNumber}:${contentItem.verse.number}`}
+            >
               {contentItem.verse.number}
             </span>
           )}
@@ -963,6 +1001,7 @@ const VerseRenderer: React.FC<{
   highlightTarget: OriginalLanguageToken | null;
   onWordClick?: (word: string, verse: OptimizedVerse, alignment?: WordAlignment) => void;
   onTokenClick?: (token: OptimizedToken, verse: OptimizedVerse) => void;
+  onVerseClick?: (verseNumber: number, chapterNumber: number) => void;
   resourceType: 'ULT' | 'UST' | 'UGNT' | 'UHB';
   language: 'en' | 'el-x-koine' | 'hbo';
   highlightedTokenRefs: React.MutableRefObject<Map<string, HTMLElement>>;
@@ -979,6 +1018,7 @@ const VerseRenderer: React.FC<{
   highlightTarget,
   onWordClick,
   onTokenClick,
+  onVerseClick,
   resourceType,
   language,
   highlightedTokenRefs,
@@ -992,9 +1032,13 @@ const VerseRenderer: React.FC<{
   return (
     <div className="verse-container mb-2 leading-relaxed">
       {showVerseNumbers && (
-        <span className="verse-number text-sm font-bold text-blue-600 mr-2 select-none">
-            {verse.number}
-          </span>
+        <span 
+          className="verse-number text-sm font-bold text-blue-600 mr-2 select-none cursor-pointer hover:bg-blue-100 px-1 rounded transition-colors"
+          onClick={() => onVerseClick?.(verse.number, chapterNumber)}
+          title={`Filter by verse ${chapterNumber}:${verse.number}`}
+        >
+          {verse.number}
+        </span>
       )}
       
       <span className="verse-text">

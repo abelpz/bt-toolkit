@@ -21,6 +21,7 @@ import {
   ScriptureTokensBroadcast,
   TokenClickBroadcast,
   NoteSelectionBroadcast,
+  VerseReferenceFilterBroadcast,
   NoteTokenGroup,
 } from '../../types/scripture-messages';
 import { 
@@ -106,6 +107,17 @@ export function NotesViewer({
       content: string;
       alignedSemanticIds?: string[];
       verseRef: string;
+    };
+    sourceResourceId: string;
+    timestamp: number;
+  } | null>(null);
+  
+  // Verse reference filter state (for filtering notes by verse reference)
+  const [verseReferenceFilter, setVerseReferenceFilter] = useState<{
+    verseReference: {
+      book: string;
+      chapter: number;
+      verse: number;
     };
     sourceResourceId: string;
     timestamp: number;
@@ -238,6 +250,9 @@ export function NotesViewer({
         const tokenClickEvent = event as TokenClickBroadcast;
         console.log('📨 NotesViewer received token click event:', tokenClickEvent);
         
+        // Clear verse reference filter when token filter is applied
+        setVerseReferenceFilter(null);
+        
         // Set token filter based on clicked token
         setTokenFilter({
           originalLanguageToken: {
@@ -253,28 +268,65 @@ export function NotesViewer({
     }
   });
 
-  // Clear token filter when navigation changes (since messages are immediate/transient)
+  // Listen for verse reference filter broadcasts via linked-panels events (transient messages)
+  useMessaging({ 
+    resourceId,
+    eventTypes: ['verse-reference-filter-broadcast'],
+    onEvent: (event) => {
+      if (event.type === 'verse-reference-filter-broadcast') {
+        const verseRefEvent = event as VerseReferenceFilterBroadcast;
+        console.log('📍 NotesViewer received verse reference filter event:', verseRefEvent);
+        
+        // Clear token filter when verse reference filter is applied
+        setTokenFilter(null);
+        
+        // Set verse reference filter based on clicked verse
+        setVerseReferenceFilter({
+          verseReference: {
+            book: verseRefEvent.verseReference.book,
+            chapter: verseRefEvent.verseReference.chapter,
+            verse: verseRefEvent.verseReference.verse
+          },
+          sourceResourceId: verseRefEvent.sourceResourceId,
+          timestamp: verseRefEvent.timestamp
+        });
+      }
+    }
+  });
+
+  // Clear filters when navigation changes (since messages are immediate/transient)
   useEffect(() => {
     setTokenFilter(null);
+    setVerseReferenceFilter(null);
   }, [currentReference.book, currentReference.chapter, currentReference.verse]);
+
+  // Track active note for toggle functionality
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null);
 
   // Function to handle note selection and broadcast the event
   const handleNoteClick = useCallback((note: TranslationNote) => {
     const noteKey = note.id || `${note.reference}-${note.quote}`;
     const tokenGroupId = `notes-${noteKey}`;
     
+    // Toggle logic: if clicking the same note, deactivate it
+    const isCurrentlyActive = activeNoteId === noteKey;
+    const newActiveId = isCurrentlyActive ? null : noteKey;
+    setActiveNoteId(newActiveId);
+    
     console.log('📝 Note clicked, broadcasting selection:', {
       noteId: noteKey,
       tokenGroupId,
       quote: note.quote,
-      reference: note.reference
+      reference: note.reference,
+      isToggleOff: isCurrentlyActive,
+      newActiveId
     });
 
-    // Broadcast note selection event
+    // Broadcast note selection event (or clear event if toggling off)
     const noteSelectionBroadcast: NoteSelectionBroadcast = {
       type: 'note-selection-broadcast',
       lifecycle: 'event',
-      selectedNote: {
+      selectedNote: isCurrentlyActive ? null : {
         noteId: noteKey,
         tokenGroupId: tokenGroupId,
         quote: note.quote,
@@ -286,7 +338,7 @@ export function NotesViewer({
 
     // Use the general messaging API instead of the typed one
     (linkedPanelsAPI.messaging as any).sendToAll(noteSelectionBroadcast);
-  }, [resourceId, linkedPanelsAPI]);
+  }, [resourceId, linkedPanelsAPI, activeNoteId]);
 
   // Function to check if a note should have color indicator and be clickable
   const shouldNoteHaveColorIndicator = useCallback((note: TranslationNote): boolean => {
@@ -448,9 +500,9 @@ export function NotesViewer({
       if (!note.reference) return false;
       
       try {
-        // Parse chapter and verse from reference (e.g., "1:1" -> chapter: 1, verse: 1)
-        const refParts = note.reference.split(':');
-        const noteChapter = parseInt(refParts[0] || '1');
+      // Parse chapter and verse from reference (e.g., "1:1" -> chapter: 1, verse: 1)
+      const refParts = note.reference.split(':');
+      const noteChapter = parseInt(refParts[0] || '1');
         
         // Parse verse part which might be a range (e.g., "3-4" or just "3")
         const versePart = refParts[1] || '1';
@@ -463,37 +515,37 @@ export function NotesViewer({
           // Single verse
           noteVerse = parseInt(versePart);
         }
-
-        // Determine the range bounds (default to single verse/chapter if no end specified)
-        const startChapter = currentReference.chapter;
-        const startVerse = currentReference.verse;
-        const endChapter = currentReference.endChapter || currentReference.chapter;
-        const endVerse = currentReference.endVerse || currentReference.verse;
-
-        // Skip filtering if we don't have valid chapter/verse data
-        if (!startChapter || !startVerse) {
-          return true;
-        }
-
-        // Check if note is within the chapter range
-        if (noteChapter < startChapter) {
-          return false;
-        }
-        if (endChapter && noteChapter > endChapter) {
-          return false;
-        }
-
-        // Filter by start verse in start chapter
-        if (noteChapter === startChapter && noteVerse < startVerse) {
-          return false;
-        }
-
-        // Filter by end verse in end chapter
-        if (endChapter && endVerse && noteChapter === endChapter && noteVerse > endVerse) {
-          return false;
-        }
-
+      
+      // Determine the range bounds (default to single verse/chapter if no end specified)
+      const startChapter = currentReference.chapter;
+      const startVerse = currentReference.verse;
+      const endChapter = currentReference.endChapter || currentReference.chapter;
+      const endVerse = currentReference.endVerse || currentReference.verse;
+      
+      // Skip filtering if we don't have valid chapter/verse data
+      if (!startChapter || !startVerse) {
         return true;
+      }
+      
+      // Check if note is within the chapter range
+      if (noteChapter < startChapter) {
+        return false;
+      }
+      if (endChapter && noteChapter > endChapter) {
+        return false;
+      }
+      
+      // Filter by start verse in start chapter
+      if (noteChapter === startChapter && noteVerse < startVerse) {
+        return false;
+      }
+      
+      // Filter by end verse in end chapter
+      if (endChapter && endVerse && noteChapter === endChapter && noteVerse > endVerse) {
+        return false;
+      }
+      
+      return true;
       } catch (error) {
         console.warn(`⚠️ NotesViewer - Error parsing note reference ${note.reference}:`, error);
         return false;
@@ -833,47 +885,197 @@ export function NotesViewer({
     return COLOR_CLASSES[colorIndex].bgColor;
   }, [filteredNotesByNavigation, shouldNoteHaveColorIndicator]);
 
-  // Apply token filter on top of navigation-filtered notes
-  const filteredNotes = useMemo(() => {
-    if (!tokenFilter || !quoteMatches.size) {
-      return filteredNotesByNavigation;
+  // Apply secondary filter (token or verse reference) on top of navigation-filtered notes with fallback
+  const { filteredNotes, secondaryFilterCount, secondaryFilterType } = useMemo(() => {
+    // If no secondary filter is active, return navigation-filtered notes
+    if (!tokenFilter && !verseReferenceFilter) {
+      return { 
+        filteredNotes: filteredNotesByNavigation, 
+        secondaryFilterCount: filteredNotesByNavigation.length,
+        secondaryFilterType: 'none' as const
+      };
     }
 
-    console.log('🔍 Applying token filter to notes:', {
-      tokenFilter: tokenFilter.originalLanguageToken,
-      totalNotes: filteredNotesByNavigation.length,
-      quoteMatchesCount: quoteMatches.size
-    });
+    // Handle token filter (quote-based filtering)
+    if (tokenFilter && quoteMatches.size > 0) {
+      console.log('🔍 Applying token filter to notes:', {
+        tokenFilter: tokenFilter.originalLanguageToken,
+        totalNotes: filteredNotesByNavigation.length,
+        quoteMatchesCount: quoteMatches.size
+      });
 
-    // Filter notes that have quote matches containing the clicked token
-    return filteredNotesByNavigation.filter(note => {
-      const noteKey = note.id || `${note.reference}-${note.quote}`;
-      const quoteMatch = quoteMatches.get(noteKey);
+      // Filter notes that have quote matches containing the clicked token
+      const tokenFilteredNotes = filteredNotesByNavigation.filter(note => {
+        const noteKey = note.id || `${note.reference}-${note.quote}`;
+        const quoteMatch = quoteMatches.get(noteKey);
+        
+        if (!quoteMatch || !quoteMatch.totalTokens.length) {
+          return false;
+        }
+
+        // Check if any of the note's matched tokens have the same ID as the clicked token
+        const hasMatchingToken = quoteMatch.totalTokens.some(token => 
+          token.id.toString() === tokenFilter.originalLanguageToken.semanticId ||
+          (tokenFilter.originalLanguageToken.alignedSemanticIds && 
+           tokenFilter.originalLanguageToken.alignedSemanticIds.includes(token.id.toString()))
+        );
+
+        if (hasMatchingToken) {
+          console.log('✅ Note matches token filter:', {
+            noteId: noteKey,
+            quote: note.quote,
+            matchedTokenIds: quoteMatch.totalTokens.map(t => t.id),
+            filterTokenId: tokenFilter.originalLanguageToken.semanticId
+          });
+        }
+
+        return hasMatchingToken;
+      });
+
+      // Fallback: If token filter produces no results, show all navigation-filtered notes
+      // but keep the actual filter count (0) for display
+      if (tokenFilteredNotes.length === 0) {
+        console.log('🔄 NotesViewer - Token filter produced no results, falling back to navigation filter');
+        return { 
+          filteredNotes: filteredNotesByNavigation, 
+          secondaryFilterCount: 0,
+          secondaryFilterType: 'token' as const
+        };
+      }
+
+      return { 
+        filteredNotes: tokenFilteredNotes, 
+        secondaryFilterCount: tokenFilteredNotes.length,
+        secondaryFilterType: 'token' as const
+      };
+    }
+
+    // Handle verse reference filter
+    if (verseReferenceFilter) {
+      console.log('📍 Applying verse reference filter to notes:', {
+        verseReference: verseReferenceFilter.verseReference,
+        totalNotes: filteredNotesByNavigation.length
+      });
+
+      // Filter notes that match the specific verse reference
+      const verseFilteredNotes = filteredNotesByNavigation.filter(note => {
+        // Parse the note's reference to extract chapter and verse
+        const referenceMatch = note.reference.match(/^(\d+):(\d+)$/);
+        if (!referenceMatch) {
+          return false; // Skip notes with invalid reference format
+        }
+
+        const noteChapter = parseInt(referenceMatch[1], 10);
+        const noteVerse = parseInt(referenceMatch[2], 10);
+
+        // Check if note matches the verse reference filter
+        const matches = noteChapter === verseReferenceFilter.verseReference.chapter &&
+                       noteVerse === verseReferenceFilter.verseReference.verse;
+
+        if (matches) {
+          console.log('✅ Note matches verse reference filter:', {
+            noteReference: note.reference,
+            filterReference: `${verseReferenceFilter.verseReference.chapter}:${verseReferenceFilter.verseReference.verse}`,
+            quote: note.quote
+          });
+        }
+
+        return matches;
+      });
+
+      // Apply fallback logic like token filter - if no results, show navigation-filtered notes
+      // but keep the actual filter count (0) for display
+      if (verseFilteredNotes.length === 0) {
+        console.log('🔄 NotesViewer - Verse reference filter produced no results, falling back to navigation filter');
+        return { 
+          filteredNotes: filteredNotesByNavigation, 
+          secondaryFilterCount: 0,
+          secondaryFilterType: 'verse' as const
+        };
+      }
+
+      return { 
+        filteredNotes: verseFilteredNotes, 
+        secondaryFilterCount: verseFilteredNotes.length,
+        secondaryFilterType: 'verse' as const
+      };
+    }
+
+    // Default case (shouldn't reach here)
+    return { 
+      filteredNotes: filteredNotesByNavigation, 
+      secondaryFilterCount: filteredNotesByNavigation.length,
+      secondaryFilterType: 'none' as const
+    };
+  }, [filteredNotesByNavigation, tokenFilter, verseReferenceFilter, quoteMatches]);
+
+  // Auto-activate first item when token filter produces results (but NOT for verse reference filters)
+  const lastAutoActivatedTokenRef = useRef<string | null>(null);
+  const lastAutoActivatedNoteRef = useRef<string | null>(null);
+  const lastVerseFilterRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    const currentTokenId = tokenFilter?.originalLanguageToken?.semanticId;
+    const currentVerseFilter = verseReferenceFilter ? 
+      `${verseReferenceFilter.verseReference.chapter}:${verseReferenceFilter.verseReference.verse}` : null;
+    
+    // Only auto-activate for token filters, not verse reference filters
+    if (tokenFilter && secondaryFilterType === 'token' && secondaryFilterCount > 0 && currentTokenId) {
+      const firstNote = filteredNotes[0];
+      const noteKey = firstNote.id || `${firstNote.reference}-${firstNote.quote}`;
       
-      if (!quoteMatch || !quoteMatch.totalTokens.length) {
-        return false;
+      // Only auto-activate if this is a new token or a different first note
+      const isNewToken = lastAutoActivatedTokenRef.current !== currentTokenId;
+      const isDifferentFirstNote = lastAutoActivatedNoteRef.current !== noteKey;
+      
+      if (isNewToken || isDifferentFirstNote) {
+        console.log('🎯 Auto-activating first filtered note (token filter):', noteKey, { isNewToken, isDifferentFirstNote });
+        
+        // Update refs to prevent re-triggering
+        lastAutoActivatedTokenRef.current = currentTokenId;
+        lastAutoActivatedNoteRef.current = noteKey;
+        
+        setActiveNoteId(noteKey);
+        
+        // Broadcast the selection
+        const tokenGroupId = `notes-${noteKey}`;
+        const noteSelectionBroadcast: NoteSelectionBroadcast = {
+          type: 'note-selection-broadcast',
+          lifecycle: 'event',
+          selectedNote: {
+            noteId: noteKey,
+            tokenGroupId: tokenGroupId,
+            quote: firstNote.quote,
+            reference: firstNote.reference
+          },
+          sourceResourceId: resourceId,
+          timestamp: Date.now()
+        };
+        (linkedPanelsAPI.messaging as any).sendToAll(noteSelectionBroadcast);
       }
-
-      // Check if any of the note's matched tokens have the same ID as the clicked token
-      const hasMatchingToken = quoteMatch.totalTokens.some(token => 
-        token.id.toString() === tokenFilter.originalLanguageToken.semanticId ||
-        (tokenFilter.originalLanguageToken.alignedSemanticIds && 
-         tokenFilter.originalLanguageToken.alignedSemanticIds.includes(token.id.toString()))
-      );
-
-      if (hasMatchingToken) {
-        console.log('✅ Note matches token filter:', {
-          noteId: noteKey,
-          quote: note.quote,
-          matchedTokenIds: quoteMatch.totalTokens.map(t => t.id),
-          filterTokenId: tokenFilter.originalLanguageToken.semanticId
-        });
+    } else if (tokenFilter && secondaryFilterType === 'token' && secondaryFilterCount === 0) {
+      // Clear active state when token filter produces no results
+      console.log('🧹 Clearing active note - no token filter results');
+      lastAutoActivatedTokenRef.current = null;
+      lastAutoActivatedNoteRef.current = null;
+      setActiveNoteId(null);
+    } else if (verseReferenceFilter && secondaryFilterType === 'verse') {
+      // Only clear active state when verse reference filter is FIRST applied (not on re-evaluations)
+      const isNewVerseFilter = lastVerseFilterRef.current !== currentVerseFilter;
+      if (isNewVerseFilter) {
+        console.log('📍 Verse reference filter applied - clearing active note (no auto-activation)');
+        lastAutoActivatedTokenRef.current = null;
+        lastAutoActivatedNoteRef.current = null;
+        lastVerseFilterRef.current = currentVerseFilter;
+        setActiveNoteId(null);
       }
-
-      return hasMatchingToken;
-    });
-  }, [filteredNotesByNavigation, tokenFilter, quoteMatches]);
-
+    } else if (!tokenFilter && !verseReferenceFilter) {
+      // Clear refs when no filters are active
+      lastAutoActivatedTokenRef.current = null;
+      lastAutoActivatedNoteRef.current = null;
+      lastVerseFilterRef.current = null;
+    }
+  }, [tokenFilter?.originalLanguageToken?.semanticId, verseReferenceFilter, secondaryFilterType, secondaryFilterCount, filteredNotes, resourceId, linkedPanelsAPI]);
 
   // Send note token groups when quote matches are updated (with debouncing)
   useEffect(() => {
@@ -1049,13 +1251,13 @@ export function NotesViewer({
           <div className="bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between">
             <div className="flex items-center space-x-2">
               <span className="text-blue-600 text-sm font-medium">
-                <Icon name="search" size={16} className="text-green-600" aria-label="Target" /> 
+                <Icon name="search" size={16} className="text-green-600" aria-label="Token Filter" /> 
               </span>
               <span className="text-blue-800 font-mono text-sm bg-blue-100 px-2 py-1 rounded">
                 {tokenFilter.originalLanguageToken.content}
               </span>
               <span className="text-blue-600 text-xs">
-                ({filteredNotes.length})
+                ({secondaryFilterCount})
               </span>
             </div>
             <button
@@ -1064,6 +1266,34 @@ export function NotesViewer({
               }}
               className="text-blue-600 hover:text-blue-800 hover:bg-blue-100 rounded p-1 transition-colors"
               title="Clear token filter"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {/* Verse Reference Filter Banner */}
+        {verseReferenceFilter && (
+          <div className="bg-purple-50 border-b border-purple-200 px-3 py-2 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="text-purple-600 text-sm font-medium">
+                <Icon name="bookmark" size={16} className="text-purple-600" aria-label="Verse Filter" /> 
+              </span>
+              <span className="text-purple-800 font-mono text-sm bg-purple-100 px-2 py-1 rounded">
+                {verseReferenceFilter.verseReference.chapter}:{verseReferenceFilter.verseReference.verse}
+              </span>
+              <span className="text-purple-600 text-xs">
+                ({secondaryFilterCount})
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setVerseReferenceFilter(null);
+              }}
+              className="text-purple-600 hover:text-purple-800 hover:bg-purple-100 rounded p-1 transition-colors"
+              title="Clear verse reference filter"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1094,10 +1324,14 @@ export function NotesViewer({
             {filteredNotes.map((note, index) => (
               <div 
                 key={note.id || index} 
-                className={`border border-gray-200 rounded p-2 bg-white transition-colors ${
+                className={`border rounded p-2 transition-colors ${
                   shouldNoteHaveColorIndicator(note) 
-                    ? 'hover:bg-blue-50/50 cursor-pointer' 
+                    ? 'cursor-pointer' 
                     : ''
+                } ${
+                  shouldNoteHaveColorIndicator(note) && activeNoteId === (note.id || `${note.reference}-${note.quote}`)
+                    ? 'border-blue-500 bg-blue-50 shadow-md'
+                    : 'border-gray-200 bg-white hover:bg-blue-50/50'
                 }`}
                 onClick={shouldNoteHaveColorIndicator(note) ? () => handleNoteClick(note) : undefined}
                 title={shouldNoteHaveColorIndicator(note) ? "Click to highlight this note's tokens in scripture" : undefined}

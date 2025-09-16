@@ -8,7 +8,7 @@
 
 import { BaseMessageContent, ResourceMessage } from 'linked-panels';
 import { OptimizedToken } from '../services/usfm-processor';
-import { TokenClickBroadcast, NoteSelectionBroadcast, NoteTokenGroup } from '../types/scripture-messages';
+import { TokenClickBroadcast, NoteSelectionBroadcast, VerseReferenceFilterBroadcast, NoteTokenGroup } from '../types/scripture-messages';
 
 /**
  * Notes token groups broadcast message
@@ -54,6 +54,7 @@ export interface NotesScriptureMessageTypes {
   'notes-token-groups-broadcast': NotesTokenGroupsBroadcast;
   'token-click-broadcast': TokenClickBroadcast;
   'note-selection-broadcast': NoteSelectionBroadcast;
+  'verse-reference-filter-broadcast': VerseReferenceFilterBroadcast;
 }
 
 /**
@@ -118,11 +119,13 @@ function isNoteSelectionBroadcast(content: unknown): content is NoteSelectionBro
   return (
     msg.type === 'note-selection-broadcast' &&
     msg.lifecycle === 'event' &&
-    msg.selectedNote &&
-    typeof msg.selectedNote.noteId === 'string' &&
-    typeof msg.selectedNote.tokenGroupId === 'string' &&
-    typeof msg.selectedNote.quote === 'string' &&
-    typeof msg.selectedNote.reference === 'string' &&
+    (msg.selectedNote === null || (
+      msg.selectedNote &&
+      typeof msg.selectedNote.noteId === 'string' &&
+      typeof msg.selectedNote.tokenGroupId === 'string' &&
+      typeof msg.selectedNote.quote === 'string' &&
+      typeof msg.selectedNote.reference === 'string'
+    )) &&
     typeof msg.sourceResourceId === 'string' &&
     typeof msg.timestamp === 'number'
   );
@@ -144,11 +147,49 @@ function handleTokenClickBroadcast(message: ResourceMessage<TokenClickBroadcast>
  * Handler for note selection broadcast messages
  */
 function handleNoteSelectionBroadcast(message: ResourceMessage<NoteSelectionBroadcast>) {
-  console.log(`📝 Note selection broadcast from ${message.fromResourceId}:`, {
-    noteId: message.content.selectedNote.noteId,
-    tokenGroupId: message.content.selectedNote.tokenGroupId,
-    quote: message.content.selectedNote.quote,
-    reference: message.content.selectedNote.reference,
+  if (message.content.selectedNote === null) {
+    console.log(`📝 Note selection cleared from ${message.fromResourceId}:`, {
+      action: 'clear_selection',
+      timestamp: new Date(message.content.timestamp).toLocaleTimeString()
+    });
+  } else {
+    console.log(`📝 Note selection broadcast from ${message.fromResourceId}:`, {
+      noteId: message.content.selectedNote.noteId,
+      tokenGroupId: message.content.selectedNote.tokenGroupId,
+      quote: message.content.selectedNote.quote,
+      reference: message.content.selectedNote.reference,
+      timestamp: new Date(message.content.timestamp).toLocaleTimeString()
+    });
+  }
+}
+
+/**
+ * Validation function for verse reference filter broadcast
+ */
+function isVerseReferenceFilterBroadcast(content: unknown): content is VerseReferenceFilterBroadcast {
+  if (!content || typeof content !== 'object') return false;
+  
+  const msg = content as any;
+  return (
+    msg.type === 'verse-reference-filter-broadcast' &&
+    msg.lifecycle === 'event' &&
+    msg.verseReference &&
+    typeof msg.verseReference.book === 'string' &&
+    typeof msg.verseReference.chapter === 'number' &&
+    typeof msg.verseReference.verse === 'number' &&
+    typeof msg.sourceResourceId === 'string' &&
+    typeof msg.timestamp === 'number'
+  );
+}
+
+/**
+ * Handler for verse reference filter broadcast messages
+ */
+function handleVerseReferenceFilterBroadcast(message: ResourceMessage<VerseReferenceFilterBroadcast>) {
+  console.log(`📍 Verse reference filter broadcast from ${message.fromResourceId}:`, {
+    book: message.content.verseReference.book,
+    chapter: message.content.verseReference.chapter,
+    verse: message.content.verseReference.verse,
     timestamp: new Date(message.content.timestamp).toLocaleTimeString()
   });
 }
@@ -164,19 +205,22 @@ export const notesScripturePlugin = {
   messageTypes: {
     'notes-token-groups-broadcast': {} as NotesTokenGroupsBroadcast,
     'token-click-broadcast': {} as TokenClickBroadcast,
-    'note-selection-broadcast': {} as NoteSelectionBroadcast
+    'note-selection-broadcast': {} as NoteSelectionBroadcast,
+    'verse-reference-filter-broadcast': {} as VerseReferenceFilterBroadcast
   } as NotesScriptureMessageTypes,
   
   validators: {
     'notes-token-groups-broadcast': isNotesTokenGroupsBroadcast,
     'token-click-broadcast': isTokenClickBroadcast,
-    'note-selection-broadcast': isNoteSelectionBroadcast
+    'note-selection-broadcast': isNoteSelectionBroadcast,
+    'verse-reference-filter-broadcast': isVerseReferenceFilterBroadcast
   },
   
   handlers: {
     'notes-token-groups-broadcast': handleNotesTokenGroupsBroadcast,
     'token-click-broadcast': handleTokenClickBroadcast,
-    'note-selection-broadcast': handleNoteSelectionBroadcast
+    'note-selection-broadcast': handleNoteSelectionBroadcast,
+    'verse-reference-filter-broadcast': handleVerseReferenceFilterBroadcast
   }
 };
 

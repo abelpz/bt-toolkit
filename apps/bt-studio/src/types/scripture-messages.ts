@@ -121,23 +121,47 @@ export interface TokenClickBroadcast extends BaseMessageContent {
  * Note selection broadcast message
  * This is an EVENT message for when a user clicks on a note in the NotesViewer
  * Used for highlighting the selected note's tokens as active
+ * When selectedNote is null, it indicates clearing/deselecting the current selection
  */
 export interface NoteSelectionBroadcast extends BaseMessageContent {
   type: 'note-selection-broadcast';
   lifecycle: 'event';
   
-  /** The selected note information */
+  /** The selected note information, or null to clear selection */
   selectedNote: {
     noteId: string;
     tokenGroupId: string; // The corresponding token group ID for underlining
     quote: string;
     reference: string;
-  };
+  } | null;
   
   /** The resource ID that detected the selection */
   sourceResourceId: string;
   
   /** Timestamp when the selection occurred */
+  timestamp: number;
+}
+
+/**
+ * Verse reference filter broadcast message
+ * This is an EVENT message for when a user clicks on a verse number in the scripture viewer
+ * Used for filtering notes/TWL by verse reference (secondary filter type)
+ */
+export interface VerseReferenceFilterBroadcast extends BaseMessageContent {
+  type: 'verse-reference-filter-broadcast';
+  lifecycle: 'event';
+  
+  /** The verse reference to filter by */
+  verseReference: {
+    book: string;
+    chapter: number;
+    verse: number;
+  };
+  
+  /** The resource ID that initiated the verse filter */
+  sourceResourceId: string;
+  
+  /** Timestamp when the verse filter was applied */
   timestamp: number;
 }
 
@@ -149,4 +173,5 @@ export interface ScriptureMessageTypes {
   'notes-token-groups-broadcast': NotesTokenGroupsBroadcast;
   'token-click-broadcast': TokenClickBroadcast;
   'note-selection-broadcast': NoteSelectionBroadcast;
+  'verse-reference-filter-broadcast': VerseReferenceFilterBroadcast;
 }

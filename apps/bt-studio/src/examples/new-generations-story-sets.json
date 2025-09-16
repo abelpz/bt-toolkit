@@ -7,13 +7,11 @@
   "updatedAt": "2024-01-01T00:00:00.000Z",
   "metadata": {
     "category": "curriculum",
-    "difficulty": 3,
     "audience": [
       "beginner",
       "intermediate",
       "advanced"
     ],
-    "totalTime": 1141,
     "passageCount": 1141,
     "source": "ESP300 Kingdom Scripture Sets - v. 2"
   },
@@ -25,8 +23,7 @@
       "description": "A foundational set introducing God's plan from creation through Christ",
       "metadata": {
         "totalVerses": 383,
-        "theme": "evangelism",
-        "difficulty": 2
+        "theme": "evangelism"
       },
       "groupType": "sequential",
       "requiresSequentialCompletion": true,
@@ -42,8 +39,7 @@
               "label": "Discover our Creator",
               "metadata": {
                 "title": "Discover our Creator",
-                "theme": "creation",
-                "difficulty": 1
+                "theme": "creation"
               }
             }
           ]
@@ -59,8 +55,7 @@
               "label": "The Image of God",
               "metadata": {
                 "title": "The Image of God",
-                "theme": "creation",
-                "difficulty": 1
+                "theme": "creation"
               }
             }
           ]
@@ -76,8 +71,7 @@
               "label": "God's Provides & Instructs",
               "metadata": {
                 "title": "God's Provides & Instructs",
-                "theme": "provision",
-                "difficulty": 1
+                "theme": "provision"
               }
             }
           ]
@@ -93,8 +87,7 @@
               "label": "Man Disobeys God",
               "metadata": {
                 "title": "Man Disobeys God",
-                "theme": "sin",
-                "difficulty": 2
+                "theme": "sin"
               }
             }
           ]
@@ -110,8 +103,7 @@
               "label": "Results of Disobedience",
               "metadata": {
                 "title": "Results of Disobedience",
-                "theme": "sin",
-                "difficulty": 2
+                "theme": "sin"
               }
             }
           ]
@@ -127,8 +119,7 @@
               "label": "Creation Cursed & Promise",
               "metadata": {
                 "title": "Creation Cursed & Promise",
-                "theme": "promise",
-                "difficulty": 2
+                "theme": "promise"
               }
             }
           ]
@@ -144,8 +135,7 @@
               "label": "Compounded Consequences",
               "metadata": {
                 "title": "Compounded Consequences",
-                "theme": "judgment",
-                "difficulty": 2
+                "theme": "judgment"
               }
             }
           ]
@@ -161,8 +151,7 @@
               "label": "United in Rebellion",
               "metadata": {
                 "title": "United in Rebellion",
-                "theme": "rebellion",
-                "difficulty": 2
+                "theme": "rebellion"
               }
             }
           ]
@@ -178,8 +167,7 @@
               "label": "God's Promised Restoration",
               "metadata": {
                 "title": "God's Promised Restoration",
-                "theme": "promise",
-                "difficulty": 2
+                "theme": "promise"
               }
             }
           ]
@@ -195,8 +183,7 @@
               "label": "God Provides a Ram",
               "metadata": {
                 "title": "God Provides a Ram",
-                "theme": "sacrifice",
-                "difficulty": 3
+                "theme": "sacrifice"
               }
             }
           ]
@@ -212,8 +199,7 @@
               "label": "A Passover Lamb",
               "metadata": {
                 "title": "A Passover Lamb",
-                "theme": "sacrifice",
-                "difficulty": 3
+                "theme": "sacrifice"
               }
             }
           ]
@@ -229,8 +215,7 @@
               "label": "Messiah will Suffer",
               "metadata": {
                 "title": "Messiah will Suffer",
-                "theme": "prophecy",
-                "difficulty": 3
+                "theme": "prophecy"
               }
             }
           ]
@@ -246,8 +231,7 @@
               "label": "God's Promised Savior (Annunciation)",
               "metadata": {
                 "title": "The Annunciation",
-                "theme": "incarnation",
-                "difficulty": 2
+                "theme": "incarnation"
               }
             },
             {
@@ -256,8 +240,7 @@
               "label": "God's Promised Savior (Birth)",
               "metadata": {
                 "title": "The Birth of Jesus",
-                "theme": "incarnation",
-                "difficulty": 2
+                "theme": "incarnation"
               }
             }
           ]
@@ -273,8 +256,7 @@
               "label": "Jesus Baptized",
               "metadata": {
                 "title": "Jesus Baptized",
-                "theme": "baptism",
-                "difficulty": 2
+                "theme": "baptism"
               }
             }
           ]
@@ -290,8 +272,7 @@
               "label": "The Lamb of God",
               "metadata": {
                 "title": "The Lamb of God",
-                "theme": "sacrifice",
-                "difficulty": 2
+                "theme": "sacrifice"
               }
             }
           ]
@@ -307,8 +288,7 @@
               "label": "Jesus Tested",
               "metadata": {
                 "title": "Jesus Tested",
-                "theme": "temptation",
-                "difficulty": 2
+                "theme": "temptation"
               }
             }
           ]
@@ -324,8 +304,7 @@
               "label": "Forgiving & Healing",
               "metadata": {
                 "title": "Forgiving & Healing",
-                "theme": "healing",
-                "difficulty": 2
+                "theme": "healing"
               }
             }
           ]
@@ -341,8 +320,7 @@
               "label": "Power Over Nature",
               "metadata": {
                 "title": "Power Over Nature",
-                "theme": "miracle",
-                "difficulty": 2
+                "theme": "miracle"
               }
             }
           ]
@@ -358,8 +336,7 @@
               "label": "Power Over Demons",
               "metadata": {
                 "title": "Power Over Demons",
-                "theme": "deliverance",
-                "difficulty": 3
+                "theme": "deliverance"
               }
             }
           ]
@@ -375,8 +352,7 @@
               "label": "Power Over Death",
               "metadata": {
                 "title": "Power Over Death",
-                "theme": "resurrection",
-                "difficulty": 3
+                "theme": "resurrection"
               }
             }
           ]
@@ -392,8 +368,7 @@
               "label": "Jesus Betrayed & Arrested",
               "metadata": {
                 "title": "Jesus Betrayed & Arrested",
-                "theme": "betrayal",
-                "difficulty": 3
+                "theme": "betrayal"
               }
             }
           ]
@@ -409,8 +384,7 @@
               "label": "Crucified yet Forgiving",
               "metadata": {
                 "title": "Crucified yet Forgiving",
-                "theme": "crucifixion",
-                "difficulty": 3
+                "theme": "crucifixion"
               }
             }
           ]
@@ -426,8 +400,7 @@
               "label": "Jesus' Resurrection",
               "metadata": {
                 "title": "Jesus' Resurrection",
-                "theme": "resurrection",
-                "difficulty": 3
+                "theme": "resurrection"
               }
             }
           ]
@@ -443,8 +416,7 @@
               "label": "Come to Jesus",
               "metadata": {
                 "title": "Come to Jesus",
-                "theme": "invitation",
-                "difficulty": 1
+                "theme": "invitation"
               }
             }
           ]
@@ -460,8 +432,7 @@
               "label": "Born Again (Part 1)",
               "metadata": {
                 "title": "Born Again - Nicodemus",
-                "theme": "salvation",
-                "difficulty": 2
+                "theme": "salvation"
               }
             },
             {
@@ -470,8 +441,7 @@
               "label": "Born Again (Part 2)",
               "metadata": {
                 "title": "Born Again - God's Love",
-                "theme": "salvation",
-                "difficulty": 2
+                "theme": "salvation"
               }
             }
           ]
@@ -485,8 +455,7 @@
       "description": "Building understanding of church life and community",
       "metadata": {
         "totalVerses": 269,
-        "theme": "discipleship",
-        "difficulty": 3
+        "theme": "discipleship"
       },
       "groupType": "sequential",
       "requiresSequentialCompletion": true,
@@ -502,8 +471,7 @@
               "label": "Repenting & Believing",
               "metadata": {
                 "title": "Repenting & Believing",
-                "theme": "repentance",
-                "difficulty": 2
+                "theme": "repentance"
               }
             }
           ]
@@ -519,8 +487,7 @@
               "label": "Holy Spirit Empowered (Promise)",
               "metadata": {
                 "title": "The Promise of the Spirit",
-                "theme": "holy-spirit",
-                "difficulty": 2
+                "theme": "holy-spirit"
               }
             },
             {
@@ -529,8 +496,7 @@
               "label": "Holy Spirit Empowered (Commission)",
               "metadata": {
                 "title": "The Great Commission",
-                "theme": "mission",
-                "difficulty": 2
+                "theme": "mission"
               }
             },
             {
@@ -539,8 +505,7 @@
               "label": "Holy Spirit Empowered (Pentecost)",
               "metadata": {
                 "title": "Pentecost",
-                "theme": "holy-spirit",
-                "difficulty": 3
+                "theme": "holy-spirit"
               }
             }
           ]
@@ -556,8 +521,7 @@
               "label": "Baptizing Followers (Peter Stands)",
               "metadata": {
                 "title": "Peter Stands Up",
-                "theme": "preaching",
-                "difficulty": 2
+                "theme": "preaching"
               }
             },
             {
@@ -566,8 +530,7 @@
               "label": "Baptizing Followers (The Message)",
               "metadata": {
                 "title": "Peter's Message",
-                "theme": "preaching",
-                "difficulty": 3
+                "theme": "preaching"
               }
             },
             {
@@ -576,8 +539,7 @@
               "label": "Baptizing Followers (Response)",
               "metadata": {
                 "title": "The Response",
-                "theme": "baptism",
-                "difficulty": 2
+                "theme": "baptism"
               }
             }
           ]
@@ -593,8 +555,7 @@
               "label": "Functions of Churches",
               "metadata": {
                 "title": "Functions of Churches",
-                "theme": "church-life",
-                "difficulty": 2
+                "theme": "church-life"
               }
             }
           ]
@@ -610,8 +571,7 @@
               "label": "Praying for Healing",
               "metadata": {
                 "title": "Praying for Healing",
-                "theme": "healing",
-                "difficulty": 3
+                "theme": "healing"
               }
             }
           ]
@@ -627,8 +587,7 @@
               "label": "Making Disciples",
               "metadata": {
                 "title": "Making Disciples",
-                "theme": "discipleship",
-                "difficulty": 3
+                "theme": "discipleship"
               }
             }
           ]
@@ -644,8 +603,7 @@
               "label": "Spirit's Empowerment",
               "metadata": {
                 "title": "Spirit's Empowerment",
-                "theme": "prayer",
-                "difficulty": 3
+                "theme": "prayer"
               }
             }
           ]
@@ -661,8 +619,7 @@
               "label": "Lifestyle of Generosity",
               "metadata": {
                 "title": "Lifestyle of Generosity",
-                "theme": "generosity",
-                "difficulty": 2
+                "theme": "generosity"
               }
             }
           ]
@@ -678,8 +635,7 @@
               "label": "Courage in Suffering (Signs)",
               "metadata": {
                 "title": "Signs and Wonders",
-                "theme": "miracles",
-                "difficulty": 2
+                "theme": "miracles"
               }
             },
             {
@@ -688,8 +644,7 @@
               "label": "Courage in Suffering (Persecution)",
               "metadata": {
                 "title": "Persecution and Deliverance",
-                "theme": "persecution",
-                "difficulty": 3
+                "theme": "persecution"
               }
             },
             {
@@ -698,8 +653,7 @@
               "label": "Courage in Suffering (Joy)",
               "metadata": {
                 "title": "Joy in Suffering",
-                "theme": "suffering",
-                "difficulty": 3
+                "theme": "suffering"
               }
             }
           ]
@@ -715,8 +669,7 @@
               "label": "Developing Leaders",
               "metadata": {
                 "title": "Developing Leaders",
-                "theme": "leadership",
-                "difficulty": 3
+                "theme": "leadership"
               }
             }
           ]
@@ -732,8 +685,7 @@
               "label": "Enduring (Stephen's Arrest)",
               "metadata": {
                 "title": "Stephen's Arrest",
-                "theme": "persecution",
-                "difficulty": 3
+                "theme": "persecution"
               }
             },
             {
@@ -742,8 +694,7 @@
               "label": "Enduring (Stephen's Death)",
               "metadata": {
                 "title": "Stephen's Martyrdom",
-                "theme": "martyrdom",
-                "difficulty": 4
+                "theme": "martyrdom"
               }
             },
             {
@@ -752,8 +703,7 @@
               "label": "Enduring (Scattering)",
               "metadata": {
                 "title": "The Church Scattered",
-                "theme": "persecution",
-                "difficulty": 3
+                "theme": "persecution"
               }
             }
           ]
@@ -769,8 +719,7 @@
               "label": "Baptizing New Followers",
               "metadata": {
                 "title": "Baptizing New Followers",
-                "theme": "evangelism",
-                "difficulty": 3
+                "theme": "evangelism"
               }
             }
           ]
@@ -786,8 +735,7 @@
               "label": "Sharing Good News",
               "metadata": {
                 "title": "Sharing Good News",
-                "theme": "conversion",
-                "difficulty": 3
+                "theme": "conversion"
               }
             }
           ]
@@ -803,8 +751,7 @@
               "label": "Praying for Oppressed",
               "metadata": {
                 "title": "Praying for Oppressed",
-                "theme": "healing",
-                "difficulty": 3
+                "theme": "healing"
               }
             }
           ]
@@ -820,8 +767,7 @@
               "label": "Studying God's Word",
               "metadata": {
                 "title": "Studying God's Word",
-                "theme": "teaching",
-                "difficulty": 3
+                "theme": "teaching"
               }
             }
           ]
@@ -837,8 +783,7 @@
               "label": "Mission of Generosity",
               "metadata": {
                 "title": "Mission of Generosity",
-                "theme": "generosity",
-                "difficulty": 2
+                "theme": "generosity"
               }
             }
           ]
@@ -852,8 +797,7 @@
       "description": "A focused study on the Kingdom of God theme",
       "metadata": {
         "totalVerses": 60,
-        "theme": "kingdom",
-        "difficulty": 3
+        "theme": "kingdom"
       },
       "groupType": "sequential",
       "children": [
@@ -868,8 +812,7 @@
               "label": "Promise of the Seed",
               "metadata": {
                 "title": "Promise of the Seed",
-                "theme": "kingdom",
-                "difficulty": 3
+                "theme": "kingdom"
               }
             }
           ]
@@ -885,8 +828,7 @@
               "label": "Eternal Kingdom (Promise to David)",
               "metadata": {
                 "title": "God's Promise to David",
-                "theme": "kingdom",
-                "difficulty": 3
+                "theme": "kingdom"
               }
             },
             {
@@ -895,8 +837,7 @@
               "label": "Eternal Kingdom (Covenant)",
               "metadata": {
                 "title": "The Davidic Covenant",
-                "theme": "kingdom",
-                "difficulty": 3
+                "theme": "kingdom"
               }
             }
           ]
@@ -912,8 +853,7 @@
               "label": "Messiah born of a virgin",
               "metadata": {
                 "title": "Messiah born of a virgin",
-                "theme": "kingdom",
-                "difficulty": 3
+                "theme": "kingdom"
               }
             }
           ]
@@ -929,8 +869,7 @@
               "label": "New Kingdom (Preparation)",
               "metadata": {
                 "title": "Preparing the Way",
-                "theme": "kingdom",
-                "difficulty": 3
+                "theme": "kingdom"
               }
             },
             {
@@ -939,8 +878,7 @@
               "label": "New Kingdom (Servant)",
               "metadata": {
                 "title": "The Servant King",
-                "theme": "kingdom",
-                "difficulty": 3
+                "theme": "kingdom"
               }
             }
           ]
@@ -956,8 +894,7 @@
               "label": "Messiah will Suffer",
               "metadata": {
                 "title": "Messiah will Suffer",
-                "theme": "kingdom",
-                "difficulty": 4
+                "theme": "kingdom"
               }
             }
           ]
@@ -973,8 +910,7 @@
               "label": "Eternal kingdom for all (Vision)",
               "metadata": {
                 "title": "The Eternal Kingdom",
-                "theme": "kingdom",
-                "difficulty": 4
+                "theme": "kingdom"
               }
             },
             {
@@ -983,8 +919,7 @@
               "label": "Eternal kingdom for all (Authority)",
               "metadata": {
                 "title": "Dominion and Glory",
-                "theme": "kingdom",
-                "difficulty": 4
+                "theme": "kingdom"
               }
             }
           ]
@@ -1000,8 +935,7 @@
               "label": "Kingdom Focus",
               "metadata": {
                 "title": "Kingdom Focus",
-                "theme": "kingdom",
-                "difficulty": 2
+                "theme": "kingdom"
               }
             }
           ]
@@ -1017,8 +951,7 @@
               "label": "The Culmination",
               "metadata": {
                 "title": "The Culmination",
-                "theme": "kingdom",
-                "difficulty": 4
+                "theme": "kingdom"
               }
             }
           ]
@@ -1034,8 +967,7 @@
               "label": "Kingdom Sacrifice",
               "metadata": {
                 "title": "Kingdom Sacrifice",
-                "theme": "kingdom",
-                "difficulty": 3
+                "theme": "kingdom"
               }
             }
           ]
@@ -1051,8 +983,7 @@
               "label": "King of Kings",
               "metadata": {
                 "title": "King of Kings",
-                "theme": "kingdom",
-                "difficulty": 3
+                "theme": "kingdom"
               }
             }
           ]
@@ -1066,8 +997,7 @@
       "description": "Leadership development through the book of Titus",
       "metadata": {
         "totalVerses": 66,
-        "theme": "leadership",
-        "difficulty": 4
+        "theme": "leadership"
       },
       "groupType": "sequential",
       "requiresSequentialCompletion": true,
@@ -1083,8 +1013,7 @@
               "label": "Promises of God",
               "metadata": {
                 "title": "Promises of God",
-                "theme": "leadership",
-                "difficulty": 3
+                "theme": "leadership"
               }
             }
           ]
@@ -1100,8 +1029,7 @@
               "label": "Qualifications of Elders",
               "metadata": {
                 "title": "Qualifications of Elders",
-                "theme": "leadership",
-                "difficulty": 4
+                "theme": "leadership"
               }
             }
           ]
@@ -1117,8 +1045,7 @@
               "label": "Behavior of the lost",
               "metadata": {
                 "title": "Behavior of the lost",
-                "theme": "leadership",
-                "difficulty": 4
+                "theme": "leadership"
               }
             }
           ]
@@ -1134,8 +1061,7 @@
               "label": "Leading those older",
               "metadata": {
                 "title": "Leading those older",
-                "theme": "leadership",
-                "difficulty": 4
+                "theme": "leadership"
               }
             }
           ]
@@ -1151,8 +1077,7 @@
               "label": "Leading those younger",
               "metadata": {
                 "title": "Leading those younger",
-                "theme": "leadership",
-                "difficulty": 4
+                "theme": "leadership"
               }
             }
           ]
@@ -1168,8 +1093,7 @@
               "label": "Grace & Renouncing",
               "metadata": {
                 "title": "Grace & Renouncing",
-                "theme": "leadership",
-                "difficulty": 3
+                "theme": "leadership"
               }
             }
           ]
@@ -1185,8 +1109,7 @@
               "label": "Vision Reminders (Authority)",
               "metadata": {
                 "title": "Speak with Authority",
-                "theme": "leadership",
-                "difficulty": 3
+                "theme": "leadership"
               }
             },
             {
@@ -1195,8 +1118,7 @@
               "label": "Vision Reminders (Submission)",
               "metadata": {
                 "title": "Remind Them to Submit",
-                "theme": "leadership",
-                "difficulty": 3
+                "theme": "leadership"
               }
             }
           ]
@@ -1212,8 +1134,7 @@
               "label": "Grace motivates compassion",
               "metadata": {
                 "title": "Grace motivates compassion",
-                "theme": "leadership",
-                "difficulty": 3
+                "theme": "leadership"
               }
             }
           ]
@@ -1229,8 +1150,7 @@
               "label": "Handling distractions",
               "metadata": {
                 "title": "Handling distractions",
-                "theme": "leadership",
-                "difficulty": 4
+                "theme": "leadership"
               }
             }
           ]
@@ -1246,8 +1166,7 @@
               "label": "Focused on Mission",
               "metadata": {
                 "title": "Focused on Mission",
-                "theme": "leadership",
-                "difficulty": 3
+                "theme": "leadership"
               }
             }
           ]
@@ -1263,8 +1182,7 @@
               "label": "Shepherding Introduction (The Good Shepherd)",
               "metadata": {
                 "title": "The Good Shepherd",
-                "theme": "leadership",
-                "difficulty": 4
+                "theme": "leadership"
               }
             },
             {
@@ -1273,8 +1191,7 @@
               "label": "Shepherding Introduction (New Heart)",
               "metadata": {
                 "title": "A New Heart",
-                "theme": "leadership",
-                "difficulty": 4
+                "theme": "leadership"
               }
             }
           ]
@@ -1288,8 +1205,7 @@
       "description": "Advanced topics for mission and cultural adaptation",
       "metadata": {
         "totalVerses": 423,
-        "theme": "mission",
-        "difficulty": 4
+        "theme": "mission"
       },
       "groupType": "parallel",
       "children": [
@@ -1300,8 +1216,7 @@
           "description": "Training for disciple making movements",
           "metadata": {
             "totalVerses": 43,
-            "theme": "dmm",
-            "difficulty": 4
+            "theme": "dmm"
           },
           "children": [
             {
@@ -1315,8 +1230,7 @@
                   "label": "God's loving heart",
                   "metadata": {
                     "title": "God's loving heart",
-                    "theme": "dmm",
-                    "difficulty": 3
+                    "theme": "dmm"
                   }
                 }
               ]
@@ -1332,8 +1246,7 @@
                   "label": "God draws, so ask him to",
                   "metadata": {
                     "title": "God draws, so ask him to",
-                    "theme": "dmm",
-                    "difficulty": 3
+                    "theme": "dmm"
                   }
                 }
               ]
@@ -1349,8 +1262,7 @@
                   "label": "Show your Christian life",
                   "metadata": {
                     "title": "Show your Christian life",
-                    "theme": "dmm",
-                    "difficulty": 3
+                    "theme": "dmm"
                   }
                 }
               ]
@@ -1366,8 +1278,7 @@
                   "label": "A Jesus strategy to reach the lost",
                   "metadata": {
                     "title": "A Jesus strategy to reach the lost",
-                    "theme": "dmm",
-                    "difficulty": 4
+                    "theme": "dmm"
                   }
                 }
               ]
@@ -1381,8 +1292,7 @@
           "description": "Understanding commitment and discipleship",
           "metadata": {
             "totalVerses": 22,
-            "theme": "commitment",
-            "difficulty": 3
+            "theme": "commitment"
           },
           "children": [
             {
@@ -1396,8 +1306,7 @@
                   "label": "Love God and neighbor",
                   "metadata": {
                     "title": "Love God and neighbor",
-                    "theme": "commitment",
-                    "difficulty": 2
+                    "theme": "commitment"
                   }
                 }
               ]
@@ -1413,8 +1322,7 @@
                   "label": "Die daily and follow Christ (Cost)",
                   "metadata": {
                     "title": "Count the Cost",
-                    "theme": "commitment",
-                    "difficulty": 4
+                    "theme": "commitment"
                   }
                 },
                 {
@@ -1423,8 +1331,7 @@
                   "label": "Die daily and follow Christ (Everything)",
                   "metadata": {
                     "title": "Give Up Everything",
-                    "theme": "commitment",
-                    "difficulty": 4
+                    "theme": "commitment"
                   }
                 }
               ]
@@ -1440,8 +1347,7 @@
                   "label": "Die to bear much fruit",
                   "metadata": {
                     "title": "Die to bear much fruit",
-                    "theme": "commitment",
-                    "difficulty": 4
+                    "theme": "commitment"
                   }
                 }
               ]
@@ -1457,8 +1363,7 @@
                   "label": "Love as Christ loves us",
                   "metadata": {
                     "title": "Love as Christ loves us",
-                    "theme": "commitment",
-                    "difficulty": 3
+                    "theme": "commitment"
                   }
                 }
               ]
@@ -1474,8 +1379,7 @@
                   "label": "Love and obey Jesus, receive the Holy Spirit",
                   "metadata": {
                     "title": "Love and obey Jesus, receive the Holy Spirit",
-                    "theme": "commitment",
-                    "difficulty": 3
+                    "theme": "commitment"
                   }
                 }
               ]
@@ -1491,8 +1395,7 @@
                   "label": "Remain in Christ to bear fruit",
                   "metadata": {
                     "title": "Remain in Christ to bear fruit",
-                    "theme": "commitment",
-                    "difficulty": 3
+                    "theme": "commitment"
                   }
                 }
               ]
@@ -1508,8 +1411,7 @@
                   "label": "Trust Jesus as Lord and God",
                   "metadata": {
                     "title": "Trust Jesus as Lord and God",
-                    "theme": "commitment",
-                    "difficulty": 3
+                    "theme": "commitment"
                   }
                 }
               ]
@@ -1525,8 +1427,7 @@
                   "label": "Make disciples of all nations",
                   "metadata": {
                     "title": "Make disciples of all nations",
-                    "theme": "commitment",
-                    "difficulty": 3
+                    "theme": "commitment"
                   }
                 }
               ]
@@ -1540,8 +1441,7 @@
           "description": "Biblical perspectives on marriage and relationships",
           "metadata": {
             "totalVerses": 157,
-            "theme": "marriage",
-            "difficulty": 3
+            "theme": "marriage"
           },
           "children": [
             {
@@ -1555,8 +1455,7 @@
                   "label": "In good times and bad: Isaac & Rebekah (Meeting)",
                   "metadata": {
                     "title": "Isaac and Rebekah Meet",
-                    "theme": "marriage",
-                    "difficulty": 3
+                    "theme": "marriage"
                   }
                 },
                 {
@@ -1565,8 +1464,7 @@
                   "label": "In good times and bad: Isaac & Rebekah (Marriage)",
                   "metadata": {
                     "title": "Isaac and Rebekah Marry",
-                    "theme": "marriage",
-                    "difficulty": 3
+                    "theme": "marriage"
                   }
                 }
               ]
@@ -1582,8 +1480,7 @@
                   "label": "Love, honor and cherish: Ruth and Boaz",
                   "metadata": {
                     "title": "Love, honor and cherish: Ruth and Boaz",
-                    "theme": "marriage",
-                    "difficulty": 3
+                    "theme": "marriage"
                   }
                 }
               ]
@@ -1599,8 +1496,7 @@
                   "label": "'Till death do us part: Jacob and Rachel",
                   "metadata": {
                     "title": "'Till death do us part: Jacob and Rachel",
-                    "theme": "marriage",
-                    "difficulty": 3
+                    "theme": "marriage"
                   }
                 }
               ]
@@ -1616,8 +1512,7 @@
                   "label": "Serving one another: Who's job is foot washing?",
                   "metadata": {
                     "title": "Serving one another: Who's job is foot washing?",
-                    "theme": "marriage",
-                    "difficulty": 3
+                    "theme": "marriage"
                   }
                 }
               ]
@@ -1633,8 +1528,7 @@
                   "label": "One-flesh friends: Adam and Eve",
                   "metadata": {
                     "title": "One-flesh friends: Adam and Eve",
-                    "theme": "marriage",
-                    "difficulty": 2
+                    "theme": "marriage"
                   }
                 }
               ]
@@ -1650,8 +1544,7 @@
                   "label": "Lovers: celebrate the difference (Beginning)",
                   "metadata": {
                     "title": "Celebrate the Difference",
-                    "theme": "marriage",
-                    "difficulty": 4
+                    "theme": "marriage"
                   }
                 },
                 {
@@ -1660,8 +1553,7 @@
                   "label": "Lovers: celebrate the difference (Continuation)",
                   "metadata": {
                     "title": "Love's Expression",
-                    "theme": "marriage",
-                    "difficulty": 4
+                    "theme": "marriage"
                   }
                 }
               ]
@@ -1675,8 +1567,7 @@
           "description": "Biblical perspectives on grief, loss, and healing",
           "metadata": {
             "totalVerses": 142,
-            "theme": "grief",
-            "difficulty": 4
+            "theme": "grief"
           },
           "children": [
             {
@@ -1690,8 +1581,7 @@
                   "label": "Denial: Elisha and a woman in denial",
                   "metadata": {
                     "title": "Denial: Elisha and a woman in denial",
-                    "theme": "grief",
-                    "difficulty": 4
+                    "theme": "grief"
                   }
                 }
               ]
@@ -1707,8 +1597,7 @@
                   "label": "Anger: Naomi empty and bitter",
                   "metadata": {
                     "title": "Anger: Naomi empty and bitter",
-                    "theme": "grief",
-                    "difficulty": 4
+                    "theme": "grief"
                   }
                 }
               ]
@@ -1724,8 +1613,7 @@
                   "label": "Bargaining: David bargains with God",
                   "metadata": {
                     "title": "Bargaining: David bargains with God",
-                    "theme": "grief",
-                    "difficulty": 4
+                    "theme": "grief"
                   }
                 }
               ]
@@ -1741,8 +1629,7 @@
                   "label": "Depression: Jacob mourns for Joseph",
                   "metadata": {
                     "title": "Depression: Jacob mourns for Joseph",
-                    "theme": "grief",
-                    "difficulty": 4
+                    "theme": "grief"
                   }
                 }
               ]
@@ -1758,8 +1645,7 @@
                   "label": "Acceptance: Job suffers",
                   "metadata": {
                     "title": "Acceptance: Job suffers",
-                    "theme": "grief",
-                    "difficulty": 4
+                    "theme": "grief"
                   }
                 }
               ]
@@ -1775,8 +1661,7 @@
                   "label": "Hope: Jesus raises Lazarus",
                   "metadata": {
                     "title": "Hope: Jesus raises Lazarus",
-                    "theme": "grief",
-                    "difficulty": 3
+                    "theme": "grief"
                   }
                 }
               ]
@@ -1790,8 +1675,7 @@
           "description": "Extended study on the Kingdom of God (duplicate for reference)",
           "metadata": {
             "totalVerses": 59,
-            "theme": "kingdom",
-            "difficulty": 4
+            "theme": "kingdom"
           },
           "children": [
             {
@@ -1805,8 +1689,7 @@
                   "label": "Promise of the Seed",
                   "metadata": {
                     "title": "Promise of the Seed",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1822,8 +1705,7 @@
                   "label": "Eternal Kingdom (Promise)",
                   "metadata": {
                     "title": "Promise to David",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 },
                 {
@@ -1832,8 +1714,7 @@
                   "label": "Eternal Kingdom (Covenant)",
                   "metadata": {
                     "title": "Davidic Covenant",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1849,8 +1730,7 @@
                   "label": "Messiah born of a virgin",
                   "metadata": {
                     "title": "Messiah born of a virgin",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1866,8 +1746,7 @@
                   "label": "New Kingdom (Preparation)",
                   "metadata": {
                     "title": "Preparing the Way",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 },
                 {
@@ -1876,8 +1755,7 @@
                   "label": "New Kingdom (Servant)",
                   "metadata": {
                     "title": "The Servant King",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1893,8 +1771,7 @@
                   "label": "Messiah will Suffer",
                   "metadata": {
                     "title": "Messiah will Suffer",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1910,8 +1787,7 @@
                   "label": "Eternal kingdom for all (Vision)",
                   "metadata": {
                     "title": "The Eternal Kingdom",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 },
                 {
@@ -1920,8 +1796,7 @@
                   "label": "Eternal kingdom for all (Authority)",
                   "metadata": {
                     "title": "Dominion and Glory",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1937,8 +1812,7 @@
                   "label": "Kingdom Focus",
                   "metadata": {
                     "title": "Kingdom Focus",
-                    "theme": "kingdom",
-                    "difficulty": 3
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1954,8 +1828,7 @@
                   "label": "The Culmination",
                   "metadata": {
                     "title": "The Culmination",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1971,8 +1844,7 @@
                   "label": "Kingdom Sacrifice",
                   "metadata": {
                     "title": "Kingdom Sacrifice",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
@@ -1988,8 +1860,7 @@
                   "label": "King of Kings",
                   "metadata": {
                     "title": "King of Kings",
-                    "theme": "kingdom",
-                    "difficulty": 4
+                    "theme": "kingdom"
                   }
                 }
               ]
