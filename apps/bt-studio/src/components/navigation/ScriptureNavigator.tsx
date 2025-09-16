@@ -54,12 +54,12 @@ export function ScriptureNavigator() {
       const endRef = `${section.end.chapter}:${section.end.verse}`;
       
       // Create a descriptive title
-      let title = `Section ${index + 1}`;
+      let title = `${index + 1}`;
       if (section.start.chapter === section.end.chapter) {
         if (section.start.verse === section.end.verse) {
-          title = `Chapter ${section.start.chapter}:${section.start.verse}`;
+          title = `${section.start.chapter}:${section.start.verse}`;
         } else {
-          title = `Chapter ${section.start.chapter}:${section.start.verse}-${section.end.verse}`;
+          title = `${section.start.chapter}:${section.start.verse}-${section.end.verse}`;
         }
       } else {
         title = `${startRef} - ${endRef}`;
@@ -107,7 +107,7 @@ export function ScriptureNavigator() {
             const fallbackSections = [];
             for (let chapter = 1; chapter <= count; chapter++) {
               fallbackSections.push({
-                title: `Chapter ${chapter}`,
+                title: `${chapter}`,
                 range: { 
                   startChapter: chapter, 
                   startVerse: 1, 
@@ -146,13 +146,13 @@ export function ScriptureNavigator() {
               setSections(convertedSections);
             } else {
               setSections([
-                { title: 'Chapter 1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
+                { title: '1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
               ]);
             }
           } catch (error) {
             console.warn(`Failed to load sections for ${currentReference.book}:`, error);
             setSections([
-              { title: 'Chapter 1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
+              { title: '1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
             ]);
           }
         }
@@ -163,7 +163,7 @@ export function ScriptureNavigator() {
         setChapterCount(1);
         setVerseCountByChapter({ 1: 31 });
         setSections([
-          { title: 'Chapter 1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
+          { title: '1', range: { startChapter: 1, startVerse: 1, endChapter: 1, endVerse: 31 } }
         ]);
         setIsContentLoaded(true);
       }
@@ -240,11 +240,16 @@ export function ScriptureNavigator() {
             transition-colors duration-200
           "
         >
-          <Icon name="book-open" size={16} className="text-blue-600" aria-label="book" />
-          <span>{currentBookInfo?.name || currentReference.book.toUpperCase()}</span>
-          <span className="text-gray-400">
-            ▼
+          <Icon
+            name="book-open"
+            size={16}
+            className="text-blue-600"
+            aria-label="book"
+          />
+          <span>
+            {currentBookInfo?.name || currentReference.book.toUpperCase()}
           </span>
+          <span className="text-gray-400">▼</span>
         </button>
 
         {/* Chapter/Verse Navigation Button */}
@@ -255,18 +260,22 @@ export function ScriptureNavigator() {
             flex items-center space-x-2 px-4 py-2 h-10
             border font-medium text-sm
             transition-colors duration-200
-            ${isContentLoaded 
-              ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
-              : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+            ${
+              isContentLoaded
+                ? 'bg-white border-gray-200 hover:bg-gray-50 text-gray-900'
+                : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
             }
           `}
         >
-          <Icon name="search" size={16} className="text-green-600" aria-label="target" />
+          <Icon
+            name="search"
+            size={16}
+            className="text-green-600"
+            aria-label="target"
+          />
           <span>{formatReferenceOnly()}</span>
           {isContentLoaded ? (
-            <span className="text-gray-400">
-              ▼
-            </span>
+            <span className="text-gray-400">▼</span>
           ) : (
             <span className="animate-spin">⟳</span>
           )}
@@ -278,7 +287,11 @@ export function ScriptureNavigator() {
         <Modal
           isOpen={isBookModalOpen}
           onClose={() => setIsBookModalOpen(false)}
-          title="Select Book"
+          title={
+            <div className="flex items-center space-x-2 text-gray-400">
+              <Icon name="book-open" size={20} />
+            </div>
+          }
         >
           <BookSelector
             availableBooks={availableBooks}
@@ -293,7 +306,11 @@ export function ScriptureNavigator() {
         <Modal
           isOpen={isNavModalOpen}
           onClose={() => setIsNavModalOpen(false)}
-          title="Navigate to Reference"
+          title={
+            <div className="flex items-center space-x-2 text-gray-400">
+              <Icon name="search" size={20} />
+            </div>
+          }
         >
           <div className="space-y-4">
             {/* Navigation Tabs */}
@@ -302,27 +319,31 @@ export function ScriptureNavigator() {
                 onClick={() => setNavTab('range')}
                 className={`
                   flex-1 px-4 py-3 text-sm font-medium
-                  transition-colors duration-200
-                  ${navTab === 'range'
-                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  transition-colors duration-200 flex items-center justify-center space-x-2
+                  ${
+                    navTab === 'range'
+                      ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }
                 `}
+                title="Custom Range"
               >
-                Custom Range
+                <Icon name="grid" size={16} />
               </button>
               <button
                 onClick={() => setNavTab('sections')}
                 className={`
                   flex-1 px-4 py-3 text-sm font-medium
-                  transition-colors duration-200
-                  ${navTab === 'sections'
-                    ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  transition-colors duration-200 flex items-center justify-center space-x-2
+                  ${
+                    navTab === 'sections'
+                      ? 'text-blue-600 bg-blue-50 border-b-2 border-blue-600'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }
                 `}
+                title="Sections"
               >
-                Sections
+                <Icon name="list" size={16} />
               </button>
             </div>
 
@@ -337,7 +358,7 @@ export function ScriptureNavigator() {
                   onSelectionChange={setCurrentRangeSelection}
                 />
               )}
-              
+
               {navTab === 'sections' && (
                 <SectionsNavigator
                   sections={sections}
@@ -363,9 +384,7 @@ interface BookSelectorProps {
 function BookSelector({ availableBooks, selectedBook, onBookSelect }: BookSelectorProps) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-700 mb-3">
-        Available Books ({availableBooks.length})
-      </h3>
+      
       <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto overflow-x-hidden">
         {availableBooks.map((book) => (
           <button
@@ -487,17 +506,14 @@ function RangeSelector({ chapterCount, verseCountByChapter, currentReference, on
 
   return (
     <div className="space-y-4">
-
-      
-
       <div className="max-h-64 overflow-y-auto space-y-3">
         {Array.from({ length: chapterCount }, (_, i) => i + 1).map((chapter) => {
           const verseCount = verseCountByChapter[chapter] || 31;
           return (
             <div key={chapter} className="space-y-2">
-              <h4 className="text-xs font-medium text-gray-600">
-                Chapter {chapter}
-              </h4>
+                <h4 className="text-sm font-bold text-gray-700 bg-gray-100 rounded-md px-2 py-1 inline-block">
+                  {chapter}
+                </h4>
               <div className="grid grid-cols-10 gap-1">
                 {Array.from({ length: verseCount }, (_, i) => i + 1).map((verse) => {
                   const isSelected = 
@@ -544,9 +560,10 @@ function RangeSelector({ chapterCount, verseCountByChapter, currentReference, on
               };
               onRangeSelect(range);
             }}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200"
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors duration-200 flex items-center space-x-2"
+            title="Done"
           >
-            Done
+            <Icon name="check" size={16} />
           </button>
         </div>
       )}
@@ -564,13 +581,13 @@ interface SectionsNavigatorProps {
 function SectionsNavigator({ sections, currentReference, onRangeSelect }: SectionsNavigatorProps) {
   return (
     <div className="space-y-2">
-      <h3 className="text-sm font-medium text-gray-700 mb-3">
-        Predefined Sections ({sections.length})
-      </h3>
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {sections.length === 0 ? (
           <div className="text-sm text-gray-500 p-3">
-            No sections available for this book.
+            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+              <Icon name="info" size={24} />
+              <span className="text-sm mt-2">No sections available</span>
+            </div>
           </div>
         ) : (
           sections.map((section, index) => {
@@ -593,12 +610,7 @@ function SectionsNavigator({ sections, currentReference, onRangeSelect }: Sectio
               `}
             >
               <div className="font-medium text-sm">{section.title}</div>
-              <div className="text-xs opacity-75">
-                {section.range.startChapter}:{section.range.startVerse}
-                {section.range.endChapter && section.range.endVerse && 
-                  ` - ${section.range.endChapter}:${section.range.endVerse}`
-                }
-              </div>
+             
             </button>
           );
         }))}
@@ -611,7 +623,7 @@ function SectionsNavigator({ sections, currentReference, onRangeSelect }: Sectio
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title: string;
+  title: string | React.ReactNode;
   children: React.ReactNode;
 }
 

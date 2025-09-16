@@ -27,6 +27,9 @@ import {
   ArrowRight,
   Home,
   Menu,
+  Target,
+  List,
+  Grid3X3,
   
   // Action icons
   Search,
@@ -88,6 +91,9 @@ export const iconMap = {
   'arrow-right': ArrowRight,
   'home': Home,
   'menu': Menu,
+  'target': Target,
+  'list': List,
+  'grid': Grid3X3,
   
   // Actions
   'search': Search,
