@@ -1450,7 +1450,13 @@ export const TranslationWordsLinksViewer: React.FC<
                       className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs italic font-medium hover:bg-purple-100 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleWordPress(link);
+                        if (shouldLinkHaveColorIndicator(link)) {
+                          // For links with quotes and occurrences, only broadcast selection (like NotesViewer)
+                          handleLinkClick(link);
+                        } else {
+                          // For links without quotes/occurrences, open the detail modal
+                          handleLinkPress(link);
+                        }
                       }}
                     >
                       “{targetQuote.quote}”
