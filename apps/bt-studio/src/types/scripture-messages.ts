@@ -121,18 +121,19 @@ export interface TokenClickBroadcast extends BaseMessageContent {
  * Note selection broadcast message
  * This is an EVENT message for when a user clicks on a note in the NotesViewer
  * Used for highlighting the selected note's tokens as active
+ * When selectedNote is null, it indicates clearing/deselecting the current selection
  */
 export interface NoteSelectionBroadcast extends BaseMessageContent {
   type: 'note-selection-broadcast';
   lifecycle: 'event';
   
-  /** The selected note information */
+  /** The selected note information, or null to clear selection */
   selectedNote: {
     noteId: string;
     tokenGroupId: string; // The corresponding token group ID for underlining
     quote: string;
     reference: string;
-  };
+  } | null;
   
   /** The resource ID that detected the selection */
   sourceResourceId: string;

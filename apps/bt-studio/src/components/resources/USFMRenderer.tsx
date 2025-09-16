@@ -441,9 +441,15 @@ const USFMRendererInternal: React.FC<USFMRendererProps> = ({
         console.log('🧹 Clearing previous token click highlights for note selection');
         getCrossPanelCommunicationService().clearHighlights();
         
-        // Set the active group based on the selected note's token group ID
-        // This will override any previous token click highlights
-        setActiveGroup(noteSelectionEvent.selectedNote.tokenGroupId);
+        if (noteSelectionEvent.selectedNote === null) {
+          // Clear the active group when note selection is cleared
+          console.log('🧹 Clearing active group for note deselection');
+          setActiveGroup(null);
+        } else {
+          // Set the active group based on the selected note's token group ID
+          // This will override any previous token click highlights
+          setActiveGroup(noteSelectionEvent.selectedNote.tokenGroupId);
+        }
       }
     }
   });

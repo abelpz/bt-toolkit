@@ -1,6 +1,6 @@
 /**
  * Translation Words Links Viewer Component
- *
+ * 
  * Displays Translation Words Links (TWL) content in the bt-studio application.
  * Shows cross-reference links between Bible words and Translation Words definitions.
  */
@@ -51,10 +51,10 @@ export interface TranslationWordsLinksViewerProps {
   onLinksFiltered?: (
     loadTranslationWordsContent: () => Promise<
       Array<{
-        link: TranslationWordsLink;
-        articleId: string;
-        title: string;
-        content: unknown;
+    link: TranslationWordsLink;
+    articleId: string;
+    title: string;
+    content: unknown;
       }>
     >
   ) => void;
@@ -268,11 +268,19 @@ export const TranslationWordsLinksViewer: React.FC<
     timestamp: number;
   } | null>(null);
 
+  // Track active link for toggle functionality
+  const [activeLinkId, setActiveLinkId] = useState<string | null>(null);
+
   // Function to handle link selection and broadcast the event (similar to NotesViewer)
   const handleLinkClick = useCallback(
     (link: TranslationWordsLink) => {
       const linkKey = link.id || `${link.reference}-${link.origWords?.trim()}`;
       const tokenGroupId = `notes-${linkKey}`; // Use same format as USFMRenderer creates token groups
+
+      // Toggle logic: if clicking the same link, deactivate it
+      const isCurrentlyActive = activeLinkId === linkKey;
+      const newActiveId = isCurrentlyActive ? null : linkKey;
+      setActiveLinkId(newActiveId);
 
       console.log('📝 TWL Link clicked, broadcasting selection:', {
         linkId: linkKey,
@@ -280,13 +288,15 @@ export const TranslationWordsLinksViewer: React.FC<
         origWords: link.origWords,
         reference: link.reference,
         expectedFormat: `notes-${linkKey}`,
+        isToggleOff: isCurrentlyActive,
+        newActiveId
       });
 
-      // Broadcast link selection event
+      // Broadcast link selection event (or clear event if toggling off)
       const linkSelectionBroadcast: NoteSelectionBroadcast = {
         type: 'note-selection-broadcast',
         lifecycle: 'event',
-        selectedNote: {
+        selectedNote: isCurrentlyActive ? null : {
           noteId: linkKey,
           tokenGroupId: tokenGroupId,
           quote: link.origWords || '',
@@ -308,7 +318,7 @@ export const TranslationWordsLinksViewer: React.FC<
         console.error('❌ Failed to send TWL link selection broadcast:', error);
       }
     },
-    [resourceId, linkedPanelsAPI]
+    [resourceId, linkedPanelsAPI, activeLinkId]
   );
 
   // Function to check if a link should have color indicator and be clickable
@@ -391,11 +401,11 @@ export const TranslationWordsLinksViewer: React.FC<
         setContentLoading(true);
         setDisplayError(null);
         setActualLinks(null); // Clear previous content
-
+        
         console.log(
           `🔍 TranslationWordsLinksViewer - Fetching content for ${resourceId}, book: ${currentReference.book}`
         );
-
+        
         // Find the resource config to get the correct adapter resource ID
         const resourceConfig = processedResourceConfig.find(
           (config: { panelResourceId: string }) =>
@@ -404,19 +414,19 @@ export const TranslationWordsLinksViewer: React.FC<
         if (!resourceConfig) {
           throw new Error(`Resource config not found for ${resourceId}`);
         }
-
+        
         console.log(`📋 Found resource config:`, resourceConfig.metadata);
-
+        
         // Construct the full content key in the same format as ScriptureViewer
         const contentKey = `${resourceConfig.metadata.server}/${resourceConfig.metadata.owner}/${resourceConfig.metadata.language}/${resourceConfig.metadata.id}/${currentReference.book}`;
-
+        
         console.log(`🔑 Content key: ${contentKey}`);
-
+        
         const content = await resourceManager.getOrFetchContent(
           contentKey, // Full key format: server/owner/language/resourceId/book
           resourceConfig.metadata.type as ResourceType // Resource type from metadata
         );
-
+        
         if (content) {
           const processedLinks = content as unknown as ProcessedWordsLinks;
           if (
@@ -440,7 +450,7 @@ export const TranslationWordsLinksViewer: React.FC<
         } else {
           setDisplayError(`No word links found for ${currentReference.book}`);
         }
-
+        
         // Use existing metadata from resource config for language direction
         setResourceMetadata(resourceConfig.metadata);
       } catch (err) {
@@ -523,7 +533,7 @@ export const TranslationWordsLinksViewer: React.FC<
 
   // Listen for scripture token broadcasts using useCurrentState hook
   const scriptureTokensBroadcast = useCurrentState<ScriptureTokensBroadcast>(
-    resourceId,
+    resourceId, 
     'current-scripture-tokens'
   );
 
@@ -565,8 +575,8 @@ export const TranslationWordsLinksViewer: React.FC<
       // Check if this is a clear message (empty tokens and empty book)
       const isClearMessage =
         scriptureTokensBroadcast.tokens.length === 0 &&
-        !scriptureTokensBroadcast.reference.book;
-
+                            !scriptureTokensBroadcast.reference.book;
+      
       if (isClearMessage) {
         console.log(
           `🧹 TWL received clear signal from ${scriptureTokensBroadcast.sourceResourceId}`
@@ -577,8 +587,8 @@ export const TranslationWordsLinksViewer: React.FC<
         console.log(
           `🎯 TWL received scripture tokens from ${scriptureTokensBroadcast.sourceResourceId}:`,
           {
-            tokenCount: scriptureTokensBroadcast.tokens.length,
-            reference: scriptureTokensBroadcast.reference,
+          tokenCount: scriptureTokensBroadcast.tokens.length,
+          reference: scriptureTokensBroadcast.reference,
             timestamp: new Date(
               scriptureTokensBroadcast.timestamp
             ).toLocaleTimeString(),
@@ -607,25 +617,25 @@ export const TranslationWordsLinksViewer: React.FC<
     if (!displayLinks?.links || !currentReference) {
       return displayLinks?.links || [];
     }
-
+    
     return displayLinks.links.filter((link) => {
       // Parse chapter and verse from reference (e.g., "1:1" -> chapter: 1, verse: 1)
       const refParts = link.reference.split(':');
       const linkChapter = parseInt(refParts[0] || '1');
       const linkVerse = parseInt(refParts[1] || '1');
-
+      
       // Determine the range bounds (default to single verse/chapter if no end specified)
       const startChapter = currentReference.chapter;
       const startVerse = currentReference.verse;
       const endChapter =
         currentReference.endChapter || currentReference.chapter;
       const endVerse = currentReference.endVerse || currentReference.verse;
-
+      
       // Skip filtering if we don't have valid chapter/verse data
       if (!startChapter || !startVerse) {
         return true;
       }
-
+      
       // Check if link is within the chapter range
       if (linkChapter < startChapter) {
         return false;
@@ -633,12 +643,12 @@ export const TranslationWordsLinksViewer: React.FC<
       if (endChapter && linkChapter > endChapter) {
         return false;
       }
-
+      
       // Filter by start verse in start chapter
       if (linkChapter === startChapter && linkVerse < startVerse) {
         return false;
       }
-
+      
       // Filter by end verse in end chapter
       if (
         endChapter &&
@@ -648,7 +658,7 @@ export const TranslationWordsLinksViewer: React.FC<
       ) {
         return false;
       }
-
+      
       return true;
     });
   }, [displayLinks?.links, currentReference]);
@@ -1126,10 +1136,10 @@ export const TranslationWordsLinksViewer: React.FC<
   }, []); // Empty dependency array is INTENTIONAL - ensures cleanup only on unmount (team-review pattern)
 
 
-  // Apply token filter on top of navigation-filtered links
-  const filteredLinks = useMemo(() => {
+  // Apply token filter on top of navigation-filtered links with fallback
+  const { filteredLinks, tokenFilterCount } = useMemo(() => {
     if (!tokenFilter || !quoteMatches.size) {
-      return filteredLinksByNavigation;
+      return { filteredLinks: filteredLinksByNavigation, tokenFilterCount: filteredLinksByNavigation.length };
     }
 
     console.log('🔍 Applying token filter to TWL links:', {
@@ -1139,7 +1149,7 @@ export const TranslationWordsLinksViewer: React.FC<
     });
 
     // Filter links that have quote matches containing the clicked token
-    return filteredLinksByNavigation.filter((link) => {
+    const tokenFilteredLinks = filteredLinksByNavigation.filter((link) => {
       const linkKey = link.id || `${link.reference}-${link.origWords?.trim()}`;
       const quoteMatch = quoteMatches.get(linkKey);
 
@@ -1169,7 +1179,65 @@ export const TranslationWordsLinksViewer: React.FC<
 
       return hasMatchingToken;
     });
+
+    // Fallback: If token filter produces no results, show all navigation-filtered links
+    // but keep the actual filter count (0) for display
+    if (tokenFilteredLinks.length === 0) {
+      console.log('🔄 TWL - Token filter produced no results, falling back to navigation filter');
+      return { filteredLinks: filteredLinksByNavigation, tokenFilterCount: 0 };
+    }
+
+    return { filteredLinks: tokenFilteredLinks, tokenFilterCount: tokenFilteredLinks.length };
   }, [filteredLinksByNavigation, tokenFilter, quoteMatches]);
+
+  // Auto-activate first item when token filter produces results
+  const lastAutoActivatedTokenRef = useRef<string | null>(null);
+  const lastAutoActivatedLinkRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    const currentTokenId = tokenFilter?.originalLanguageToken?.semanticId;
+    
+    if (tokenFilter && tokenFilterCount > 0 && currentTokenId) {
+      const firstLink = filteredLinks[0];
+      const linkKey = firstLink.id || `${firstLink.reference}-${firstLink.origWords?.trim()}`;
+      
+      // Only auto-activate if this is a new token or a different first link
+      const isNewToken = lastAutoActivatedTokenRef.current !== currentTokenId;
+      const isDifferentFirstLink = lastAutoActivatedLinkRef.current !== linkKey;
+      
+      if (isNewToken || isDifferentFirstLink) {
+        console.log('🎯 Auto-activating first filtered TWL link:', linkKey, { isNewToken, isDifferentFirstLink });
+        
+        // Update refs to prevent re-triggering
+        lastAutoActivatedTokenRef.current = currentTokenId;
+        lastAutoActivatedLinkRef.current = linkKey;
+        
+        setActiveLinkId(linkKey);
+        
+        // Broadcast the selection
+        const tokenGroupId = `notes-${linkKey}`;
+        const linkSelectionBroadcast: NoteSelectionBroadcast = {
+          type: 'note-selection-broadcast',
+          lifecycle: 'event',
+          selectedNote: {
+            noteId: linkKey,
+            tokenGroupId: tokenGroupId,
+            quote: firstLink.origWords || '',
+            reference: firstLink.reference
+          },
+          sourceResourceId: resourceId,
+          timestamp: Date.now()
+        };
+        (linkedPanelsAPI.messaging as any).sendToAll(linkSelectionBroadcast);
+      }
+    } else if (tokenFilter && tokenFilterCount === 0) {
+      // Clear active state when token filter produces no results
+      console.log('🧹 Clearing active TWL link - no token filter results');
+      lastAutoActivatedTokenRef.current = null;
+      lastAutoActivatedLinkRef.current = null;
+      setActiveLinkId(null);
+    }
+  }, [tokenFilter?.originalLanguageToken?.semanticId, tokenFilterCount, filteredLinks, resourceId, linkedPanelsAPI]);
 
   // Function to get the color for a link using the same cycling logic as token groups
   // Always use the original navigation-filtered links (before token filter) to maintain consistent colors
@@ -1224,18 +1292,18 @@ export const TranslationWordsLinksViewer: React.FC<
         console.log(
           `📋 Auto-loading Translation Words content for ${filteredLinks.length} filtered links...`
         );
-
+        
         // Find the Translation Words resource config
         const twResourceConfig = processedResourceConfig?.find(
           (config: { metadata: { type: string; id: string } }) =>
-            config.metadata.type === 'words' || config.metadata.id === 'tw'
+          config.metadata.type === 'words' || config.metadata.id === 'tw'
         );
-
+        
         if (!twResourceConfig) {
           console.warn('❌ Translation Words resource config not found');
           return;
         }
-
+        
         const loadedEntries: Array<{
           link: TranslationWordsLink;
           articleId: string;
@@ -1243,38 +1311,38 @@ export const TranslationWordsLinksViewer: React.FC<
           content: unknown;
         }> = [];
         const titlesMap = new Map();
-
+        
         for (const link of filteredLinks) {
           try {
             // Parse the twLink to extract category and term (e.g., "rc://*/tw/dict/bible/kt/god" -> category: "kt", term: "god")
             const twInfo = parseTWLink(link.twLink);
-
+            
             if (!twInfo.term || twInfo.category === 'unknown') {
               console.warn(`⚠️ Could not parse twLink: ${link.twLink}`);
               continue;
             }
-
+            
             // Construct the article ID in the format expected by Door43TranslationWordsAdapter: bible/category/term-id
             const articleId = `bible/${twInfo.category}/${twInfo.term}`;
-
+            
             // Skip if we already have this title loaded (use term as the key for the titles map)
             if (twTitles.has(twInfo.term)) {
               continue;
             }
-
+            
             // Construct the content key for the Translation Words entry
             const contentKey = `${twResourceConfig.metadata.server}/${twResourceConfig.metadata.owner}/${twResourceConfig.metadata.language}/${twResourceConfig.metadata.id}/${articleId}`;
-
+            
             console.log(
               `🔍 Loading TW content for: ${articleId} (key: ${contentKey})`
             );
-
+            
             // Load the Translation Words content
             const twContent = await resourceManager.getOrFetchContent(
               contentKey,
               twResourceConfig.metadata.type as ResourceType
             );
-
+            
             if (
               twContent &&
               (twContent as { word?: { term?: string } }).word?.term
@@ -1301,23 +1369,23 @@ export const TranslationWordsLinksViewer: React.FC<
             );
           }
         }
-
+        
         console.log(
           `📋 Successfully loaded ${loadedEntries.length} Translation Words entries:`,
           loadedEntries
         );
-
+        
         // Update the titles state with new titles
         if (titlesMap.size > 0) {
           setTwTitles((prev) => new Map([...prev, ...titlesMap]));
         }
-
+        
         // Call the callback if provided
         if (onLinksFiltered) {
           onLinksFiltered(() => Promise.resolve(loadedEntries));
         }
       };
-
+      
       loadTranslationWordsContent();
     }
   }, [
@@ -1350,20 +1418,38 @@ export const TranslationWordsLinksViewer: React.FC<
 
   const handleLinkPress = useCallback(
     (link: TranslationWordsLink) => {
-      if (onLinkPress) {
-        onLinkPress(link);
-      }
-
-      if (!compact) {
+    if (onLinkPress) {
+      onLinkPress(link);
+    }
+    
+    if (!compact) {
         // Open the TW article in the ResourceModal
         handleTranslationWordPress(link.twLink);
-      }
+    }
     },
     [onLinkPress, compact, handleTranslationWordPress]
   );
 
   const handleWordPress = (link: TranslationWordsLink) => {
+    const linkKey = link.id || `${link.reference}-${link.origWords?.trim()}`;
+    
+    // Toggle logic: if clicking the same link, deactivate it
+    const isCurrentlyActive = activeLinkId === linkKey;
+    const newActiveId = isCurrentlyActive ? null : linkKey;
+    setActiveLinkId(newActiveId);
+    
+    console.log('🔗 TWL Link clicked, toggling highlight:', {
+      linkId: linkKey,
+      origWords: link.origWords,
+      occurrence: link.occurrence,
+      isToggleOff: isCurrentlyActive,
+      newActiveId
+    });
+
     if (onWordHighlight) {
+      // If toggling off, we could send a special signal to clear highlighting
+      // For now, we'll still call onWordHighlight but the scripture viewer
+      // should handle the toggle logic based on repeated calls
       onWordHighlight(link.origWords, parseInt(link.occurrence) || 1);
     }
   };
@@ -1384,7 +1470,7 @@ export const TranslationWordsLinksViewer: React.FC<
     // Check if it contains Hebrew or Greek characters
     const hasHebrew = /[\u0590-\u05FF]/.test(origWords);
     const hasGreek = /[\u0370-\u03FF\u1F00-\u1FFF]/.test(origWords);
-
+    
     return (
       <span
         className={`font-medium ${hasHebrew ? 'text-right' : ''} ${
@@ -1400,10 +1486,12 @@ export const TranslationWordsLinksViewer: React.FC<
     return (
       <div
         key={link.id}
-        className={`bg-gray-50 rounded-md p-2 mb-2 border border-gray-200 transition-colors ${
-          shouldLinkHaveColorIndicator(link)
-            ? 'hover:bg-blue-50/20 cursor-pointer'
-            : 'hover:bg-gray-100 cursor-pointer'
+        className={`rounded-md p-2 mb-2 border transition-colors cursor-pointer ${
+          shouldLinkHaveColorIndicator(link) && activeLinkId === (link.id || `${link.reference}-${link.origWords?.trim()}`)
+            ? 'border-blue-500 bg-blue-50 shadow-md'
+            : shouldLinkHaveColorIndicator(link)
+            ? 'border-gray-200 bg-gray-50 hover:bg-blue-50/20'
+            : 'border-gray-200 bg-gray-50 hover:bg-gray-100'
         }`}
         onClick={() => {
           if (shouldLinkHaveColorIndicator(link)) {
@@ -1432,10 +1520,10 @@ export const TranslationWordsLinksViewer: React.FC<
                 title="This color matches the token underlining in scripture"
               ></div>
             )}
-            <div className="text-xs font-semibold text-blue-600">
-              {link.reference}
-            </div>
+          <div className="text-xs font-semibold text-blue-600">
+            {link.reference}
           </div>
+            </div>
         </div>
 
         {/* Original words and tags - show target language quote if available, otherwise original */}
@@ -1450,10 +1538,10 @@ export const TranslationWordsLinksViewer: React.FC<
                 if (targetQuote) {
                   // Show target language quote when available
                   return (
-                    <button
+        <button
                       className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs italic font-medium hover:bg-purple-100 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
+          onClick={(e) => {
+            e.stopPropagation();
                         if (shouldLinkHaveColorIndicator(link)) {
                           // For links with quotes and occurrences, only broadcast selection (like NotesViewer)
                           handleLinkClick(link);
@@ -1464,12 +1552,12 @@ export const TranslationWordsLinksViewer: React.FC<
                       }}
                     >
                       “{targetQuote.quote}”
-                    </button>
+        </button>
                   );
                 } else {
                   // Show original language words when no target quote is built
-                  return (
-                    <button
+    return (
+          <button
                       className="bg-blue-50 text-blue-800 px-2 py-1 rounded text-xs font-medium hover:bg-blue-100 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -1477,13 +1565,13 @@ export const TranslationWordsLinksViewer: React.FC<
                       }}
                     >
                       {renderOriginalWords(link.origWords)}
-                    </button>
+          </button>
                   );
                 }
               })()}
+          </div>
+              )}
             </div>
-          )}
-        </div>
 
         {/* Translation Words button */}
         <TWButton
@@ -1525,7 +1613,7 @@ export const TranslationWordsLinksViewer: React.FC<
         className={`flex flex-col items-center justify-center p-8 text-center ${className}`}
       >
         <div className="text-gray-500 text-base">
-          {currentReference && currentReference.chapter
+          {currentReference && currentReference.chapter 
             ? `No translation word links for ${currentReference.book} ${
                 currentReference.chapter
               }:${currentReference.verse}${
@@ -1543,8 +1631,8 @@ export const TranslationWordsLinksViewer: React.FC<
     );
   }
 
-  return (
-    <div className={`flex flex-col h-full ${className}`}>
+    return (
+      <div className={`flex flex-col h-full ${className}`}>
       {/* Token Filter Banner */}
       {tokenFilter && (
         <div className="bg-blue-50 border-b border-blue-200 px-3 py-2 flex items-center justify-between">
@@ -1561,9 +1649,9 @@ export const TranslationWordsLinksViewer: React.FC<
               {tokenFilter.originalLanguageToken.content}
             </span>
             <span className="text-blue-600 text-xs">
-              ({filteredLinks.length})
+              ({tokenFilterCount})
             </span>
-          </div>
+      </div>
           <button
             onClick={() => {
               setTokenFilter(null);
@@ -1620,13 +1708,13 @@ export const TranslationWordsLinksViewer: React.FC<
               </div>
             </div>
           )} */}
-
+                   
           <div className="space-y-3">
             {filteredLinks.map((link, index) => renderLink(link, index))}
           </div>
         </div>
       </div>
-
+      
       {/* ResourceModal now managed by ResourceModalContext */}
     </div>
   );

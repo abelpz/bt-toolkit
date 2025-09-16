@@ -118,11 +118,13 @@ function isNoteSelectionBroadcast(content: unknown): content is NoteSelectionBro
   return (
     msg.type === 'note-selection-broadcast' &&
     msg.lifecycle === 'event' &&
-    msg.selectedNote &&
-    typeof msg.selectedNote.noteId === 'string' &&
-    typeof msg.selectedNote.tokenGroupId === 'string' &&
-    typeof msg.selectedNote.quote === 'string' &&
-    typeof msg.selectedNote.reference === 'string' &&
+    (msg.selectedNote === null || (
+      msg.selectedNote &&
+      typeof msg.selectedNote.noteId === 'string' &&
+      typeof msg.selectedNote.tokenGroupId === 'string' &&
+      typeof msg.selectedNote.quote === 'string' &&
+      typeof msg.selectedNote.reference === 'string'
+    )) &&
     typeof msg.sourceResourceId === 'string' &&
     typeof msg.timestamp === 'number'
   );
@@ -144,13 +146,20 @@ function handleTokenClickBroadcast(message: ResourceMessage<TokenClickBroadcast>
  * Handler for note selection broadcast messages
  */
 function handleNoteSelectionBroadcast(message: ResourceMessage<NoteSelectionBroadcast>) {
-  console.log(`📝 Note selection broadcast from ${message.fromResourceId}:`, {
-    noteId: message.content.selectedNote.noteId,
-    tokenGroupId: message.content.selectedNote.tokenGroupId,
-    quote: message.content.selectedNote.quote,
-    reference: message.content.selectedNote.reference,
-    timestamp: new Date(message.content.timestamp).toLocaleTimeString()
-  });
+  if (message.content.selectedNote === null) {
+    console.log(`📝 Note selection cleared from ${message.fromResourceId}:`, {
+      action: 'clear_selection',
+      timestamp: new Date(message.content.timestamp).toLocaleTimeString()
+    });
+  } else {
+    console.log(`📝 Note selection broadcast from ${message.fromResourceId}:`, {
+      noteId: message.content.selectedNote.noteId,
+      tokenGroupId: message.content.selectedNote.tokenGroupId,
+      quote: message.content.selectedNote.quote,
+      reference: message.content.selectedNote.reference,
+      timestamp: new Date(message.content.timestamp).toLocaleTimeString()
+    });
+  }
 }
 
 /**

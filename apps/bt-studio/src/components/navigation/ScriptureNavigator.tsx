@@ -267,6 +267,12 @@ export function ScriptureNavigator() {
         };
       }
 
+      // Fix endChapter when it's undefined but endVerse is defined
+      // This ensures proper range filtering in the scripture viewer
+      if (reference.endVerse !== undefined && reference.endChapter === undefined) {
+        reference.endChapter = reference.chapter;
+      }
+
       navigateToReference(reference);
       setIsBookModalOpen(false);
     } catch (error) {
