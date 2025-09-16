@@ -14,6 +14,7 @@
 
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
 import remarkRehype from 'remark-rehype';
 import rehypeReact from 'rehype-react';
 import { Fragment } from 'react';
@@ -44,6 +45,7 @@ export class RemarkMarkdownRenderer {
 
     this.processor = unified()
       .use(remarkParse) // Parse markdown to AST
+      .use(remarkGfm) // Add GitHub Flavored Markdown support (tables, strikethrough, etc.)
       .use(remarkRehype, { 
         allowDangerousHtml: this.options.allowDangerousHtml || false 
       }) // Convert markdown AST to HTML AST
@@ -80,6 +82,23 @@ export class RemarkMarkdownRenderer {
           ),
           strong: (props: any) => <strong {...props} className="font-semibold" />,
           em: (props: any) => <em {...props} className="italic" />,
+          
+          // Table components (GitHub Flavored Markdown)
+          table: (props: any) => (
+            <div className="overflow-x-auto mb-4">
+              <table {...props} className="min-w-full border-collapse border border-gray-300" />
+            </div>
+          ),
+          thead: (props: any) => <thead {...props} className="bg-gray-50" />,
+          tbody: (props: any) => <tbody {...props} />,
+          tr: (props: any) => <tr {...props} className="border-b border-gray-200" />,
+          th: (props: any) => (
+            <th {...props} className="border border-gray-300 px-4 py-2 text-left font-semibold bg-gray-100" />
+          ),
+          td: (props: any) => (
+            <td {...props} className="border border-gray-300 px-4 py-2" />
+          ),
+          
           ...this.options.customComponents
         }
       }); // Convert HTML AST to React components

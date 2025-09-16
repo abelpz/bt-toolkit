@@ -489,10 +489,6 @@ const Door43Link: React.FC<{
     <span
       className={getLinkStyle()}
       onClick={isClickable ? handleClick : undefined}
-      onPointerDown={isClickable ? (e) => {
-        console.log('🖱️ Door43Link pointerDown - calling handleClick directly');
-        handleClick(e as any);
-      } : undefined}
       title={getTooltip()}
       style={{ cursor: isClickable ? 'pointer' : 'default' }}
     >

@@ -448,34 +448,52 @@ export function NotesViewer({
       if (!note.reference) return false;
       
       try {
+        // Parse chapter and verse from reference (e.g., "1:1" -> chapter: 1, verse: 1)
         const refParts = note.reference.split(':');
         const noteChapter = parseInt(refParts[0] || '1');
         
         // Parse verse part which might be a range (e.g., "3-4" or just "3")
         const versePart = refParts[1] || '1';
-        let noteStartVerse: number;
-        let noteEndVerse: number;
+        let noteVerse: number;
         
         if (versePart.includes('-')) {
-          // Handle verse range (e.g., "3-4")
-          const verseParts = versePart.split('-');
-          noteStartVerse = parseInt(verseParts[0] || '1');
-          noteEndVerse = parseInt(verseParts[1] || noteStartVerse.toString());
+          // For verse ranges, use the start verse for filtering
+          noteVerse = parseInt(versePart.split('-')[0] || '1');
         } else {
           // Single verse
-          noteStartVerse = parseInt(versePart);
-          noteEndVerse = noteStartVerse;
+          noteVerse = parseInt(versePart);
         }
-        
-        // Check if note overlaps with current navigation range
-        const currentChapter = currentReference.chapter || 1;
-        const currentStartVerse = currentReference.verse || 1;
-        const currentEndVerse = currentReference.endVerse || currentStartVerse;
-        
-        // Note is visible if it overlaps with the current navigation range
-        return noteChapter === currentChapter && 
-               noteStartVerse <= currentEndVerse && 
-               noteEndVerse >= currentStartVerse;
+
+        // Determine the range bounds (default to single verse/chapter if no end specified)
+        const startChapter = currentReference.chapter;
+        const startVerse = currentReference.verse;
+        const endChapter = currentReference.endChapter || currentReference.chapter;
+        const endVerse = currentReference.endVerse || currentReference.verse;
+
+        // Skip filtering if we don't have valid chapter/verse data
+        if (!startChapter || !startVerse) {
+          return true;
+        }
+
+        // Check if note is within the chapter range
+        if (noteChapter < startChapter) {
+          return false;
+        }
+        if (endChapter && noteChapter > endChapter) {
+          return false;
+        }
+
+        // Filter by start verse in start chapter
+        if (noteChapter === startChapter && noteVerse < startVerse) {
+          return false;
+        }
+
+        // Filter by end verse in end chapter
+        if (endChapter && endVerse && noteChapter === endChapter && noteVerse > endVerse) {
+          return false;
+        }
+
+        return true;
       } catch (error) {
         console.warn(`⚠️ NotesViewer - Error parsing note reference ${note.reference}:`, error);
         return false;
