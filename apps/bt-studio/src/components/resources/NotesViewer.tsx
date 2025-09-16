@@ -1105,7 +1105,7 @@ export function NotesViewer({
                       if (targetQuote) {
                         // Show target language quote when available
                         return (
-                          <p className="text-purple-700 italic text-sm">
+                          <p className="text-purple-700 italic text-sm font-medium">
                             “{targetQuote.quote}”
                           </p>
                         );

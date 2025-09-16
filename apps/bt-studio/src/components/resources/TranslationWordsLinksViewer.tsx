@@ -1447,7 +1447,7 @@ export const TranslationWordsLinksViewer: React.FC<
                   // Show target language quote when available
                   return (
                     <button
-                      className="bg-purple-50 text-purple-800 px-2 py-1 rounded text-xs font-medium hover:bg-purple-100 transition-colors"
+                      className="bg-purple-50 text-purple-700 px-2 py-1 rounded text-xs italic font-medium hover:bg-purple-100 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleWordPress(link);

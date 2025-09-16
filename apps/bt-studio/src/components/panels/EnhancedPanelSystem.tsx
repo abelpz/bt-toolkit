@@ -409,7 +409,7 @@ export function EnhancedPanelSystem() {
                   // Add border after first panel: bottom border in portrait, right border in landscape
                   const isFirstPanel = index === 0;
                   const borderClasses = isFirstPanel 
-                    ? "border-b-2 lg:border-b-0 lg:border-r-2 border-gray-300" 
+                    ? "border-b-4 lg:border-b-0 lg:border-r-4 border-gray-300" 
                     : "";
                   
                   return (
