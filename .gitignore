@@ -49,3 +49,6 @@ test-output
 
 vite.config.*.timestamp*
 vitest.config.*.timestamp*
+
+# Resource downloader exports
+resource-downloader/exports/

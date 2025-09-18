@@ -1,5 +1,5 @@
 /**
- * NavigationBar - Top navigation component
+ * NavigationBar - Bottom navigation component
  * 
  * Displays current navigation state and provides navigation controls
  */

@@ -2,14 +2,26 @@
  * AppLogo - Shared app logo component
  * 
  * Displays the consistent FBT branding with gradient styling
+ * Now clickable to open settings
  */
 
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Icon } from '../ui/Icon';
 
 export function AppLogo() {
+  const navigate = useNavigate();
+
+  const handleLogoClick = () => {
+    navigate('/settings');
+  };
+
   return (
-    <div className="flex items-center space-x-2">
+    <button 
+      onClick={handleLogoClick}
+      className="flex items-center space-x-2 hover:opacity-80 transition-opacity cursor-pointer"
+      title="Open Settings"
+    >
       {/* Logo Icon */}
       <div className="relative">
         <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-lg flex items-center justify-center shadow-md">
@@ -25,6 +37,6 @@ export function AppLogo() {
           
         </h1>
       </div>
-    </div>
+    </button>
   )
 }

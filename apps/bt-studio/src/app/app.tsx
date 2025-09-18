@@ -1,8 +1,8 @@
 import { Routes, Route, Navigate, useParams, useSearchParams } from 'react-router-dom';
 import { AppContexts } from '../contexts/AppContexts';
-import { WorkspaceStatus } from '../components/WorkspaceStatus';
 import { ReadyNavigationBar } from '../components/ReadyNavigationBar';
 import { EnhancedPanelSystem } from '../components/panels/EnhancedPanelSystem';
+import { Settings } from '../components/Settings';
 import { resolveAppParams, PathParams, storeParams, getStoredParams, DEFAULT_PARAMS } from '../utils/urlParams';
 import { useEffect, useMemo } from 'react';
 
@@ -24,6 +24,7 @@ export function App() {
         <main className="flex-1 min-h-0 overflow-hidden">
           <Routes>
             <Route path="/" element={<DefaultRedirect />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/:owner/:language/:book" element={<WorkspaceView />} />
             <Route path="/:owner/:language/:book/:ref" element={<WorkspaceView />} />
           </Routes>
@@ -62,20 +63,15 @@ function WorkspaceView() {
       initialBook={resolvedParams.book}
     >
       <div className="flex flex-col h-full">
-        {/* Navigation Bar */}
-        <header className="flex-shrink-0 bg-white shadow-sm border-b">
-          <ReadyNavigationBar />
-        </header>
-        
-        {/* Workspace Status */}
-        {/* <div className="flex-shrink-0">
-          <WorkspaceStatus />
-        </div> */}
-        
         {/* Main Content - Fixed height container */}
         <div className="flex-1 min-h-0 overflow-hidden">
           <EnhancedPanelSystem />
         </div>
+        
+        {/* Navigation Bar - Moved to bottom */}
+        <header className="flex-shrink-0 bg-white shadow-sm border-t">
+          <ReadyNavigationBar />
+        </header>
       </div>
     </AppContexts>
   );

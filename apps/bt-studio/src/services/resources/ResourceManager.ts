@@ -117,7 +117,7 @@ export class ResourceManagerImpl implements ResourceManager {
         }
       }
       
-      // Step 2: Fetch fresh metadata from all available adapters
+      // Step 2: Fetch fresh metadata from all available adapters (with stale fallback)
       const freshMetadata: ResourceMetadata[] = [];
       
       for (const adapter of this.resourceAdapters) {
@@ -128,6 +128,22 @@ export class ResourceManagerImpl implements ResourceManager {
             () => adapter.getResourceMetadata(server, owner, language),
             `${adapter.resourceType} metadata`
           );
+          
+          // Check if we have better TOC data in cached metadata
+          let tocToUse = adapterMetadata.toc || {};
+          const cachedAdapterMetadata = cachedMetadata?.find(meta => 
+            meta.type === adapter.resourceType && meta.id === adapter.resourceId
+          );
+          
+          if (cachedAdapterMetadata && cachedAdapterMetadata.toc?.books && cachedAdapterMetadata.toc.books.length > 0) {
+            const freshBookCount = adapterMetadata.toc?.books?.length || 0;
+            const cachedBookCount = cachedAdapterMetadata.toc.books.length;
+            
+            if (cachedBookCount > freshBookCount) {
+              console.log(`🔄 Using cached TOC data (${cachedBookCount} books) over fresh data (${freshBookCount} books) for ${adapter.resourceId}`);
+              tocToUse = cachedAdapterMetadata.toc;
+            }
+          }
           
           // Convert to full ResourceMetadata format
           const fullMetadata: ResourceMetadata = {
@@ -142,7 +158,7 @@ export class ResourceManagerImpl implements ResourceManager {
             version: adapterMetadata.version,
             lastUpdated: new Date(),
             available: adapterMetadata.available,
-            toc: adapterMetadata.toc || {},
+            toc: tocToUse,
             isAnchor: adapter.resourceType === ResourceType.SCRIPTURE && adapter.resourceId === 'literal-text'
           };
           
@@ -154,8 +170,32 @@ export class ResourceManagerImpl implements ResourceManager {
           console.log(`✅ Got metadata for ${adapter.resourceType}: ${fullMetadata.title} (id: ${fullMetadata.id}, type: ${fullMetadata.type})`);
           
         } catch (error) {
-          console.warn(`⚠️ Failed to fetch metadata from ${adapter.resourceType} adapter:`, error);
-          // Continue with other adapters
+          console.warn(`⚠️ Failed to fetch metadata from ${adapter.resourceType} adapter, checking for stale fallback:`, error);
+          
+          // Try to find stale cached metadata for this adapter
+          const staleMetadata = cachedMetadata?.find(meta => 
+            meta.type === adapter.resourceType && meta.id === adapter.resourceId
+          );
+          
+          if (staleMetadata) {
+            console.log(`🔄 Using stale cached metadata for ${adapter.resourceType} and refreshing timestamps`);
+            
+            // Update the stale metadata with fresh timestamp
+            const refreshedMetadata: ResourceMetadata = {
+              ...staleMetadata,
+              lastUpdated: new Date()
+            };
+            
+            // Store the adapter reference for content fetching
+            this.metadataToAdapter.set(refreshedMetadata.id, adapter);
+            console.log(`🔗 Mapped stale metadata id '${refreshedMetadata.id}' to adapter with resourceId '${adapter.resourceId}'`);
+            
+            freshMetadata.push(refreshedMetadata);
+            console.log(`✅ Using stale metadata for ${adapter.resourceType}: ${refreshedMetadata.title} (refreshed timestamps)`);
+          } else {
+            console.warn(`❌ No stale fallback available for ${adapter.resourceType} adapter`);
+            // Continue with other adapters
+          }
         }
       }
       
@@ -259,40 +299,80 @@ export class ResourceManagerImpl implements ResourceManager {
         }
       }
 
-      // Step 2: Fetch fresh metadata from the specific adapter
+      // Step 2: Try to fetch fresh metadata from the specific adapter
       console.log(`📡 Fetching fresh metadata from adapter: ${adapter.resourceId}`);
-      const freshAdapterMetadata = await this.fetchWithRetry(
-        () => adapter.getResourceMetadata(server, owner, language),
-        `${adapter.resourceType} metadata`
-      );
       
-      // Convert to full ResourceMetadata format
-      const fullMetadata: ResourceMetadata = {
-        id: freshAdapterMetadata.id, // Use the actual resource ID from the adapter (ult, glt, ulb)
-        server,
-        owner,
-        language,
-        type: adapter.resourceType,
-        title: freshAdapterMetadata.title,
-        description: freshAdapterMetadata.description || '',
-        name: `${adapter.resourceType}-${language}`,
-        version: freshAdapterMetadata.version,
-        lastUpdated: new Date(),
-        available: freshAdapterMetadata.available,
-        toc: freshAdapterMetadata.toc || {},
-        isAnchor: false // Will be set by ResourceConfigProcessor if needed
-      };
-      
-      console.log(`✅ Got fresh metadata for ${adapter.resourceId}`);
-      
-      // Map the metadata to adapter
-      this.metadataToAdapter.set(fullMetadata.id, adapter);
-      
-      // Save to storage
-      await this.storageAdapter!.saveResourceMetadata([fullMetadata]);
-      console.log(`💾 Saved fresh metadata for ${adapter.resourceId}`);
-      
-      return fullMetadata;
+      try {
+        const freshAdapterMetadata = await this.fetchWithRetry(
+          () => adapter.getResourceMetadata(server, owner, language),
+          `${adapter.resourceType} metadata`
+        );
+        
+        // Check if we have better TOC data in cached metadata
+        let tocToUse = freshAdapterMetadata.toc || {};
+        if (cachedAdapterMetadata && cachedAdapterMetadata.toc?.books && cachedAdapterMetadata.toc.books.length > 0) {
+          const freshBookCount = freshAdapterMetadata.toc?.books?.length || 0;
+          const cachedBookCount = cachedAdapterMetadata.toc.books.length;
+          
+          if (cachedBookCount > freshBookCount) {
+            console.log(`🔄 Using cached TOC data (${cachedBookCount} books) over fresh data (${freshBookCount} books)`);
+            tocToUse = cachedAdapterMetadata.toc;
+          }
+        }
+        
+        // Convert to full ResourceMetadata format
+        const fullMetadata: ResourceMetadata = {
+          id: freshAdapterMetadata.id, // Use the actual resource ID from the adapter (ult, glt, ulb)
+          server,
+          owner,
+          language,
+          type: adapter.resourceType,
+          title: freshAdapterMetadata.title,
+          description: freshAdapterMetadata.description || '',
+          name: `${adapter.resourceType}-${language}`,
+          version: freshAdapterMetadata.version,
+          lastUpdated: new Date(),
+          available: freshAdapterMetadata.available,
+          toc: tocToUse,
+          isAnchor: false // Will be set by ResourceConfigProcessor if needed
+        };
+        
+        console.log(`✅ Got fresh metadata for ${adapter.resourceId}`);
+        
+        // Map the metadata to adapter
+        this.metadataToAdapter.set(fullMetadata.id, adapter);
+        
+        // Save to storage
+        await this.storageAdapter!.saveResourceMetadata([fullMetadata]);
+        console.log(`💾 Saved fresh metadata for ${adapter.resourceId}`);
+        
+        return fullMetadata;
+        
+      } catch (fetchError) {
+        // Step 3: Fallback to stale cached data if fetch fails
+        if (cachedAdapterMetadata) {
+          console.log(`🔄 Fetch failed, using stale cached metadata for ${adapter.resourceId} and refreshing timestamps`);
+          
+          // Update the stale metadata with fresh timestamp
+          const refreshedMetadata: ResourceMetadata = {
+            ...cachedAdapterMetadata,
+            lastUpdated: new Date() // Refresh timestamp to prevent future staleness
+          };
+          
+          // Map the metadata to adapter
+          this.metadataToAdapter.set(refreshedMetadata.id, adapter);
+          
+          // Save refreshed metadata to storage
+          await this.storageAdapter!.saveResourceMetadata([refreshedMetadata]);
+          console.log(`💾 Refreshed stale metadata timestamps for ${adapter.resourceId}`);
+          
+          return refreshedMetadata;
+        } else {
+          // No cached data available, re-throw the error
+          console.error(`❌ No cached fallback available for ${adapter.resourceId}`);
+          throw fetchError;
+        }
+      }
     } catch (error) {
       console.error(`❌ Failed to get metadata for adapter ${adapter.resourceId}:`, error);
       return null;
@@ -402,60 +482,97 @@ export class ResourceManagerImpl implements ResourceManager {
         );
       }
       
-      // Step 3: Fetch and process content with retry logic
-      const processedContent = await this.fetchContentWithRetry(resourceAdapter, key);
-      
-      // Step 4: Validate content if enabled
-      if (this.config.enableContentValidation) {
-        this.validateContent(processedContent, key);
+      // Step 3: Try to fetch and process content with retry logic
+      try {
+        const processedContent = await this.fetchContentWithRetry(resourceAdapter, key);
+        
+        // Step 4: Validate content if enabled
+        if (this.config.enableContentValidation) {
+          this.validateContent(processedContent, key);
+        }
+        
+        // Step 5: Save to storage for offline use (with SHA information)
+        const { server, owner, language, resourceId, contentId } = parsedKey;
+        const currentSha = resourceAdapter.getCurrentSha?.(server, owner, language, contentId);
+        
+        // Use the resourceId from the parsed key since we already have the correct adapter
+        const actualResourceId = resourceId;
+        
+        const contentToSave: ResourceContent = {
+          key,
+          resourceKey: `${server}/${owner}/${language}/${actualResourceId}`,
+          resourceId: actualResourceId, // Use the actual resource ID from metadata (ult, glt, ulb)
+          server,
+          owner,
+          language,
+          type: resourceType,
+          bookCode: resourceAdapter.organizationType === 'book' ? contentId : undefined,
+          articleId: resourceAdapter.organizationType === 'entry' ? contentId : undefined,
+          content: processedContent,
+          lastFetched: new Date(),
+          cachedUntil: this.calculateCacheExpiry(),
+          checksum: this.calculateChecksum(processedContent),
+          size: this.calculateContentSize(processedContent),
+          // SHA-based change detection
+          sourceSha: currentSha,
+          sourceCommit: (processedContent as { metadata?: { sourceCommit?: string } }).metadata?.sourceCommit
+        };
+        
+        await this.storageAdapter!.saveResourceContent(contentToSave);
+        console.log(`💾 Saved content to storage (${contentToSave.size} bytes) with key: ${key}`);
+        console.log(`📋 Content saved details:`, {
+          key: contentToSave.key,
+          resourceKey: contentToSave.resourceKey,
+          resourceId: contentToSave.resourceId,
+          type: contentToSave.type,
+          articleId: contentToSave.articleId,
+          size: contentToSave.size
+        });
+        
+        return processedContent;
+        
+      } catch (fetchError) {
+        // Step 3.5: Fallback to stale cached content if fetch fails
+        if (cachedContent) {
+          console.log(`🔄 Fetch failed, using stale cached content for ${key} and refreshing timestamps`);
+          
+          // Update the stale content with fresh timestamps
+          const refreshedContent: ResourceContent = {
+            ...cachedContent,
+            lastFetched: new Date(),
+            cachedUntil: this.calculateCacheExpiry()
+          };
+          
+          // Save refreshed content to storage
+          await this.storageAdapter!.saveResourceContent(refreshedContent);
+          console.log(`💾 Refreshed stale content timestamps for ${key} (${refreshedContent.size} bytes)`);
+          
+          return cachedContent.content;
+        } else {
+          // No cached data available, re-throw the error
+          console.error(`❌ No cached fallback available for ${key}`);
+          throw fetchError;
+        }
       }
       
-      // Step 5: Save to storage for offline use (with SHA information)
-      const { server, owner, language, resourceId, contentId } = parsedKey;
-      const currentSha = resourceAdapter.getCurrentSha?.(server, owner, language, contentId);
-      
-      // Use the resourceId from the parsed key since we already have the correct adapter
-      const actualResourceId = resourceId;
-      
-      const contentToSave: ResourceContent = {
-        key,
-        resourceKey: `${server}/${owner}/${language}/${actualResourceId}`,
-        resourceId: actualResourceId, // Use the actual resource ID from metadata (ult, glt, ulb)
-        server,
-        owner,
-        language,
-        type: resourceType,
-        bookCode: resourceAdapter.organizationType === 'book' ? contentId : undefined,
-        articleId: resourceAdapter.organizationType === 'entry' ? contentId : undefined,
-        content: processedContent,
-        lastFetched: new Date(),
-        cachedUntil: this.calculateCacheExpiry(),
-        checksum: this.calculateChecksum(processedContent),
-        size: this.calculateContentSize(processedContent),
-        // SHA-based change detection
-        sourceSha: currentSha,
-        sourceCommit: (processedContent as { metadata?: { sourceCommit?: string } }).metadata?.sourceCommit
-      };
-      
-      await this.storageAdapter!.saveResourceContent(contentToSave);
-      console.log(`💾 Saved content to storage (${contentToSave.size} bytes) with key: ${key}`);
-      console.log(`📋 Content saved details:`, {
-        key: contentToSave.key,
-        resourceKey: contentToSave.resourceKey,
-        resourceId: contentToSave.resourceId,
-        type: contentToSave.type,
-        articleId: contentToSave.articleId,
-        size: contentToSave.size
-      });
-      
-      return processedContent;
-      
     } catch (error) {
-      // Fallback to cached content if available, even if expired
-      const cachedContent = await this.storageAdapter!.getResourceContent(key);
-      if (cachedContent) {
-        console.warn(`⚠️ Using expired cache for ${key} due to error:`, error);
-        return cachedContent.content;
+      // Final fallback to cached content if available, even if expired
+      const finalCachedContent = await this.storageAdapter!.getResourceContent(key);
+      if (finalCachedContent) {
+        console.warn(`⚠️ Using final expired cache fallback for ${key} due to error, refreshing timestamps:`, error);
+        
+        // Update the expired content with fresh timestamps
+        const refreshedContent: ResourceContent = {
+          ...finalCachedContent,
+          lastFetched: new Date(),
+          cachedUntil: this.calculateCacheExpiry()
+        };
+        
+        // Save refreshed content to storage
+        await this.storageAdapter!.saveResourceContent(refreshedContent);
+        console.log(`💾 Refreshed final expired content timestamps for ${key} (${refreshedContent.size} bytes)`);
+        
+        return finalCachedContent.content;
       }
       
       console.error(`❌ Failed to get content for ${key}:`, error);

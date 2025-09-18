@@ -1,0 +1,39 @@
+{
+  "name": "@bt-toolkit/resource-downloader",
+  "version": "1.0.0",
+  "description": "Door43 Resource Downloader - Downloads and processes Door43 resources using existing adapters",
+  "main": "complete-downloader.ts",
+  "type": "module",
+  "scripts": {
+    "download": "tsx complete-downloader.ts",
+    "build-db": "tsx sqlite-builder.ts",
+    "start": "npm run download && npm run build-db"
+  },
+  "keywords": [
+    "door43",
+    "bible",
+    "translation",
+    "resources",
+    "downloader",
+    "usfm",
+    "scripture",
+    "sqlite",
+    "indexeddb"
+  ],
+  "author": "BT-Toolkit Team",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.20.4"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "files": [
+    "*.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

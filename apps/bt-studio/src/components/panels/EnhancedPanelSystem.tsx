@@ -301,7 +301,7 @@ export function EnhancedPanelSystem() {
         ref={(el) => { dropdownRefs.current[panelId] = el; }}
       >
         {/* Previous Resource Button */}
-        <button
+        {/* <button
           onClick={() => navigateToPrevResource(panelId)}
           className="flex items-center justify-center w-10 h-full bg-white hover:bg-gray-100 border-l border-gray-200 focus:outline-none focus:bg-gray-100 transition-colors duration-200"
           title="Previous resource"
@@ -309,7 +309,7 @@ export function EnhancedPanelSystem() {
           <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-        </button>
+        </button> */}
 
         {/* Dropdown Button */}
         <div className="relative">
@@ -361,7 +361,7 @@ export function EnhancedPanelSystem() {
         </div>
 
         {/* Next Resource Button */}
-        <button
+        {/* <button
           onClick={() => navigateToNextResource(panelId)}
           className="flex items-center justify-center w-10 h-full bg-white hover:bg-gray-100 border-l border-gray-200 focus:outline-none focus:bg-gray-100 transition-colors duration-200"
           title="Next resource"
@@ -369,7 +369,7 @@ export function EnhancedPanelSystem() {
           <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-        </button>
+        </button> */}
       </div>
     );
   };

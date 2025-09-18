@@ -449,6 +449,88 @@ export class IndexedDBStorageAdapter implements StorageAdapter {
   }
 
   /**
+   * Get all resource keys from metadata store
+   */
+  async getAllResourceKeys(): Promise<string[]> {
+    await this.initialize();
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['resource_metadata'], 'readonly');
+      const store = transaction.objectStore('resource_metadata');
+      const keys: string[] = [];
+
+      transaction.onerror = () => reject(transaction.error);
+      transaction.oncomplete = () => resolve(keys);
+
+      const request = store.openCursor();
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          keys.push(cursor.value.resourceKey);
+          cursor.continue();
+        }
+      };
+    });
+  }
+
+  /**
+   * Get all content keys from content store
+   */
+  async getAllContentKeys(): Promise<string[]> {
+    await this.initialize();
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['resource_content'], 'readonly');
+      const store = transaction.objectStore('resource_content');
+      const keys: string[] = [];
+
+      transaction.onerror = () => reject(transaction.error);
+      transaction.oncomplete = () => resolve(keys);
+
+      const request = store.openCursor();
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          keys.push(cursor.value.key);
+          cursor.continue();
+        }
+      };
+    });
+  }
+
+  /**
+   * Get metadata with versions for comparison
+   */
+  async getMetadataVersions(): Promise<Map<string, {version: string, lastUpdated: Date}>> {
+    await this.initialize();
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      const transaction = this.db!.transaction(['resource_metadata'], 'readonly');
+      const store = transaction.objectStore('resource_metadata');
+      const versionMap = new Map<string, {version: string, lastUpdated: Date}>();
+
+      transaction.onerror = () => reject(transaction.error);
+      transaction.oncomplete = () => resolve(versionMap);
+
+      const request = store.openCursor();
+      request.onsuccess = (event) => {
+        const cursor = (event.target as IDBRequest).result;
+        if (cursor) {
+          const data = cursor.value;
+          versionMap.set(data.resourceKey, {
+            version: data.version,
+            lastUpdated: new Date(data.lastUpdated)
+          });
+          cursor.continue();
+        }
+      };
+    });
+  }
+
+  /**
    * Get storage information and statistics
    */
   async getStorageInfo(): Promise<StorageInfo> {
